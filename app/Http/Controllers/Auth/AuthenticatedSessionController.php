@@ -32,6 +32,13 @@ class AuthenticatedSessionController extends Controller
     {
         $user = $request->validateCredentials();
 
+        // Check if user has operator role (role_id = 1)
+        if ($user->role_id !== 1) {
+            return back()->withErrors([
+                'email' => 'Access denied. Only operators can access this system.',
+            ])->onlyInput('email');
+        }
+
         if (Features::enabled(Features::twoFactorAuthentication()) && $user->hasEnabledTwoFactorAuthentication()) {
             $request->session()->put([
                 'login.id' => $user->getKey(),
