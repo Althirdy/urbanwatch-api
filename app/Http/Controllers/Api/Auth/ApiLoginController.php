@@ -79,7 +79,7 @@ class ApiLoginController extends BaseApiController
 
             return $this->sendError('Invalid user role');
         } catch (\Exception $e) {
-            return $this->sendError('An error occured during login');
+            return $this->sendError('Invalid Credentials');
         }
     }
     /**
