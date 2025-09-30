@@ -1,4 +1,3 @@
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -10,10 +9,10 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, locations } from '@/routes';
+import { dashboard, locations, reports, roles, users } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, MapPin } from 'lucide-react';
+import { File, LayoutGrid, MapPin, User, UserCog } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -23,10 +22,25 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
+        title: 'Users',
+        href: users(),
+        icon: User,
+    },
+    {
+        title: 'Roles',
+        href: roles(),
+        icon: UserCog,
+    },
+    {
+        title: 'Reports',
+        href: reports(),
+        icon: File,
+    },
+    {
         title: 'Locations',
         href: locations().url,
         icon: MapPin,
-    }
+    },
 ];
 
 // const footerNavItems: NavItem[] = [
