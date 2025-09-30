@@ -115,13 +115,13 @@ function CreateLocation({ locationCategory = [] }: { locationCategory?: Location
                     description: "Location created successfully.",
                     variant: "default",
                 });
-                
+
                 // Reset form
                 reset();
                 setBarangayState({ value: null, open: false });
                 setCategoryState({ value: null, open: false });
                 setCoordinates({ latitude: '', longitude: '' });
-                
+
                 // Close the sheet
                 setSheetOpen(false);
             },
@@ -132,6 +132,7 @@ function CreateLocation({ locationCategory = [] }: { locationCategory?: Location
                     description: "Failed to create location. Please check your inputs and try again.",
                     variant: "destructive",
                 });
+
             }
         });
     }
