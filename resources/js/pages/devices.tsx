@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/tabs"
 import { Button } from '@/components/ui/button';
 import AddCCTVDevice from './cctv-comp/createCCTV';
+import { cctv_T, location_T, paginated_T } from './type';
+import CCTVDisplay from './cctv-comp/cctvDisplay';
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -29,17 +31,12 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: devices().url,
     },
 ];
-type Device_T = []
 
-export type location_T = {
-    id: number,
-    location_name: string,
-    category_name?: string,
-    landmark: string,
-    barangay: string,
-}
+type Device_T = paginated_T<cctv_T>
+
 
 export default function Devices({ devices, locations }: { devices: Device_T, locations: location_T[] }) {
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
@@ -49,8 +46,9 @@ export default function Devices({ devices, locations }: { devices: Device_T, loc
                         <TabsTrigger value="cctv">CCTV</TabsTrigger>
                         <TabsTrigger value="uwDevice">UW Device</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="cctv">
+                    <TabsContent value="cctv" className='space-y-6'>
                         <AddCCTVDevice location={locations} />
+                        <CCTVDisplay />
                     </TabsContent>
                     <TabsContent value="uwDevice">
                     </TabsContent>

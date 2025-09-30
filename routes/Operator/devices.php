@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Operator\CCTVController;
+use App\Models\cctvDevices;
 use App\Models\Locations;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -17,9 +19,14 @@ Route::middleware('auth')->group(function () {
             ];
         });
 
+        $cctvDevices = cctvDevices::with('location:id,location_name,landmark,barangay')->paginate(10);
+
+        
         return Inertia::render('devices', [
-            'devices' => [],
+            'devices' => $cctvDevices,
             'locations' => $location
         ]);
     })->name('devices');
+
+    Route::post('devices/cctv', [CCTVController::class, 'store'])->name('devices.cctv.store');
 });

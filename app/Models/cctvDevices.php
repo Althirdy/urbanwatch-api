@@ -19,7 +19,6 @@ class cctvDevices extends Model
         'brand',
         'model',
         'resolution',
-        'bitrate',
         'fps',
         'installation_date',
     ];

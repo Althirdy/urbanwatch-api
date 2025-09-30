@@ -21,7 +21,6 @@ return new class extends Migration
             $table->string('brand');
             $table->string('model');
             $table->string('resolution');
-            $table->integer('bitrate');
             $table->integer('fps');
             $table->date('installation_date');
             $table->softDeletes();
