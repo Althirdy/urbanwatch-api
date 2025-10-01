@@ -48,7 +48,7 @@ export default function Devices({ devices, locations }: { devices: Device_T, loc
                     </TabsList>
                     <TabsContent value="cctv" className='space-y-6'>
                         <AddCCTVDevice location={locations} />
-                        <CCTVDisplay />
+                        <CCTVDisplay devices={devices} locations={locations} />
                     </TabsContent>
                     <TabsContent value="uwDevice">
                     </TabsContent>

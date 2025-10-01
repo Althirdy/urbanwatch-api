@@ -29,8 +29,8 @@ export type location_T = {
     category_name?: string,
     longitude: string,
     latitude: string,
-    cameras: number,
     description?: string,
+    cctv_count?: number,
 }
 
 

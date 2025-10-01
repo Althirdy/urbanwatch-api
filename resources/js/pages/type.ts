@@ -24,6 +24,7 @@ export type cctv_T = {
     model: string,
     resolution: string,
     status: string,
+    fps: number,
 }
 
 export type location_T = {

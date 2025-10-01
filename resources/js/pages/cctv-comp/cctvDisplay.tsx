@@ -15,119 +15,28 @@ import {
     Monitor,
     Settings
 } from 'lucide-react'
+import { cctv_T, location_T, paginated_T } from '../type'
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination'
+import EditCCTVDevice from './EditCCTV'
+import ArchiveCCTV from './archiveCCTV'
 
-// Dummy data
-const dummyCCTVDevices = [
-    {
-        id: 1,
-        device_name: "Monumento Circle Junction",
-        resolution: "2688x1520",
-        fps: 25,
-        status: "maintenance",
-        location: {
-            location_name: "Monumento Circle Junction",
-            landmark: "Caloocan Avenue",
-            barangay: "Main traffic circle, pedestrian areas",
-            category_name: "Historic"
-        },
-        brand: "HIK VISION",
-        model: "DS-2CD2T47G1-L",
-        description: "Main traffic monitoring camera at historic monument area"
-    },
-    {
-        id: 2,
-        device_name: "Bagong Barrio Market",
-        resolution: "1920x1080",
-        fps: 30,
-        status: "active",
-        location: {
-            location_name: "Bagong Barrio Public Market",
-            landmark: "Market Entrance",
-            barangay: "Bagong Barrio",
-            category_name: "Commercial"
-        },
-        brand: "DAHUA",
-        model: "IPC-HFW2431S-S-S2",
-        description: "Security monitoring for public market entrance and vicinity"
-    },
-    {
-        id: 3,
-        device_name: "University of Caloocan Gate",
-        resolution: "3840x2160",
-        fps: 20,
-        status: "active",
-        location: {
-            location_name: "University of Caloocan City",
-            landmark: "Main Gate",
-            barangay: "Biglang Awa",
-            category_name: "Educational"
-        },
-        brand: "AXIS",
-        model: "P3367-VE",
-        description: "Educational institution main entrance security surveillance"
-    },
-    {
-        id: 4,
-        device_name: "Grace Park Elementary",
-        resolution: "1920x1080",
-        fps: 25,
-        status: "inactive",
-        location: {
-            location_name: "Grace Park Elementary School",
-            landmark: "School Playground",
-            barangay: "Grace Park West",
-            category_name: "Educational"
-        },
-        brand: "HIK VISION",
-        model: "DS-2CD2143G0-I",
-        description: "School playground and premises monitoring system"
-    },
-    {
-        id: 5,
-        device_name: "Caloocan City Hall",
-        resolution: "2688x1520",
-        fps: 30,
-        status: "active",
-        location: {
-            location_name: "Caloocan City Hall",
-            landmark: "Main Entrance",
-            barangay: "Poblacion",
-            category_name: "Government"
-        },
-        brand: "SAMSUNG",
-        model: "SNO-6084R",
-        description: "Government building main entrance and public area surveillance"
-    },
-    {
-        id: 6,
-        device_name: "Rizal Avenue Bridge",
-        resolution: "1920x1080",
-        fps: 25,
-        status: "active",
-        location: {
-            location_name: "Rizal Avenue Bridge",
-            landmark: "Bridge Overpass",
-            barangay: "Maypajo",
-            category_name: "Infrastructure"
-        },
-        brand: "HIK VISION",
-        model: "DS-2CD2147G2-L",
-        description: "Bridge traffic and pedestrian monitoring system"
-    }
-]
 
 interface CCTVDisplayProps {
     onEdit?: (device: any) => void
     onDelete?: (device: any) => void
     onViewReports?: (device: any) => void
     onViewStream?: (device: any) => void
+    devices: paginated_T<cctv_T>
+    locations: location_T[]
 }
 
 function CCTVDisplay({
     onEdit,
     onDelete,
     onViewReports,
-    onViewStream
+    onViewStream,
+    devices,
+    locations = []
 }: CCTVDisplayProps) {
     const [selectedDevices, setSelectedDevices] = useState<number[]>([])
 
@@ -164,7 +73,7 @@ function CCTVDisplay({
         <div className="space-y-6">
             {/* CCTV Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {dummyCCTVDevices.map((device) => (
+                {devices?.data.map((device) => (
                     <Card
                         key={device.id}
                         className="group hover:shadow-md transition-all duration-200 relative overflow-hidden"
@@ -198,14 +107,6 @@ function CCTVDisplay({
                         </CardHeader>
 
                         <CardContent className="space-y-4">
-                            {/* Description */}
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground mb-1">Description</p>
-                                <p className="text-sm text-foreground line-clamp-2">
-                                    {device.description}
-                                </p>
-                            </div>
-
                             {/* Technical Details */}
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
@@ -246,35 +147,9 @@ function CCTVDisplay({
                                     <BarChart3 className="h-4 w-4" />
                                     Reports
                                 </Button>
-
                                 <div className="flex items-center gap-1">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => onViewStream?.(device)}
-                                        className="h-8 w-8 p-0 hover:bg-green-50"
-                                        title="View Live Stream"
-                                    >
-                                        <ExternalLink className="h-4 w-4 text-green-600" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => onEdit?.(device)}
-                                        className="h-8 w-8 p-0 hover:bg-orange-50"
-                                        title="Edit Device"
-                                    >
-                                        <Edit className="h-4 w-4 text-orange-600" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => onDelete?.(device)}
-                                        className="h-8 w-8 p-0 hover:bg-red-50"
-                                        title="Delete Device"
-                                    >
-                                        <Trash2 className="h-4 w-4 text-red-600" />
-                                    </Button>
+                                    <EditCCTVDevice location={locations} cctv={device} />
+                                    <ArchiveCCTV cctv={device} />
                                 </div>
                             </div>
                         </CardContent>
@@ -282,23 +157,33 @@ function CCTVDisplay({
                 ))}
             </div>
 
-            {/* Pagination Footer */}
-            <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                    Showing {dummyCCTVDevices.length} of {dummyCCTVDevices.length} CCTV devices
-                </p>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" disabled>
-                        Previous
-                    </Button>
-                    <Button variant="outline" size="sm" className="bg-blue-50 border-blue-200">
-                        1
-                    </Button>
-                    <Button variant="outline" size="sm" disabled>
-                        Next
-                    </Button>
-                </div>
-            </div>
+            {/* Pagination Controls */}
+            {devices && devices.links && (
+                <Pagination className='flex justify-end'>
+                    <PaginationContent>
+                        <PaginationItem>
+                            <PaginationPrevious href={devices.prev_page_url || '#'} />
+                        </PaginationItem>
+                        {
+                            devices.links.map((link, index) => {
+                                if (link.url !== null) {
+                                    return (
+                                        <PaginationItem key={index}>
+                                            <PaginationLink isActive={link.active} href={link.url || '#'}>{link.label}</PaginationLink>
+                                        </PaginationItem>
+                                    )
+                                }
+                            })
+                        }
+                        <PaginationItem>
+                            <PaginationEllipsis />
+                        </PaginationItem>
+                        <PaginationItem>
+                            <PaginationNext href={devices.next_page_url || '#'} />
+                        </PaginationItem>
+                    </PaginationContent>
+                </Pagination>
+            )}
         </div>
     )
 }

@@ -19,9 +19,19 @@ Route::middleware('auth')->group(function () {
             ];
         });
 
-        $cctvDevices = cctvDevices::with('location:id,location_name,landmark,barangay')->paginate(10);
+        $cctvDevices = cctvDevices::with([
+            'location:id,location_name,landmark,barangay,location_category',
+            'location.locationCategory:id,name'
+        ])->paginate(10);
 
-        
+
+        $cctvDevices->getCollection()->transform(function ($device) {
+            if ($device->location && $device->location->locationCategory) {
+                $device->location->category_name = $device->location->locationCategory->name;
+            }
+            return $device;
+        });
+
         return Inertia::render('devices', [
             'devices' => $cctvDevices,
             'locations' => $location
@@ -29,4 +39,6 @@ Route::middleware('auth')->group(function () {
     })->name('devices');
 
     Route::post('devices/cctv', [CCTVController::class, 'store'])->name('devices.cctv.store');
+    Route::put('devices/cctv/{cctv}', [CCTVController::class, 'update'])->name('devices.cctv.update');
+    Route::delete('devices/cctv/{cctv}', [CCTVController::class, 'destroy'])->name('devices.cctv.destroy');
 });

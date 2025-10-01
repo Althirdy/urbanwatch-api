@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { format } from 'date-fns';
 import {
     Sheet,
     SheetClose,
@@ -9,63 +10,67 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet"
-import { format } from 'date-fns'; // Add this import
-import { ChevronDownIcon, Plus } from 'lucide-react'
+import { ChevronDownIcon, Plus, SquarePen } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Select } from '@radix-ui/react-select'
-import { SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { useForm } from '@inertiajs/react'
 import { toast } from "@/components/use-toast"
-import { location_T } from '../type'
+import { cctv_T, location_T } from '../type'
 
+interface EditCCTVDevice {
+    location: location_T[];
+    cctv: cctv_T;
+}
 
-function AddCCTVDevice({ location }: { location: location_T[] }) {
+function EditCCTVDevice({ location, cctv }: EditCCTVDevice) {
     // Sheet control state
     const [sheetOpen, setSheetOpen] = useState(false);
-    const { data, setData, post, processing, errors, reset } = useForm({
-        device_name: '',
-        primary_rtsp_url: '',
-        backup_rtsp_url: '',
-        location_id: '',
-        status: '',
-        model: '',
-        brand: '',
-        fps: '',
-        resolution: '',
-        bitrate: '',
-        installation_date: '',
+    const { data, setData, put, processing, errors, reset } = useForm({
+        device_name: cctv?.device_name || '',
+        primary_rtsp_url: cctv?.primary_rtsp_url || '',
+        backup_rtsp_url: cctv?.backup_rtsp_url || '',
+        location_id: cctv?.location?.id?.toString() || '',
+        status: cctv?.status || '',
+        model: cctv?.model || '',
+        brand: cctv?.brand || '',
+        fps: cctv?.fps?.toString() || '',
+        resolution: cctv?.resolution || '',
+        installation_date: cctv?.installation_date || '',
     });
 
     const [open, setOpen] = React.useState(false)
-    const [date, setDate] = React.useState<Date | undefined>(undefined)
+    const [date, setDate] = React.useState<Date | undefined>(() => {
+        if (cctv.installation_date) {
+            const originalDate = new Date(cctv.installation_date);
+            return originalDate;
+        }
+        return undefined;
+    })
 
     const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        console.log('Form data being sent:', data); // Debug log
+        console.log('Form data being sent:', data);
 
-        post('/devices/cctv', {
+        put(`/devices/cctv/${cctv.id}`, {
             onSuccess: () => {
-                console.log('CCTV device created successfully');
+                console.log('CCTV device updated successfully');
                 toast({
                     title: "Success!",
-                    description: "CCTV device created successfully.",
+                    description: "CCTV device updated successfully.",
                     variant: "default",
                 });
-                reset();
-                setDate(undefined);
                 setSheetOpen(false);
             },
             onError: (errors) => {
                 console.log('Validation errors:', errors);
                 toast({
                     title: "Error",
-                    description: "Failed to create CCTV device. Please check your inputs.",
+                    description: "Failed to update CCTV device. Please check your inputs.",
                     variant: "destructive",
                 });
             },
@@ -75,17 +80,17 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
     return (
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" /> Add CCTV
-                </Button>
+                <div className='p-2 rounded-full hover:bg-primary/20 cursor-pointer' >
+                    <SquarePen size={20} />
+                </div>
             </SheetTrigger>
             <SheetContent className="flex flex-col h-full">
                 <form onSubmit={onSubmit} className="flex flex-col h-full">
                     {/* Fixed Header */}
                     <SheetHeader className="flex-shrink-0 px-6 py-6 border-b">
-                        <SheetTitle>Add New CCTV Device</SheetTitle>
+                        <SheetTitle>Edit CCTV Device</SheetTitle>
                         <SheetDescription>
-                            Add a new CCTV camera device with its configuration details.
+                            Update the CCTV camera device configuration details.
                         </SheetDescription>
                     </SheetHeader>
 
@@ -124,16 +129,19 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
 
                             <div className='flex flex-col gap-2'>
                                 <Label htmlFor="cctv-location">CCTV Location</Label>
-                                <Select onValueChange={(value) => setData('location_id', value)}>
+                                <Select 
+                                    value={data.location_id} 
+                                    onValueChange={(value) => setData('location_id', value)}
+                                >
                                     <SelectTrigger className="w-full">
-                                        <SelectValue />
+                                        <SelectValue placeholder="Select a location" />
                                     </SelectTrigger>
-                                    <SelectContent id='cctv-location'>
+                                    <SelectContent>
                                         <SelectGroup>
                                             {location.map((loc) => (
                                                 <SelectItem key={loc.id} value={loc.id.toString()}>
                                                     <div>
-                                                        {loc.location_name} - {loc.category_name}
+                                                        <div className="font-medium">{loc.location_name} - {loc.category_name}</div>
                                                         <div className='text-xs text-muted-foreground'>{loc.landmark}, {loc.barangay}</div>
                                                     </div>
                                                 </SelectItem>
@@ -146,11 +154,14 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
 
                             <div className='flex flex-col gap-2'>
                                 <Label htmlFor="cctv-status">CCTV Status</Label>
-                                <Select onValueChange={(value) => setData('status', value)}>
+                                <Select 
+                                    value={data.status} 
+                                    onValueChange={(value) => setData('status', value)}
+                                >
                                     <SelectTrigger className="w-full">
-                                        <SelectValue />
+                                        <SelectValue placeholder="Select status" />
                                     </SelectTrigger>
-                                    <SelectContent id='cctv-status'>
+                                    <SelectContent>
                                         <SelectGroup>
                                             <SelectItem value="active">Active</SelectItem>
                                             <SelectItem value="inactive">Inactive</SelectItem>
@@ -200,11 +211,14 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
                                 </div>
                                 <div className='flex-1 flex flex-col gap-2'>
                                     <Label htmlFor="cctv-resolution">Resolution</Label>
-                                    <Select onValueChange={(value) => setData('resolution', value)}>
+                                    <Select 
+                                        value={data.resolution} 
+                                        onValueChange={(value) => setData('resolution', value)}
+                                    >
                                         <SelectTrigger className="w-full">
-                                            <SelectValue />
+                                            <SelectValue placeholder="Select resolution" />
                                         </SelectTrigger>
-                                        <SelectContent id='cctv-resolution'>
+                                        <SelectContent>
                                             <SelectGroup>
                                                 <SelectItem value="4k">4K</SelectItem>
                                                 <SelectItem value="1080p">1080p</SelectItem>
@@ -226,7 +240,7 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
                                             id="date"
                                             className="w-full justify-between font-normal"
                                         >
-                                            {date ? date.toLocaleDateString() : "Select date"}
+                                            {date ? format(date, 'PPP') : "Select date"}
                                             <ChevronDownIcon />
                                         </Button>
                                     </PopoverTrigger>
@@ -261,7 +275,7 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
                                 disabled={processing}
                                 className="flex-1"
                             >
-                                {processing ? 'Saving...' : 'Add CCTV'}
+                                {processing ? 'Updating...' : 'Update CCTV'}
                             </Button>
                         </div>
                     </SheetFooter>
@@ -271,4 +285,4 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
     )
 }
 
-export default AddCCTVDevice;
+export default EditCCTVDevice;

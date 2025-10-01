@@ -9,8 +9,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet"
-import { format } from 'date-fns'; // Add this import
-import { ChevronDownIcon, Plus } from 'lucide-react'
+import { ChevronDownIcon, Plus, SquarePen } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -21,10 +20,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'
 import { useForm } from '@inertiajs/react'
 import { toast } from "@/components/use-toast"
-import { location_T } from '../type'
+import { cctv_T, location_T } from '../type'
 
+interface EditCCTVDevice {
+    location: location_T[];
+    cctv: cctv_T;
+}
 
-function AddCCTVDevice({ location }: { location: location_T[] }) {
+function EditCCTVDevice({ location, cctv }: EditCCTVDevice) {
     // Sheet control state
     const [sheetOpen, setSheetOpen] = useState(false);
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -75,9 +78,9 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
     return (
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" /> Add CCTV
-                </Button>
+                <div className='p-2 rounded-full hover:bg-primary/20 cursor-pointer' >
+                    <SquarePen size={20} />
+                </div>
             </SheetTrigger>
             <SheetContent className="flex flex-col h-full">
                 <form onSubmit={onSubmit} className="flex flex-col h-full">
@@ -236,7 +239,7 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
                                             selected={date}
                                             captionLayout="dropdown"
                                             onSelect={(date) => {
-                                                setData('installation_date', date ? format(date, 'yyyy-MM-dd') : '')
+                                                setData('installation_date', date ? date.toISOString().split('T')[0] : '')
                                                 setDate(date)
                                                 setOpen(false)
                                             }}
@@ -271,4 +274,4 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
     )
 }
 
-export default AddCCTVDevice;
+export default EditCCTVDevice;

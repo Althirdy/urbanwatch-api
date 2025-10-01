@@ -1,6 +1,6 @@
 import React from 'react'
-import { pagination_T } from '../locations'
-import { MapPin, ChevronLeft, ChevronRight, Link } from 'lucide-react'
+import { location_T } from '../locations'
+import { MapPin, ChevronLeft, ChevronRight, Link, Cctv } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { LocationCategory_T } from '../locations'
 import ViewLocation from './viewLocation'
@@ -15,14 +15,15 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination"
+import { paginated_T } from '../type'
 
-function LocationCardView({ location, locationCategory = [] }: { location?: pagination_T, locationCategory?: LocationCategory_T[] }) {
+function LocationCardView({ location, locationCategory = [] }: { location?: paginated_T<location_T>, locationCategory?: LocationCategory_T[] }) {
 
     return (
         <div className="space-y-6">
             {/* Location Cards */}
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(location?.data || []).map((loc) => (
+                {(location?.data || []).map((loc: location_T) => (
                     <Card key={loc.id} className="p-4 rounded-lg border bg-card">
                         <CardHeader className='flex-row items-center p-0'>
                             <MapPin className="h-6 w-6 text-muted-foreground" />
@@ -30,6 +31,10 @@ function LocationCardView({ location, locationCategory = [] }: { location?: pagi
                                 <div>
                                     <h3 className="font-semibold">{loc.location_name}</h3>
                                     <p className="text-sm text-muted-foreground">{loc.landmark}</p>
+                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                        <Cctv size={18} />
+                                        <span>{loc.cctv_count} Camera</span>
+                                    </p>
                                 </div>
                                 <span className="font-medium text-muted-foreground text-sm rounded">
                                     {loc.location_category?.name}
@@ -59,7 +64,7 @@ function LocationCardView({ location, locationCategory = [] }: { location?: pagi
                             <PaginationPrevious href={location.prev_page_url || '#'} />
                         </PaginationItem>
                         {
-                            location.links.map((link, index) => {
+                            location.links.map((link: { url: string | null; active: boolean; label: string }, index: number) => {
                                 if (link.url !== null) {
                                     return (
                                         <PaginationItem key={index}>
