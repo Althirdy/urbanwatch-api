@@ -5,6 +5,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import CreateLocation from './locations-comp/createLocation';
 import LocationCardView from './locations-comp/locationCardList';
+import { paginated_T } from './type';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -28,24 +29,12 @@ export type location_T = {
     category_name?: string,
     longitude: string,
     latitude: string,
-    cameras: number,
     description?: string,
+    cctv_count?: number,
 }
 
-export type pagination_T = {
-    current_page: number,
-    first_page_url: string,
-    data: location_T[],
-    from: number,
-    last_page_url: string,
-    links: { url: string | null, label: string, active: boolean }[],
-    next_page_url: string | null,
-    path: string,
-    per_page: number,
-    prev_page_url: string | null,
-    to: number,
-    total: number,
-}
+
+type location_paginated_T = paginated_T<location_T>
 
 const locationCategory: LocationCategory_T[] = [
     { id: 1, name: 'School' },
@@ -58,7 +47,7 @@ const locationCategory: LocationCategory_T[] = [
 
 
 
-export default function Locations({ locationCategories = [], locations }: { locationCategories?: LocationCategory_T[], locations?: pagination_T }) {
+export default function Locations({ locationCategories = [], locations }: { locationCategories?: LocationCategory_T[], locations?: location_paginated_T }) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Locations" />

@@ -29,4 +29,9 @@ class Locations extends Model
     {
         return $this->locationCategory?->name;
     }
+
+    public function cctvDevices()
+    {
+        return $this->hasMany(cctvDevices::class, 'location_id');
+    }
 }
