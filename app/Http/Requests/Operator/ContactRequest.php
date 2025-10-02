@@ -24,7 +24,7 @@ class ContactRequest extends FormRequest
         return [
             'branch_unit_name' => 'required|string|max:255',
             'contact_person' => 'nullable|string|max:255',
-            'responder_type' => 'required|string|in:Police,Fire,Medical,Barangay,Traffic',
+            'responder_type' => 'required|string|in:BEST,BCCM,BCPC,BDRRM,BHERT,BHW,BPSO,BTMO,VAWC',
             'location' => 'required|string|max:255',
             'primary_mobile' => 'required|string|max:20',
             'backup_mobile' => 'nullable|string|max:20',

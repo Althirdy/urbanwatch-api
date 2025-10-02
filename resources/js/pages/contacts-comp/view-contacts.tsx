@@ -9,7 +9,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Eye, MapPin, Phone, User, Building, Clock } from 'lucide-react';
+import { ExternalLink, MapPin, Phone, User, Building, Clock } from 'lucide-react';
 
 type Contact = {
     id: number;
@@ -34,9 +34,9 @@ export default function ViewContacts({ contact }: ViewContactsProps) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <Eye className="h-4 w-4" />
-                </Button>
+                <div className='p-2 rounded-full hover:bg-secondary/20 cursor-pointer' >
+                    <ExternalLink size={20} />
+                </div>
             </DialogTrigger>
             <DialogContent className="max-w-md">
                 <DialogHeader>

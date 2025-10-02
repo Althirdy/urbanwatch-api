@@ -7,8 +7,16 @@ import AddContacts from './contacts-comp/add-contacts';
 import ViewContacts from './contacts-comp/view-contacts';
 import EditContacts from './contacts-comp/edit-contacts';
 import DeleteContacts from './contacts-comp/delete-contacts';
-import { Auth } from '@/types';
+import { Auth, type BreadcrumbItem } from '@/types';
+import { contacts } from '@/routes';
 import { useState } from 'react';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Contacts',
+        href: contacts().url,
+    },
+];
 
 // Define PageProps interface
 interface PageProps {
@@ -53,7 +61,7 @@ export default function Contacts({ auth, contacts, filters }: ContactsPageProps)
     const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
 
-    const responderTypes = ['Police', 'Medical', 'Fire', 'Barangay', 'Traffic'];
+    const responderTypes = ['BEST', 'BCCM', 'BCPC', 'BDRRM', 'BHERT', 'BHW', 'BPSO', 'BTMO', 'VAWC'];
     const statusOptions = ['Active', 'Inactive'];
 
     // Filter contacts based on search term, type, and status - client-side filtering as fallback
@@ -72,7 +80,7 @@ export default function Contacts({ auth, contacts, filters }: ContactsPageProps)
     }) || [];
 
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Contacts" />
             
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
@@ -180,7 +188,7 @@ export default function Contacts({ auth, contacts, filters }: ContactsPageProps)
                         <div className="col-span-2">Primary Number</div>
                         <div className="col-span-2">Location</div>
                         <div className="col-span-1">Status</div>
-                        <div className="col-span-2">Actions</div>
+                        <div className="col-span-2 text-center">Actions</div>
                     </div>
 
                     {/* Table Body - Dynamic Data */}
@@ -202,11 +210,16 @@ export default function Contacts({ auth, contacts, filters }: ContactsPageProps)
                                     </div>
                                     <div className="col-span-2">
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                            contact.responder_type === 'Police' ? 'bg-blue-100 text-blue-800' :
-                                            contact.responder_type === 'Fire' ? 'bg-red-100 text-red-800' :
-                                            contact.responder_type === 'Medical' ? 'bg-green-100 text-green-800' :
-                                            contact.responder_type === 'Barangay' ? 'bg-purple-100 text-purple-800' :
-                                            'bg-yellow-100 text-yellow-800'
+                                            contact.responder_type === 'BEST' ? 'bg-blue-100 text-blue-800' :
+                                            contact.responder_type === 'BCCM' ? 'bg-green-100 text-green-800' :
+                                            contact.responder_type === 'BCPC' ? 'bg-purple-100 text-purple-800' :
+                                            contact.responder_type === 'BDRRM' ? 'bg-red-100 text-red-800' :
+                                            contact.responder_type === 'BHERT' ? 'bg-orange-100 text-orange-800' :
+                                            contact.responder_type === 'BHW' ? 'bg-pink-100 text-pink-800' :
+                                            contact.responder_type === 'BPSO' ? 'bg-indigo-100 text-indigo-800' :
+                                            contact.responder_type === 'BTMO' ? 'bg-cyan-100 text-cyan-800' :
+                                            contact.responder_type === 'VAWC' ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-gray-100 text-gray-800'
                                         }`}>
                                             {contact.responder_type}
                                         </span>
@@ -234,7 +247,7 @@ export default function Contacts({ auth, contacts, filters }: ContactsPageProps)
                                             ● {contact.active ? 'Active' : 'Inactive'}
                                         </span>
                                     </div>
-                                    <div className="col-span-2 flex items-center gap-2">
+                                    <div className="col-span-2 flex items-center justify-center gap-0">
                                         <ViewContacts contact={contact} />
                                         <EditContacts contact={contact} />
                                         <DeleteContacts contact={contact} />
