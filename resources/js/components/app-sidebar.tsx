@@ -10,10 +10,10 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, locations } from '@/routes';
+import { dashboard, devices, locations } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, MapPin } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, MapPin, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -26,6 +26,16 @@ const mainNavItems: NavItem[] = [
         title: 'Locations',
         href: locations().url,
         icon: MapPin,
+    },
+    {
+        title: 'Devices',
+        href: devices().url,
+        icon: Folder
+    },
+    {
+        title: 'Contacts',
+        href: '/contacts',
+        icon: Users,
     }
 ];
 
