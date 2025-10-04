@@ -20,10 +20,16 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'role_id',
         'name',
+        'first_name',
+        'middle_name',
+        'last_name',
         'email',
         'password',
-        'role_id',
+        'phone_number',
+        'assigned_brgy',
+        'status'
     ];
 
     /**
@@ -62,5 +68,15 @@ class User extends Authenticatable
     public function citizenDetails()
     {
         return $this->hasOne(CitizenDetails::class);
+    }
+
+    public function reports()
+    {
+        return $this->hasMany(Report::class);
+    }
+
+    public function acknowledgedReports()
+    {
+        return $this->hasMany(Report::class, 'acknowledge_by');
     }
 }

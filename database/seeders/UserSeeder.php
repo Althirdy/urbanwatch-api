@@ -35,9 +35,11 @@ class UserSeeder extends Seeder
                 'middle_name' => 'M.',
                 'last_name' => 'Saydallus',
                 'suffix' => null,
-                'office_address' => 'ph1 Brgy 176A Near Sto Nino Parish',
+                'office_address' => 'ph1 Barangay 176A Near Sto Nino Parish',
+                'assigned_brgy' => 'Barangay 176A',
                 'latitude' => '14.5995',
                 'longitude' => '120.9842',
+                'status' => 'active',
             ]
         );
 
@@ -60,8 +62,10 @@ class UserSeeder extends Seeder
                 'last_name' => 'Guina',
                 'suffix' => null,
                 'office_address' => 'Ph 1 Pkg 1',
+                'assigned_brgy' => 'Barangay 176A',
                 'latitude' => '14.6095',
                 'longitude' => '120.9742',
+                'status' => 'active',
             ]
         );
 
@@ -84,12 +88,13 @@ class UserSeeder extends Seeder
                 'suffix' => null,
                 'date_of_birth' => '1990-01-01',
                 'phone_number' => '+63 912-345-6789',
-                'address' => 'Ph1 Pkg4, Brgy 176A',
-                'barangay' =>  'Brgy 176A',
+                'address' => 'Ph1 Pkg4, Barangay 176A',
+                'barangay' =>  'Barangay 176A',
                 'city' => 'Caloocan City',
                 'province' => 'Metro Manila',
                 'postal_code' => '1400',
                 'is_verified' => true,
+                'status' => 'active',
             ]
         );
     }

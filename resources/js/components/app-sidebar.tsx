@@ -1,4 +1,3 @@
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -10,10 +9,25 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, devices, locations } from '@/routes';
+import {
+    dashboard,
+    devices,
+    locations,
+    publicPosts,
+    reports,
+    users,
+} from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, MapPin, Users } from 'lucide-react';
+import {
+    File,
+    FlagTriangleRight,
+    Folder,
+    LayoutGrid,
+    MapPin,
+    User,
+    Users,
+} from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -23,20 +37,36 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
+        title: 'Users',
+        href: users(),
+        icon: User,
+    },
+
+    {
+        title: 'Public Posts',
+        href: publicPosts(),
+        icon: FlagTriangleRight,
+    },
+    {
+        title: 'Reports',
+        href: reports(),
+        icon: File,
+    },
+    {
         title: 'Locations',
-        href: locations().url,
+        href: locations(),
         icon: MapPin,
     },
     {
         title: 'Devices',
         href: devices().url,
-        icon: Folder
+        icon: Folder,
     },
     {
         title: 'Contacts',
         href: '/contacts',
         icon: Users,
-    }
+    },
 ];
 
 // const footerNavItems: NavItem[] = [
