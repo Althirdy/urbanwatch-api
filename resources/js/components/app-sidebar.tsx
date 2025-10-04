@@ -9,17 +9,24 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, locations, publicPosts, reports, users, devices } from '@/routes';
+import {
+    dashboard,
+    devices,
+    locations,
+    publicPosts,
+    reports,
+    users,
+} from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import {
     File,
     FlagTriangleRight,
+    Folder,
     LayoutGrid,
     MapPin,
     User,
-    BookOpen, 
-    Folder,
+    Users,
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -53,13 +60,13 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Devices',
         href: devices().url,
-        icon: Folder
+        icon: Folder,
     },
     {
         title: 'Contacts',
         href: '/contacts',
         icon: Users,
-    }
+    },
 ];
 
 // const footerNavItems: NavItem[] = [
