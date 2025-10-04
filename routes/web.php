@@ -21,3 +21,5 @@ require __DIR__ . '/Operator/user.php';
 require __DIR__ . '/Operator/report.php';
 require __DIR__ . '/Operator/role.php';
 require __DIR__ . '/Operator/public-post.php';
+require __DIR__ . '/Operator/devices.php';
+require __DIR__ . '/Operator/contacts.php';

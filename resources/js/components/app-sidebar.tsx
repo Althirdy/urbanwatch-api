@@ -9,7 +9,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, locations, publicPosts, reports, users } from '@/routes';
+import { dashboard, locations, publicPosts, reports, users, devices } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import {
@@ -18,6 +18,8 @@ import {
     LayoutGrid,
     MapPin,
     User,
+    BookOpen, 
+    Folder,
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -48,6 +50,16 @@ const mainNavItems: NavItem[] = [
         href: locations(),
         icon: MapPin,
     },
+    {
+        title: 'Devices',
+        href: devices().url,
+        icon: Folder
+    },
+    {
+        title: 'Contacts',
+        href: '/contacts',
+        icon: Users,
+    }
 ];
 
 // const footerNavItems: NavItem[] = [

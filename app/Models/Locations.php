@@ -23,4 +23,15 @@ class Locations extends Model
     {
         return $this->belongsTo(LocationCategory::class, 'location_category');
     }
+
+    // Accessor to get just the category name
+    public function getCategoryNameAttribute()
+    {
+        return $this->locationCategory?->name;
+    }
+
+    public function cctvDevices()
+    {
+        return $this->hasMany(cctvDevices::class, 'location_id');
+    }
 }
