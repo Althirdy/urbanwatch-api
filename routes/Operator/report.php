@@ -8,4 +8,5 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('report', ReportController::class);
     Route::patch('report/{report}/acknowledge', [ReportController::class, 'acknowledge'])->name('report.acknowledge');
+    Route::patch('report/{report}/resolve', [ReportController::class, 'resolve'])->name('report.resolve');
 });

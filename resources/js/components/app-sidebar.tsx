@@ -9,10 +9,16 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, locations, reports, roles, users } from '@/routes';
+import { dashboard, locations, publicPosts, reports, users } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { File, LayoutGrid, MapPin, User, UserCog } from 'lucide-react';
+import {
+    File,
+    FlagTriangleRight,
+    LayoutGrid,
+    MapPin,
+    User,
+} from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -26,10 +32,11 @@ const mainNavItems: NavItem[] = [
         href: users(),
         icon: User,
     },
+
     {
-        title: 'Roles',
-        href: roles(),
-        icon: UserCog,
+        title: 'Public Posts',
+        href: publicPosts(),
+        icon: FlagTriangleRight,
     },
     {
         title: 'Reports',
@@ -38,7 +45,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Locations',
-        href: locations().url,
+        href: locations(),
         icon: MapPin,
     },
 ];

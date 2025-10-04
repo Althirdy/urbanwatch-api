@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operator;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Operator\UserRequest;
 use App\Models\CitizenDetails;
 use App\Models\OfficialsDetails;
 use App\Models\Roles;
@@ -10,7 +11,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -74,102 +74,74 @@ class UserController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(UserRequest $request)
     {
+        $validated = $request->validated();
+
+        // Combine names for the user table
+        $validated['name'] = trim(
+            $validated['first_name'] . ' ' . 
+            ($validated['middle_name'] ? $validated['middle_name'] . '. ' : '') . 
+            $validated['last_name']
+        );
+
+        // Convert role_id to integer
+        $validated['role_id'] = (int) $validated['role_id'];
+
+        DB::beginTransaction();
         try {
-            $validated = $request->validate([
-                'first_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\'-]+$/',
-                'middle_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\'-]*$/',
-                'last_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\'-]+$/',
-                'suffix' => 'nullable|string|max:10',
-                'email' => 'required|email:rfc,dns|max:255|unique:users',
-                'phone_number' => 'nullable|regex:/^[0-9+\-\s]{10,20}$/',
-                'role_id' => 'required|numeric|exists:roles,id',
-                'password' => [
-                    'required',
-                    'string',
-                    Password::min(8)->letters()->numbers()->symbols(),
-                    'confirmed',
-                ],
-                // For citizens
-                'date_of_birth' => 'nullable|date|before:today',
-                'address' => 'nullable|string|max:500',
-                'barangay' => 'nullable|string|max:255',
-                'city' => 'nullable|string|max:255',
-                'province' => 'nullable|string|max:255',
-                'postal_code' => 'nullable|string|max:10',
-                // For officials
-                'office_address' => 'nullable|string|max:500',
-                'latitude' => 'nullable|numeric|between:-90,90',
-                'longitude' => 'nullable|numeric|between:-180,180',
+            // Hash the password and create basic user
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+                'role_id' => $validated['role_id'],
             ]);
 
-            // Combine names for the user table
-            $validated['name'] = trim(
-                $validated['first_name'] . ' ' . 
-                ($validated['middle_name'] ? $validated['middle_name'] . ' ' : '') . 
-                $validated['last_name']
-            );
-
-            // Convert role_id to integer
-            $validated['role_id'] = (int) $validated['role_id'];
-
-            DB::beginTransaction();
-            try {
-                // Hash the password and create basic user
-                $user = User::create([
-                    'name' => $validated['name'],
-                    'email' => $validated['email'],
-                    'password' => Hash::make($validated['password']),
-                    'role_id' => $validated['role_id'],
+            // Create role-specific details
+            if ($validated['role_id'] == 1 || $validated['role_id'] == 2) {
+                // Operator or Purok Leader - create OfficialsDetails
+                OfficialsDetails::create([
+                    'user_id' => $user->id,
+                    'first_name' => $validated['first_name'],
+                    'middle_name' => $validated['middle_name'],
+                    'last_name' => $validated['last_name'],
+                    'suffix' => $validated['suffix'],
+                    'contact_number' => $validated['phone_number'],
+                    'office_address' => $validated['office_address'],
+                    'assigned_brgy' => $validated['assigned_brgy'] ?? $validated['barangay'] ?? null,
+                    'latitude' => $validated['latitude'],
+                    'longitude' => $validated['longitude'],
                 ]);
-
-                // Create role-specific details
-                if ($validated['role_id'] == 1 || $validated['role_id'] == 2) {
-                    // Operator or Purok Leader - create OfficialsDetails
-                    OfficialsDetails::create([
-                        'user_id' => $user->id,
-                        'first_name' => $validated['first_name'],
-                        'middle_name' => $validated['middle_name'],
-                        'last_name' => $validated['last_name'],
-                        'suffix' => $validated['suffix'],
-                        'contact_number' => $validated['phone_number'],
-                        'office_address' => $validated['office_address'],
-                        'latitude' => $validated['latitude'],
-                        'longitude' => $validated['longitude'],
-                    ]);
-                } elseif ($validated['role_id'] == 3) {
-                    // Citizen - create CitizenDetails
-                    CitizenDetails::create([
-                        'user_id' => $user->id,
-                        'first_name' => $validated['first_name'],
-                        'middle_name' => $validated['middle_name'],
-                        'last_name' => $validated['last_name'],
-                        'suffix' => $validated['suffix'],
-                        'date_of_birth' => $validated['date_of_birth'],
-                        'phone_number' => $validated['phone_number'],
-                        'address' => $validated['address'],
-                        'barangay' => $validated['barangay'],
-                        'city' => $validated['city'],
-                        'province' => $validated['province'],
-                        'postal_code' => $validated['postal_code'],
-                        'is_verified' => false, // Default to unverified
-                    ]);
-                }
-                
-                DB::commit();
-
-                return redirect()->route('users')
-                    ->with('success', 'User created successfully.');
-                    
-            } catch (\Exception $e) {
-                DB::rollBack();
-                return back()
-                    ->with('error', 'Failed to create user. Please try again.')
-                    ->withInput();
+            } elseif ($validated['role_id'] == 3) {
+                // Citizen - create CitizenDetails
+                CitizenDetails::create([
+                    'user_id' => $user->id,
+                    'first_name' => $validated['first_name'],
+                    'middle_name' => $validated['middle_name'],
+                    'last_name' => $validated['last_name'],
+                    'suffix' => $validated['suffix'],
+                    'date_of_birth' => $validated['date_of_birth'],
+                    'phone_number' => $validated['phone_number'],
+                    'address' => $validated['address'],
+                    'barangay' => $validated['barangay'],
+                    'city' => $validated['city'],
+                    'province' => $validated['province'],
+                    'postal_code' => $validated['postal_code'],
+                    'is_verified' => false, // Default to unverified
+                ]);
             }
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return back()->withErrors($e->errors());
+            
+            DB::commit();
+
+            return redirect()->route('users')
+                ->with('success', 'User created successfully.');
+                
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()
+                ->with('error', 'Failed to create user. Please try again.')
+                ->withInput();
         }
     }
 
@@ -193,96 +165,80 @@ class UserController extends Controller
         ]);
     }
 
-    public function update(Request $request, User $user)
+    public function update(UserRequest $request, User $user)
     {
+        $validated = $request->validated();
+
+        // Combine names for the user table
+        $validated['name'] = trim(
+            $validated['first_name'] . ' ' . 
+            ($validated['middle_name'] ? $validated['middle_name'] . ' ' : '') . 
+            $validated['last_name']
+        );
+
+        DB::beginTransaction();
         try {
-            $validated = $request->validate([
-                'first_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\'-]+$/',
-                'middle_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s\'-]*$/',
-                'last_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\'-]+$/',
-                'suffix' => 'nullable|string|max:10',
-                'email' => 'required|email:rfc,dns|max:255|unique:users,email,' . $user->id,
-                'phone_number' => 'nullable|regex:/^[0-9+\-\s]{10,20}$/',
-                'role_id' => 'nullable|exists:roles,id',
-                // For citizens
-                'date_of_birth' => 'nullable|date|before:today',
-                'address' => 'nullable|string|max:500',
-                'barangay' => 'nullable|string|max:255',
-                'city' => 'nullable|string|max:255',
-                'province' => 'nullable|string|max:255',
-                'postal_code' => 'nullable|string|max:10',
-                'is_verified' => 'nullable|boolean',
-                // For officials
-                'office_address' => 'nullable|string|max:500',
-                'latitude' => 'nullable|numeric|between:-90,90',
-                'longitude' => 'nullable|numeric|between:-180,180',
+            // Update basic user info
+            $user->update([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'role_id' => $validated['role_id'] ?? $user->role_id,
             ]);
 
-            // Combine names for the user table
-            $validated['name'] = trim(
-                $validated['first_name'] . ' ' . 
-                ($validated['middle_name'] ? $validated['middle_name'] . ' ' : '') . 
-                $validated['last_name']
-            );
-
-            DB::beginTransaction();
-            try {
-                // Update basic user info
-                $user->update([
-                    'name' => $validated['name'],
-                    'email' => $validated['email'],
-                    'role_id' => $validated['role_id'] ?? $user->role_id,
-                ]);
-
-                // Update role-specific details
-                if ($user->role_id == 1 || $user->role_id == 2) {
-                    // Operator or Purok Leader - update OfficialsDetails
-                    $user->officialDetails()->updateOrCreate(
-                        ['user_id' => $user->id],
-                        [
-                            'first_name' => $validated['first_name'],
-                            'middle_name' => $validated['middle_name'],
-                            'last_name' => $validated['last_name'],
-                            'suffix' => $validated['suffix'],
-                            'contact_number' => $validated['phone_number'],
-                            'office_address' => $validated['office_address'],
-                            'latitude' => $validated['latitude'],
-                            'longitude' => $validated['longitude'],
-                        ]
-                    );
-                } elseif ($user->role_id == 3) {
-                    // Citizen - update CitizenDetails
-                    $user->citizenDetails()->updateOrCreate(
-                        ['user_id' => $user->id],
-                        [
-                            'first_name' => $validated['first_name'],
-                            'middle_name' => $validated['middle_name'],
-                            'last_name' => $validated['last_name'],
-                            'suffix' => $validated['suffix'],
-                            'date_of_birth' => $validated['date_of_birth'],
-                            'phone_number' => $validated['phone_number'],
-                            'address' => $validated['address'],
-                            'barangay' => $validated['barangay'],
-                            'city' => $validated['city'],
-                            'province' => $validated['province'],
-                            'postal_code' => $validated['postal_code'],
-                            'is_verified' => $validated['is_verified'] ?? false,
-                        ]
-                    );
-                }
-
-                DB::commit();
-
-                return redirect()->route('users')
-                    ->with('success', 'User updated successfully.');
-            } catch (\Exception $e) {
-                DB::rollBack();
-                return back()
-                    ->with('error', 'Failed to update user. Please try again.')
-                    ->withInput();
+            // Update role-specific details
+            if ($user->role_id == 1 || $user->role_id == 2) {
+                // Operator or Purok Leader - update OfficialsDetails
+                $assignedBrgy = $validated['assigned_brgy'] ?? $validated['barangay'] ?? null;
+            
+                $officialDetails = $user->officialDetails()->updateOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'first_name' => $validated['first_name'],
+                        'middle_name' => $validated['middle_name'],
+                        'last_name' => $validated['last_name'],
+                        'suffix' => $validated['suffix'],
+                        'contact_number' => $validated['phone_number'],
+                        'office_address' => $validated['office_address'],
+                        'assigned_brgy' => $assignedBrgy,
+                        'latitude' => $validated['latitude'],
+                        'longitude' => $validated['longitude'],
+                        'status' => strtolower($validated['status'] ?? 'active'),
+                    ]
+                );
+                
+               
+            } elseif ($user->role_id == 3) {
+                // Citizen - update CitizenDetails
+                $user->citizenDetails()->updateOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'first_name' => $validated['first_name'],
+                        'middle_name' => $validated['middle_name'],
+                        'last_name' => $validated['last_name'],
+                        'suffix' => $validated['suffix'],
+                        'date_of_birth' => $validated['date_of_birth'],
+                        'phone_number' => $validated['phone_number'],
+                        'address' => $validated['address'],
+                        'barangay' => $validated['barangay'],
+                        'city' => $validated['city'],
+                        'province' => $validated['province'],
+                        'postal_code' => $validated['postal_code'],
+                        'is_verified' => $validated['is_verified'] ?? false,
+                        'status' => strtolower($validated['status'] ?? 'active'),
+                    ]
+                );
             }
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return back()->withErrors($e->errors());
+
+            DB::commit();
+
+            return redirect()->route('users')
+                ->with('success', 'User updated successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+           
+            return back()
+                ->with('error', 'Failed to update user. Please try again.')
+                ->withInput();
         }
     }
 
@@ -291,10 +247,13 @@ class UserController extends Controller
         try {
             DB::beginTransaction();
             try {
-                // Archive user by updating status field if it exists, or use soft delete
-                if ($user->status !== null) {
-                    $user->update(['status' => 'Archived']);
+                // Archive user by updating status in the respective details table
+                if ($user->role_id == 1 || $user->role_id == 2) {
+                    $user->officialDetails()->update(['status' => 'archived']);
+                } elseif ($user->role_id == 3) {
+                    $user->citizenDetails()->update(['status' => 'archived']);
                 }
+            
                 DB::commit();
 
                 return redirect()->route('users')

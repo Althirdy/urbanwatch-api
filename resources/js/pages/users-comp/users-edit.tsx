@@ -48,6 +48,7 @@ type EditUserForm = {
     is_verified: boolean;
     // For officials
     office_address: string;
+    assigned_brgy: string;
     latitude: string;
     longitude: string;
 };
@@ -112,13 +113,17 @@ function EditUser({ user, roles, children }: EditUserProps) {
             // Citizen fields
             date_of_birth: user.citizen_details?.date_of_birth || '',
             address: user.citizen_details?.address || '',
-            barangay: user.citizen_details?.barangay || '',
+            barangay:
+                user.citizen_details?.barangay ||
+                user.official_details?.assigned_brgy ||
+                '',
             city: user.citizen_details?.city || '',
             province: user.citizen_details?.province || '',
             postal_code: user.citizen_details?.postal_code || '',
             is_verified: user.citizen_details?.is_verified || false,
             // Official fields
             office_address: user.official_details?.office_address || '',
+            assigned_brgy: user.official_details?.assigned_brgy || '',
             latitude: user.official_details?.latitude || '',
             longitude: user.official_details?.longitude || '',
         });
@@ -134,9 +139,7 @@ function EditUser({ user, roles, children }: EditUserProps) {
                 ) as HTMLButtonElement;
                 if (closeButton) closeButton.click();
             },
-            onError: (errors) => {
-                console.error('Validation errors:', errors);
-            },
+            onError: (errors) => {},
             preserveScroll: true,
         });
     };
@@ -367,22 +370,46 @@ function EditUser({ user, roles, children }: EditUserProps) {
                                             Assigned Barangay
                                         </Label>
                                         <div className="relative">
-                                            <Input
-                                                id="barangay"
+                                            <Select
                                                 value={data.barangay}
-                                                onChange={(e) =>
+                                                onValueChange={(value) => {
+                                                    setData('barangay', value);
                                                     setData(
-                                                        'barangay',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                placeholder="Enter assigned barangay"
-                                                className={
-                                                    errors.barangay
-                                                        ? 'border-red-500 focus:ring-red-500'
-                                                        : ''
-                                                }
-                                            />
+                                                        'assigned_brgy',
+                                                        value,
+                                                    );
+                                                }}
+                                            >
+                                                <SelectTrigger
+                                                    className={
+                                                        errors.barangay
+                                                            ? 'border-red-500 focus:ring-red-500'
+                                                            : ''
+                                                    }
+                                                >
+                                                    <SelectValue placeholder="Select barangay" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Barangay 176A">
+                                                        Barangay 176A
+                                                    </SelectItem>
+                                                    <SelectItem value="Barangay 176B">
+                                                        Barangay 176B
+                                                    </SelectItem>
+                                                    <SelectItem value="Barangay 176C">
+                                                        Barangay 176C
+                                                    </SelectItem>
+                                                    <SelectItem value="Barangay 176D">
+                                                        Barangay 176D
+                                                    </SelectItem>
+                                                    <SelectItem value="Barangay 176E">
+                                                        Barangay 176E
+                                                    </SelectItem>
+                                                    <SelectItem value="Barangay 176F">
+                                                        Barangay 176F
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                             {errors.barangay && (
                                                 <span className="absolute -bottom-5 left-0 text-xs text-red-500">
                                                     {errors.barangay}

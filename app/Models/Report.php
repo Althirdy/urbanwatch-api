@@ -46,21 +46,23 @@ class Report extends Model
     }
 
     /**
+     * Get the public post associated with this report.
+     */
+    public function publicPost(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(PublicPost::class);
+    }
+
+    /**
      * Get available report types.
      */
     public static function getReportTypes(): array
     {
         return [
-            'Crime',
-            'Accident',
-            'Fire',
-            'Flood',
-            'Infrastructure',
-            'Health Emergency',
-            'Environmental',
-            'Traffic',
-            'Utility',
-            'Other',
+            'CCTV',
+            'IOT Box',
+            'Citizen Concern',
+            
         ];
     }
 
@@ -70,10 +72,10 @@ class Report extends Model
     public static function getStatusOptions(): array
     {
         return [
-            'On going',
-            'Inactive',
+            'Pending',
+            'Ongoing',
+            'Resolved',
             'Archived',
-            'Acknowledged',
         ];
     }
 
@@ -93,7 +95,17 @@ class Report extends Model
         $this->update([
             'is_acknowledge' => true,
             'acknowledge_by' => $userId,
-            'status' => 'Acknowledged',
+            'status' => 'Ongoing',
+        ]);
+    }
+
+    /**
+     * Resolve the report.
+     */
+    public function resolve(): void
+    {
+        $this->update([
+            'status' => 'Resolved',
         ]);
     }
 
@@ -146,9 +158,9 @@ class Report extends Model
     public function getStatusClassAttribute(): string
     {
         return match ($this->status) {
-            'On going' => 'status-ongoing',
-            'Acknowledged' => 'status-acknowledged',
-            'Inactive' => 'status-inactive',
+            'Pending' => 'status-pending',
+            'Ongoing' => 'status-ongoing',
+            'Resolved' => 'status-resolved',
             'Archived' => 'status-archived',
             default => 'status-default',
         };

@@ -21,11 +21,10 @@ return new class extends Migration
             $table->string('longtitude');
             $table->boolean('is_acknowledge')->default(false);
             $table->foreignId('acknowledge_by')->nullable()->constrained('users')->onDelete('cascade');
-            $table->string('status')->default('On going');
+            $table->enum('status', ['Pending', 'Ongoing', 'Resolved', 'Archived'])->default('Pending');
             $table->timestamps();
             $table->softDeletes();
 
-            // Add indexes for better performance
             $table->index('report_type');
             $table->index('is_acknowledge');
             $table->index('status');

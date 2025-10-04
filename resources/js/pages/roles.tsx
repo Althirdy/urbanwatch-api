@@ -157,7 +157,7 @@ export default function Roles({ roles }: { roles: any }) {
                     </Popover>
                 </div>
 
-                <div className="mt-6 grid auto-rows-min gap-4 md:grid-cols-3">
+                <div className="mt-4 grid auto-rows-min gap-4 md:grid-cols-3">
                     {filtered_roles.length === 0 && (
                         <div className="py-8 text-center text-gray-500">
                             No roles found matching your selection.

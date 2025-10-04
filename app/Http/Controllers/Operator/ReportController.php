@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operator;
 
 use App\Http\Controllers\Controller;
+use App\Models\PublicPost;
 use App\Models\Report;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -71,7 +72,7 @@ class ReportController extends Controller
                 'latitute' => 'required|numeric|between:-90,90',
                 'longtitude' => 'required|numeric|between:-180,180',
                 'user_id' => 'nullable|exists:users,id',
-                'status' => 'nullable|string|in:On going,Inactive,Archived,Acknowledged',
+                'status' => 'nullable|string|in:Pending,Ongoing,Resolved,Archived',
             ]);
 
             // Set user_id to current user if not provided
@@ -81,7 +82,7 @@ class ReportController extends Controller
             
             // Set default status if not provided
             if (!isset($validated['status'])) {
-                $validated['status'] = 'On going';
+                $validated['status'] = 'Pending';
             }
             
             $validated['is_acknowledge'] = false;
@@ -140,12 +141,12 @@ class ReportController extends Controller
                 'user_id' => 'nullable|exists:users,id',
                 'is_acknowledge' => 'nullable|boolean',
                 'acknowledge_by' => 'nullable|exists:users,id',
-                'status' => 'nullable|string|in:On going,Inactive,Archived,Acknowledged',
+                'status' => 'nullable|string|in:Pending,Ongoing,Resolved,Archived',
             ]);
 
-            // Auto-set status to 'Acknowledged' if report is being acknowledged
+            // Auto-set status to 'Ongoing' if report is being acknowledged
             if (isset($validated['is_acknowledge']) && $validated['is_acknowledge'] === true) {
-                $validated['status'] = 'Acknowledged';
+                $validated['status'] = 'Ongoing';
             }
 
             DB::beginTransaction();
@@ -199,11 +200,21 @@ class ReportController extends Controller
             DB::beginTransaction();
             try {
                 $report->acknowledge(auth()->id());
-                $report->update(['status' => 'Acknowledged']);
+                
+                // Automatically create a public post for the acknowledged report if it doesn't exist
+                if (!$report->publicPost) {
+                    PublicPost::create([
+                        'report_id' => $report->id,
+                        'published_by' => auth()->id(),
+                        'published_at' => null, // Draft by default
+                    ]);
+                }
+                
                 DB::commit();
 
                 return redirect()->route('reports')
-                    ->with('success', 'Report acknowledged successfully.');
+                    ->with('success', 'Report acknowledged and added to public posts.')
+                    ->with('refresh', true);
             } catch (\Exception $e) {
                 DB::rollBack();
                 return back()
@@ -212,6 +223,35 @@ class ReportController extends Controller
         } catch (\Exception $e) {
             return back()
                 ->with('error', 'Failed to acknowledge report. Please try again.');
+        }
+    }
+
+    public function resolve(Report $report)
+    {
+        try {
+            if ($report->status === 'Resolved') {
+                return back()->with('error', 'Report is already resolved.');
+            }
+
+            if ($report->status !== 'Ongoing') {
+                return back()->with('error', 'Only ongoing reports can be resolved.');
+            }
+
+            DB::beginTransaction();
+            try {
+                $report->resolve();
+                DB::commit();
+
+                return redirect()->route('reports')
+                    ->with('success', 'Report resolved successfully.');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return back()
+                    ->with('error', 'Failed to resolve report. Please try again.');
+            }
+        } catch (\Exception $e) {
+            return back()
+                ->with('error', 'Failed to resolve report. Please try again.');
         }
     }
 

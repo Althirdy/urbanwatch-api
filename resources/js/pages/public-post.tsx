@@ -1,46 +1,46 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
-import { users } from '@/routes';
+import { publicPosts } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
+import { PublicPost_T } from '@/types/public-post-types';
 import { Head } from '@inertiajs/react';
 import { List, Table } from 'lucide-react';
 import { useState } from 'react';
 
-import { roles_T } from '@/types/role-types';
-import { PaginatedUsers, users_T } from '@/types/user-types';
-import CreateUsers from './users-comp/users-create';
-import UserCard from './users-comp/users-card';
-import UserTable from './users-comp/users-table';
-import UserActionTab from './users-comp/users-tab';
+import PublicPostCard from './public-post-comp/public-post-card';
+import PublicPostTab from './public-post-comp/public-post-tab';
+import PublicPostsTable from './public-post-comp/public-post-table';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'User Management',
-        href: users().url,
+        title: 'Public Posts',
+        href: publicPosts().url,
     },
 ];
 
-export default function Users({
-    users,
-    roles,
-}: {
-    users: PaginatedUsers;
-    roles: roles_T[];
-}) {
-    const [filtered_users, setFilteredUsers] = useState<users_T[]>(users.data);
+interface PublicPostPageProps {
+    data: {
+        data: PublicPost_T[];
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+    };
+}
+
+export default function PublicPost({ data }: PublicPostPageProps) {
+    const posts = data?.data || [];
+    const [filteredPosts, setFilteredPosts] = useState<PublicPost_T[]>(posts);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Users" />
+            <Head title="Public Posts" />
             <div className="space-y-4 p-4">
-                <CreateUsers roles={roles} />
-
                 <Tabs defaultValue="table" className="w-full space-y-2">
                     <div className="flex flex-row gap-4">
-                        <UserActionTab
-                            users={users}
-                            roles={roles}
-                            setFilteredUsers={setFilteredUsers}
+                        <PublicPostTab
+                            posts={posts}
+                            setFilteredPosts={setFilteredPosts}
                         />
                         <TabsList className="h-12 w-24">
                             <TabsTrigger
@@ -59,10 +59,10 @@ export default function Users({
                     </div>
 
                     <TabsContent value="table" className="w-full">
-                        <UserTable users={filtered_users} roles={roles} />
+                        <PublicPostsTable posts={filteredPosts} />
                     </TabsContent>
                     <TabsContent value="card" className="w-full">
-                        <UserCard users={filtered_users} roles={roles} />
+                        <PublicPostCard posts={filteredPosts} />
                     </TabsContent>
                 </Tabs>
             </div>

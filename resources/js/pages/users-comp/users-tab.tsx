@@ -53,7 +53,11 @@ const UserActionTab = ({
         setSearchableRoles(roles);
 
         const barangays = users.data
-            .map((user: users_T) => user.citizen_details?.barangay)
+            .map(
+                (user: users_T) =>
+                    user.citizen_details?.barangay ||
+                    user.official_details?.assigned_brgy,
+            )
             .filter((barangay): barangay is string => Boolean(barangay))
             .filter(
                 (value: string, index: number, self: string[]) =>
@@ -84,7 +88,8 @@ const UserActionTab = ({
         if (barangayValue) {
             filteredResults = filteredResults.filter(
                 (user: users_T) =>
-                    user.citizen_details?.barangay === barangayValue,
+                    user.citizen_details?.barangay === barangayValue ||
+                    user.official_details?.assigned_brgy === barangayValue,
             );
         }
 

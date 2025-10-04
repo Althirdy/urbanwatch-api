@@ -15,40 +15,39 @@ import {
 } from '@/components/ui/tooltip';
 import { Archive, ExternalLink as Open, SquarePen } from 'lucide-react';
 
-import { formatDateTime } from '@/lib/utils';
-import { reports_T } from '@/types/report-types';
-import ArchiveReport from './reports-archive';
-import EditReport from './reports-edit';
-import ViewReportDetails from './reports-view';
+import { roles_T } from '@/types/role-types';
+import { users_T } from '@/types/user-types';
+import ArchiveUser from './users-archive';
+import EditUser from './users-edit';
+import ViewUser from './users-view';
 
-type ReportsTableProps = {
-    reports: reports_T[];
-    reportTypes: string[];
-};
-
-const ReportsTable = ({ reports, reportTypes }: ReportsTableProps) => {
+const UserTable = ({
+    users,
+    roles,
+}: {
+    users: users_T[];
+    roles: roles_T[];
+}) => {
     return (
         <div className="overflow-hidden rounded-[var(--radius)] bg-[var(--sidebar)]">
             <Table className="m-0 border">
                 <TableCaption className="m-0 border-t py-4">
-                    Showing {reports.length} Reports
+                    Showing {users.length} Users
                 </TableCaption>
                 <TableHeader>
                     <TableRow>
                         <TableHead className="border-r py-4 text-center font-semibold">
-                            Report ID
+                            User ID
                         </TableHead>
                         <TableHead className="border-r py-4 text-center font-semibold">
-                            Report Type
+                            Name
+                        </TableHead>
+
+                        <TableHead className="border-r py-4 text-center font-semibold">
+                            Role
                         </TableHead>
                         <TableHead className="border-r py-4 text-center font-semibold">
-                            Report
-                        </TableHead>
-                        <TableHead className="border-r py-4 text-center font-semibold">
-                            Location
-                        </TableHead>
-                        <TableHead className="border-r py-4 text-center font-semibold">
-                            Date and Time
+                            Assigned Barangay
                         </TableHead>
                         <TableHead className="border-r py-4 text-center font-semibold">
                             Status
@@ -59,31 +58,34 @@ const ReportsTable = ({ reports, reportTypes }: ReportsTableProps) => {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {reports.map((report) => (
+                    {users.map((user) => (
                         <TableRow
-                            key={report.id}
+                            key={user.id}
                             className="text-center text-muted-foreground"
                         >
-                            <TableCell className="py-3">#{report.id}</TableCell>
+                            <TableCell className="py-3">#{user.id}</TableCell>
+                            <TableCell className="py-3">{user.name}</TableCell>
+
                             <TableCell className="py-3">
-                                {report.report_type}
+                                {user.role ? user.role.name : 'N/A'}
+                            </TableCell>
+
+                            <TableCell className="py-3">
+                                {user.citizen_details?.barangay ||
+                                    user.official_details?.assigned_brgy ||
+                                    'N/A'}
                             </TableCell>
                             <TableCell className="py-3">
-                                {report.transcript}
-                            </TableCell>
-                            <TableCell className="py-3">
-                                {report.latitute}, {report.longtitude}
-                            </TableCell>
-                            <TableCell className="py-3">
-                                {formatDateTime(report.created_at)}
-                            </TableCell>
-                            <TableCell className="py-3">
-                                {report.status.toLocaleUpperCase()}
+                                {(
+                                    user.citizen_details?.status ||
+                                    user.official_details?.status ||
+                                    'ACTIVE'
+                                ).toLocaleUpperCase()}
                             </TableCell>
                             <TableCell className="py-3">
                                 <div className="flex justify-center gap-2">
                                     <Tooltip>
-                                        <ViewReportDetails report={report}>
+                                        <ViewUser user={user}>
                                             <TooltipTrigger asChild>
                                                 <Button
                                                     variant="outline"
@@ -93,16 +95,13 @@ const ReportsTable = ({ reports, reportTypes }: ReportsTableProps) => {
                                                     <Open className="h-4 w-4" />
                                                 </Button>
                                             </TooltipTrigger>
-                                        </ViewReportDetails>
+                                        </ViewUser>
                                         <TooltipContent>
                                             <p>View Details</p>
                                         </TooltipContent>
                                     </Tooltip>
                                     <Tooltip>
-                                        <EditReport
-                                            report={report}
-                                            reportTypes={reportTypes}
-                                        >
+                                        <EditUser user={user} roles={roles}>
                                             <TooltipTrigger asChild>
                                                 <Button
                                                     variant="outline"
@@ -112,15 +111,14 @@ const ReportsTable = ({ reports, reportTypes }: ReportsTableProps) => {
                                                     <SquarePen className="h-4 w-4" />
                                                 </Button>
                                             </TooltipTrigger>
-                                        </EditReport>
-
+                                        </EditUser>
                                         <TooltipContent>
-                                            <p>Edit Report</p>
+                                            <p>Edit User</p>
                                         </TooltipContent>
                                     </Tooltip>
 
                                     <Tooltip>
-                                        <ArchiveReport report={report}>
+                                        <ArchiveUser user={user}>
                                             <TooltipTrigger asChild>
                                                 <Button
                                                     variant="outline"
@@ -130,10 +128,9 @@ const ReportsTable = ({ reports, reportTypes }: ReportsTableProps) => {
                                                     <Archive className="h-4 w-4 text-[var(--destructive)]" />
                                                 </Button>
                                             </TooltipTrigger>
-                                        </ArchiveReport>
-
+                                        </ArchiveUser>
                                         <TooltipContent>
-                                            <p>Archive Report</p>
+                                            <p>Archive User</p>
                                         </TooltipContent>
                                     </Tooltip>
                                 </div>
@@ -146,4 +143,4 @@ const ReportsTable = ({ reports, reportTypes }: ReportsTableProps) => {
     );
 };
 
-export default ReportsTable;
+export default UserTable;

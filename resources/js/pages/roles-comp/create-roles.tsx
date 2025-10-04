@@ -41,7 +41,7 @@ function CreateRoles() {
         <Sheet>
             <SheetTrigger asChild>
                 <Button>
-                    <Plus className="mr-1 h-4 w-4" /> Add Role
+                    <Plus /> Add Role
                 </Button>
             </SheetTrigger>
             <SheetContent>

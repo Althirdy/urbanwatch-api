@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -14,46 +15,55 @@ import {
 } from '@/components/ui/tooltip';
 import { Archive, ExternalLink as Open, SquarePen } from 'lucide-react';
 
-import { roles_T } from '@/types/role-types';
-import { users_T } from '@/types/user-types';
-import ArchiveUser from './archive-user';
-import EditUser from './edit-users';
-import ViewUser from './view-user';
+import { reports_T } from '@/types/report-types';
+import ArchiveReport from './reports-archive';
+import EditReport from './reports-edit';
+import ViewReportDetails from './reports-view';
 
-const UserCard = ({ users, roles }: { users: users_T[]; roles: roles_T[] }) => {
+type ReportsCardProps = {
+    reports: reports_T[];
+    reportTypes: string[];
+};
+
+const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
     return (
         <div className="grid auto-rows-min gap-4 md:grid-cols-4">
-            {users.length === 0 && (
+            {reports.length === 0 && (
                 <div className="py-8 text-center text-gray-500">
-                    No users found matching your selection.
+                    No reports found matching your selection.
                 </div>
             )}
 
             {/* Use filtered_roles for displaying cards */}
-            {users.map((user) => (
+            {reports.map((report) => (
                 <Card
-                    key={user.id}
+                    key={report.id}
                     className="relative overflow-hidden rounded-[var(--radius)] border border-sidebar-border/70 dark:border-sidebar-border"
                 >
                     <CardHeader>
-                        <CardTitle>{user.name}</CardTitle>
-                        <CardDescription>{user.email}</CardDescription>
+                        <CardTitle>
+                            {' '}
+                            <span>Report ID: #{report.id}</span>
+                        </CardTitle>
+                        <CardDescription>
+                            {' '}
+                            <Badge variant="default" className="text-sm">
+                                {report.status}
+                            </Badge>
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex flex-col gap-2">
-                            <p className="text-sm font-medium text-[var(--gray)]">
-                                Role & Location
-                            </p>
-                            <p className="text-sm font-medium text-muted-foreground">
-                                {user.role ? user.role.name : 'N/A'} at{' '}
-                                {user.citizen_details?.barangay || 'N/A'}
+                        <div className="flex flex-col">
+                            <p className="text-md">Incident Description</p>
+                            <p className="text-md text-muted-foreground">
+                                {report.description}
                             </p>
                         </div>
                     </CardContent>
                     <CardFooter>
                         <div className="flex w-full justify-end gap-2">
                             <Tooltip>
-                                <ViewUser user={user}>
+                                <ViewReportDetails report={report}>
                                     <TooltipTrigger asChild>
                                         <Button
                                             variant="outline"
@@ -63,13 +73,16 @@ const UserCard = ({ users, roles }: { users: users_T[]; roles: roles_T[] }) => {
                                             <Open className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
-                                </ViewUser>
+                                </ViewReportDetails>
                                 <TooltipContent>
                                     <p>View Details</p>
                                 </TooltipContent>
                             </Tooltip>
                             <Tooltip>
-                                <EditUser user={user} roles={roles}>
+                                <EditReport
+                                    report={report}
+                                    reportTypes={reportTypes}
+                                >
                                     <TooltipTrigger asChild>
                                         <Button
                                             variant="outline"
@@ -79,14 +92,14 @@ const UserCard = ({ users, roles }: { users: users_T[]; roles: roles_T[] }) => {
                                             <SquarePen className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
-                                </EditUser>
+                                </EditReport>
                                 <TooltipContent>
                                     <p>Edit User</p>
                                 </TooltipContent>
                             </Tooltip>
 
                             <Tooltip>
-                                <ArchiveUser user={user}>
+                                <ArchiveReport report={report}>
                                     <TooltipTrigger asChild>
                                         <Button
                                             variant="outline"
@@ -96,7 +109,7 @@ const UserCard = ({ users, roles }: { users: users_T[]; roles: roles_T[] }) => {
                                             <Archive className="h-4 w-4 text-[var(--destructive)]" />
                                         </Button>
                                     </TooltipTrigger>
-                                </ArchiveUser>
+                                </ArchiveReport>
                                 <TooltipContent>
                                     <p>Archive User</p>
                                 </TooltipContent>
@@ -109,4 +122,4 @@ const UserCard = ({ users, roles }: { users: users_T[]; roles: roles_T[] }) => {
     );
 };
 
-export default UserCard;
+export default ReportsCard;

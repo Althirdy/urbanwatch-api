@@ -13,12 +13,25 @@ import { router } from '@inertiajs/react';
 import { Check, Clock, LocateFixed, ExternalLink as Open } from 'lucide-react';
 
 import { reports_T } from '@/types/report-types';
-import ViewReportDetails from './view-report-details';
+import ViewReportDetails from './reports-view';
 
 const OngoingReport = ({ report }: { report: reports_T }) => {
     const handleAcknowledge = () => {
         router.patch(
             `/report/${report.id}/acknowledge`,
+            {},
+            {
+                preserveScroll: false,
+                onSuccess: () => {
+                    router.reload();
+                },
+            },
+        );
+    };
+
+    const handleResolve = () => {
+        router.patch(
+            `/report/${report.id}/resolve`,
             {},
             {
                 preserveScroll: true,
@@ -75,16 +88,29 @@ const OngoingReport = ({ report }: { report: reports_T }) => {
                         View Details
                     </Button>
                 </ViewReportDetails>
-                <Button
-                    variant="default"
-                    size="sm"
-                    className="w-1/4 cursor-pointer"
-                    onClick={handleAcknowledge}
-                    disabled={report.is_acknowledge}
-                >
-                    <Check className="mr-1 inline h-4 w-4" />
-                    {report.is_acknowledge ? 'Acknowledged' : 'Acknowledge'}
-                </Button>
+                {report.status === 'Pending' && (
+                    <Button
+                        variant="default"
+                        size="sm"
+                        className="w-1/4 cursor-pointer"
+                        onClick={handleAcknowledge}
+                        disabled={report.is_acknowledge}
+                    >
+                        <Check className="mr-1 inline h-4 w-4" />
+                        {report.is_acknowledge ? 'Acknowledged' : 'Acknowledge'}
+                    </Button>
+                )}
+                {report.status === 'Ongoing' && (
+                    <Button
+                        variant="default"
+                        size="sm"
+                        className="w-1/4 cursor-pointer bg-green-600 hover:bg-green-700"
+                        onClick={handleResolve}
+                    >
+                        <Check className="mr-1 inline h-4 w-4" />
+                        Resolve
+                    </Button>
+                )}
             </CardFooter>
         </Card>
     );

@@ -17,11 +17,15 @@ return new class extends Migration
             $table->string('first_name');
             $table->string('middle_name')->nullable();
             $table->string('last_name');
+
             $table->string('suffix')->nullable();
             $table->string('contact_number');
             $table->string('office_address');
+            $table->string('assigned_brgy');
+
             $table->string('latitude')->nullable();
             $table->string('longitude')->nullable();
+            $table->enum('status', ['active', 'inactive', 'archived'])->default('active');
             $table->timestamps();
         });
     }

@@ -1,12 +1,15 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
 import { reports as reportRoutes } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
+import { List, Table } from 'lucide-react';
 import { useState } from 'react';
 
 import { reports_T, ReportsProps } from '@/types/report-types';
-import OngoingReport from './reports-comp/ongoing-report';
-import ReportActionTab from './reports-comp/report-tab';
+import ReportsCard from './reports-comp/reports-card';
+import OngoingReport from './reports-comp/reports-ongoing';
+import ReportActionTab from './reports-comp/reports-tab';
 import ReportsTable from './reports-comp/reports-table';
 
 const Reports = ({ reports, reportTypes, statusOptions }: ReportsProps) => {
@@ -46,16 +49,44 @@ const Reports = ({ reports, reportTypes, statusOptions }: ReportsProps) => {
                             ))}
                     </div>
                 </div>
-                <ReportActionTab
-                    reports={reports}
-                    reportTypes={reportTypes}
-                    statusOptions={statusOptions}
-                    setFilteredReports={setFilteredReports}
-                />
-                <ReportsTable
-                    reports={filteredReports}
-                    reportTypes={reportTypes}
-                />
+
+                <Tabs defaultValue="table" className="w-full space-y-2">
+                    <div className="flex flex-row gap-4">
+                        <ReportActionTab
+                            reports={reports}
+                            reportTypes={reportTypes}
+                            statusOptions={statusOptions}
+                            setFilteredReports={setFilteredReports}
+                        />
+                        <TabsList className="h-12 w-24">
+                            <TabsTrigger
+                                value="table"
+                                className="cursor-pointer"
+                            >
+                                <List className="h-8 w-8" />
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="card"
+                                className="cursor-pointer"
+                            >
+                                <Table className="h-4 w-4" />
+                            </TabsTrigger>
+                        </TabsList>
+                    </div>
+
+                    <TabsContent value="table" className="w-full">
+                        <ReportsTable
+                            reports={filteredReports}
+                            reportTypes={reportTypes}
+                        />
+                    </TabsContent>
+                    <TabsContent value="card" className="w-full">
+                        <ReportsCard
+                            reports={filteredReports}
+                            reportTypes={reportTypes}
+                        />
+                    </TabsContent>
+                </Tabs>
             </div>
         </AppLayout>
     );
