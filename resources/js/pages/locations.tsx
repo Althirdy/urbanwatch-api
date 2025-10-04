@@ -1,11 +1,10 @@
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import AppLayout from '@/layouts/app-layout';
-import { dashboard, locations } from '@/routes';
+import { locations } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
+import { paginated_T } from '../types/cctv-location-types';
 import CreateLocation from './locations-comp/createLocation';
 import LocationCardView from './locations-comp/locationCardList';
-import { paginated_T } from './type';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -17,24 +16,23 @@ const breadcrumbs: BreadcrumbItem[] = [
 export type LocationCategory_T = {
     id: number;
     name: string;
-}
+};
 
 export type location_T = {
-    id: number,
-    location_name: string,
-    location_category?: LocationCategory_T
-    landmark: string,
-    barangay: string,
-    category: string,
-    category_name?: string,
-    longitude: string,
-    latitude: string,
-    description?: string,
-    cctv_count?: number,
-}
+    id: number;
+    location_name: string;
+    location_category?: LocationCategory_T;
+    landmark: string;
+    barangay: string;
+    category: string;
+    category_name?: string;
+    longitude: string;
+    latitude: string;
+    description?: string;
+    cctv_count?: number;
+};
 
-
-type location_paginated_T = paginated_T<location_T>
+type location_paginated_T = paginated_T<location_T>;
 
 const locationCategory: LocationCategory_T[] = [
     { id: 1, name: 'School' },
@@ -42,20 +40,32 @@ const locationCategory: LocationCategory_T[] = [
     { id: 3, name: 'Market' },
     { id: 4, name: 'Park' },
     { id: 5, name: 'Government Office' },
-]
+];
 
-
-
-
-export default function Locations({ locationCategories = [], locations }: { locationCategories?: LocationCategory_T[], locations?: location_paginated_T }) {
+export default function Locations({
+    locationCategories = [],
+    locations,
+}: {
+    locationCategories?: LocationCategory_T[];
+    locations?: location_paginated_T;
+}) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Locations" />
-            <div className="p-4 space-y-4">
+            <div className="space-y-4 p-4">
                 <div className="flex">
-                    <CreateLocation locationCategory={locationCategories.length > 0 ? locationCategories : locationCategory} />
+                    <CreateLocation
+                        locationCategory={
+                            locationCategories.length > 0
+                                ? locationCategories
+                                : locationCategory
+                        }
+                    />
                 </div>
-                <LocationCardView location={locations} locationCategory={locationCategories} />
+                <LocationCardView
+                    location={locations}
+                    locationCategory={locationCategories}
+                />
             </div>
         </AppLayout>
     );

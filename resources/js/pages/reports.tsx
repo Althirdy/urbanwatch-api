@@ -8,11 +8,16 @@ import { useState } from 'react';
 
 import { reports_T, ReportsProps } from '@/types/report-types';
 import ReportsCard from './reports-comp/reports-card';
-import OngoingReport from './reports-comp/reports-ongoing';
+import ReportsCarousel from './reports-comp/reports-carousel';
 import ReportActionTab from './reports-comp/reports-tab';
 import ReportsTable from './reports-comp/reports-table';
 
-const Reports = ({ reports, reportTypes, statusOptions }: ReportsProps) => {
+const Reports = ({
+    reports,
+    reportTypes,
+    statusOptions,
+    pendingReports,
+}: ReportsProps) => {
     const [filteredReports, setFilteredReports] = useState<reports_T[]>(
         reports.data,
     );
@@ -31,23 +36,14 @@ const Reports = ({ reports, reportTypes, statusOptions }: ReportsProps) => {
                 <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1">
                         <h1 className="text-md font-semibold">
-                            Ongoing Reports
+                            Pending Reports
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Active ongoing incidents requiring immediate
+                            Unacknowledged pending incidents requiring immediate
                             attention.
                         </p>
                     </div>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {reports.data
-                            .filter((report) => !report.is_acknowledge)
-                            .map((report) => (
-                                <OngoingReport
-                                    key={report.id}
-                                    report={report}
-                                />
-                            ))}
-                    </div>
+                    <ReportsCarousel reports={pendingReports || []} />
                 </div>
 
                 <Tabs defaultValue="table" className="w-full space-y-2">

@@ -8,6 +8,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+
 import { formatRelativeTime } from '@/lib/utils';
 import { router } from '@inertiajs/react';
 import { Check, Clock, LocateFixed, ExternalLink as Open } from 'lucide-react';
@@ -84,7 +85,7 @@ const OngoingReport = ({ report }: { report: reports_T }) => {
                         size="sm"
                         className="w-1/4 cursor-pointer"
                     >
-                        <Open className="mr-1 inline h-4 w-4" />
+                        <Open className="inline h-4 w-4" />
                         View Details
                     </Button>
                 </ViewReportDetails>
@@ -96,7 +97,7 @@ const OngoingReport = ({ report }: { report: reports_T }) => {
                         onClick={handleAcknowledge}
                         disabled={report.is_acknowledge}
                     >
-                        <Check className="mr-1 inline h-4 w-4" />
+                        <Check className="inline h-4 w-4" />
                         {report.is_acknowledge ? 'Acknowledged' : 'Acknowledge'}
                     </Button>
                 )}

@@ -37,21 +37,26 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Users',
-        href: users(),
-        icon: User,
+        title: 'Reports',
+        href: reports(),
+        icon: File,
     },
-
     {
         title: 'Public Posts',
         href: publicPosts(),
         icon: FlagTriangleRight,
     },
     {
-        title: 'Reports',
-        href: reports(),
-        icon: File,
+        title: 'Users',
+        href: users(),
+        icon: User,
     },
+    {
+        title: 'Contacts',
+        href: '/contacts',
+        icon: Users,
+    },
+
     {
         title: 'Locations',
         href: locations(),
@@ -61,11 +66,6 @@ const mainNavItems: NavItem[] = [
         title: 'Devices',
         href: devices().url,
         icon: Folder,
-    },
-    {
-        title: 'Contacts',
-        href: '/contacts',
-        icon: Users,
     },
 ];
 

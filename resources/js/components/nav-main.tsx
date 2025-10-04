@@ -24,6 +24,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                                     : item.href.url,
                             )}
                             tooltip={{ children: item.title }}
+                            className="hover h-10 rounded-[var(--radius)] px-4 transition-all duration-300 ease-in-out"
                         >
                             <Link href={item.href} prefetch>
                                 {item.icon && <item.icon />}

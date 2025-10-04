@@ -15,7 +15,9 @@ class ReportController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Report::with(['user', 'acknowledgedBy']);
+        // Only show acknowledged reports in the table
+        $query = Report::with(['user', 'acknowledgedBy'])
+                      ->where('is_acknowledge', true);
 
         // Search functionality
         if ($request->has('search') && $request->search) {
@@ -34,18 +36,26 @@ class ReportController extends Controller
             $query->where('report_type', $request->report_type);
         }
 
-        // Filter by acknowledgment status
-        if ($request->has('acknowledged') && $request->acknowledged !== '') {
-            $query->where('is_acknowledge', $request->acknowledged === 'true');
+        // Filter by status (Ongoing or Resolved)
+        if ($request->has('status') && $request->status) {
+            $query->where('status', $request->status);
         }
 
         $reports = $query->orderBy('created_at', 'desc')
                         ->paginate(10)
                         ->withQueryString();
 
+        // Get pending unacknowledged reports for the carousel
+        $pendingReports = Report::with(['user', 'acknowledgedBy'])
+                               ->where('status', 'Pending')
+                               ->where('is_acknowledge', false)
+                               ->orderBy('created_at', 'desc')
+                               ->get();
+
         return Inertia::render('reports', [
             'reports' => $reports,
-            'filters' => $request->only(['search', 'report_type', 'acknowledged']),
+            'pendingReports' => $pendingReports,
+            'filters' => $request->only(['search', 'report_type', 'status']),
             'reportTypes' => Report::getReportTypes(),
             'statusOptions' => Report::getStatusOptions(),
         ]);

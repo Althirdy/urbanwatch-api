@@ -43,7 +43,7 @@ function PublicPostsTable({ posts }: { posts: PublicPost_T[] }) {
                 <TableCaption className="m-0 border-t py-4">
                     Showing {posts.length} Public Posts
                 </TableCaption>
-                <TableHeader>
+                <TableHeader className="bg-muted/50">
                     <TableRow>
                         <TableHead className="border-r py-4 text-center font-semibold">
                             Post ID

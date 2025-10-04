@@ -23,6 +23,7 @@ export type ReportsProps = {
         links: any[];
         meta: any;
     };
+    pendingReports?: reports_T[];
     filters: {
         search?: string;
         report_type?: string;

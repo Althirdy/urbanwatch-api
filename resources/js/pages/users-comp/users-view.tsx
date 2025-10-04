@@ -63,6 +63,15 @@ function ViewUser({ user, children }: ViewUserProps) {
         return 'N/A';
     };
 
+    const getUserBarangay = (user: users_T) => {
+        if (user.official_details) {
+            return user.official_details.assigned_brgy || 'N/A';
+        } else if (user.citizen_details) {
+            return user.citizen_details.barangay || 'N/A';
+        }
+        return 'N/A';
+    };
+
     return (
         <Sheet>
             <SheetTrigger asChild>{children}</SheetTrigger>
@@ -161,10 +170,7 @@ function ViewUser({ user, children }: ViewUserProps) {
                                         <Input
                                             id="contact"
                                             type="tel"
-                                            value={
-                                                user.citizen_details
-                                                    ?.barangay || 'N/A'
-                                            }
+                                            value={getUserBarangay(user)}
                                             readOnly
                                             tabIndex={-1}
                                             placeholder="Enter contact number"

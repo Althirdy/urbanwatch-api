@@ -33,7 +33,7 @@ const ReportsTable = ({ reports, reportTypes }: ReportsTableProps) => {
                 <TableCaption className="m-0 border-t py-4">
                     Showing {reports.length} Reports
                 </TableCaption>
-                <TableHeader>
+                <TableHeader className="bg-muted/50">
                     <TableRow>
                         <TableHead className="border-r py-4 text-center font-semibold">
                             Report ID
