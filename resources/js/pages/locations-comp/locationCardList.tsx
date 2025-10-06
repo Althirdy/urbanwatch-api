@@ -31,13 +31,10 @@ function LocationCardView({ location, locationCategory = [] }: { location?: pagi
                                 <div>
                                     <h3 className="font-semibold">{loc.location_name}</h3>
                                     <p className="text-sm text-muted-foreground">{loc.landmark}</p>
-                                    <p className="text-sm text-muted-foreground flex items-center gap-2">
-                                        <Cctv size={18} />
-                                        <span>{loc.cctv_count} Camera</span>
-                                    </p>
+                                    <p className="text-sm text-muted-foreground">{loc.barangay}</p>
                                 </div>
                                 <span className="font-medium text-muted-foreground text-sm rounded">
-                                    {loc.location_category?.name}
+                                    {loc.category_name}
                                 </span>
                             </div>
                         </CardHeader>
