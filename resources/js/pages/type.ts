@@ -27,6 +27,20 @@ export type cctv_T = {
     fps: number,
 }
 
+export type uwDevice_T = {
+    id: number,
+    device_name: string,
+    status: 'active' | 'inactive' | 'maintenance',
+    location?: location_T | null,
+    location_id?: number | null,
+    cctv_id?: number | null,
+    cctv_cameras?: any[], // Array of linked CCTV devices
+    // Custom location fields
+    custom_address?: string | null,
+    latitude?: number | null,
+    longitude?: number | null,
+}
+
 export type location_T = {
     id: number,
     location_name: string,

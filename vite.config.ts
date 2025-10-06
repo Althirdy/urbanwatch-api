@@ -1,4 +1,4 @@
-import { wayfinder } from '@laravel/vite-plugin-wayfinder';
+// import { wayfinder } from '@laravel/vite-plugin-wayfinder';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
@@ -16,9 +16,10 @@ export default defineConfig({
         }),
         react(),
         tailwindcss(),
-        wayfinder({
-            formVariants: true,
-        }),
+        // Temporarily commented out wayfinder plugin due to build issues
+        // wayfinder({
+        //     formVariants: true,
+        // }),
     ],
     server: {
         // Respond to all network requests

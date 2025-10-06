@@ -21,8 +21,10 @@ import {
 } from "@/components/ui/tabs"
 import { Button } from '@/components/ui/button';
 import AddCCTVDevice from './cctv-comp/createCCTV';
-import { cctv_T, location_T, paginated_T } from './type';
+import { cctv_T, location_T, paginated_T, uwDevice_T } from './type';
 import CCTVDisplay from './cctv-comp/cctvDisplay';
+import AddUWDevice from './uwdevice-comp/createDevice';
+import UWDeviceDisplay from './uwdevice-comp/deviceDisplay';
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -33,9 +35,14 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 type Device_T = paginated_T<cctv_T>
+type UWDevice_T = paginated_T<uwDevice_T>
 
 
-export default function Devices({ devices, locations }: { devices: Device_T, locations: location_T[] }) {
+export default function Devices({ devices, uwDevices, locations }: { 
+    devices: Device_T, 
+    uwDevices: UWDevice_T,
+    locations: location_T[] 
+}) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -50,7 +57,9 @@ export default function Devices({ devices, locations }: { devices: Device_T, loc
                         <AddCCTVDevice location={locations} />
                         <CCTVDisplay devices={devices} locations={locations} />
                     </TabsContent>
-                    <TabsContent value="uwDevice">
+                    <TabsContent value="uwDevice" className="space-y-6">
+                        <AddUWDevice location={locations} cctvDevices={devices.data} />
+                        <UWDeviceDisplay devices={uwDevices} locations={locations} cctvDevices={devices.data} />
                     </TabsContent>
                 </Tabs>
             </div>
