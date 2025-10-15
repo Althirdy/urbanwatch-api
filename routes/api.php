@@ -19,3 +19,6 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('health', function () {
     return response()->json(['status' => 'OK'], 200);
 });
+
+
+require __DIR__ . '/Citizen/ConcernManagement.php';
