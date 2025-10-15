@@ -79,4 +79,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Report::class, 'acknowledge_by');
     }
+
+    public function citizenConcerns()
+    {
+        return $this->hasMany(\App\Models\Citizen\Concern::class, 'citizen_id');
+    }
 }
