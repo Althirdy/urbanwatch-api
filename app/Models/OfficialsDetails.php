@@ -16,6 +16,7 @@ class OfficialsDetails extends Model
         'suffix',
         'contact_number',
         'office_address',
+        'assigned_brgy',
         'latitude',
         'longitude',
     ];

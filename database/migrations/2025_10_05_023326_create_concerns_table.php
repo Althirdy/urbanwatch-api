@@ -1,0 +1,37 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('concerns', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('citizen_id')->constrained('users')->onDelete('cascade');
+            $table->enum('type', ['manual', 'voice']);
+            $table->string('title', 100);
+            $table->text('description');
+            $table->enum('category', ['accident', 'fire', 'flood', 'crime', 'other']);
+            $table->enum('status', ['pending', 'ongoing', 'escalated', 'resolved'])->default('pending');
+            $table->text('transcript_text')->nullable();
+            $table->decimal('longitude', 10, 7)->nullable();
+            $table->decimal('latitude', 10, 7)->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('concerns');
+    }
+};

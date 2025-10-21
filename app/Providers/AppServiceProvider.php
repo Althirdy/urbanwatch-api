@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\LocationService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,7 +12,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Register services
+        $this->app->scoped(LocationService::class);
     }
 
     /**
