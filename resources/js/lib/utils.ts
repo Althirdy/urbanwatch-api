@@ -76,3 +76,4 @@ export function formatDateTime(dateString: string): string {
 
     return `${month}/${day}/${year} at ${hours}:${minutes}${ampm}`;
 }
+

@@ -12,6 +12,10 @@ import {
     SheetTrigger,
 } from '@/components/ui/sheet';
 import { formatDateTime } from '@/lib/utils';
+import {
+    getStatusInfo,
+    renderDetailItems,
+} from '@/pages/reports-comp/reports-view';
 import { PublicPost_T } from '@/types/public-post-types';
 import { router } from '@inertiajs/react';
 import {
@@ -29,38 +33,6 @@ type ViewPublicPostDetailsProps = {
     post: PublicPost_T;
     children: React.ReactNode;
 };
-
-type DetailItem = {
-    icon: React.ComponentType<{ className?: string }>;
-    text: string;
-};
-
-function renderDetailItems(items: DetailItem[]) {
-    return items.map(({ icon: Icon, text }, index) => (
-        <div
-            key={index}
-            className="flex flex-row items-center gap-2 text-muted-foreground"
-        >
-            <Icon className="h-5 w-5" />
-            <span>{text}</span>
-        </div>
-    ));
-}
-
-function getStatusInfo(publishedAt: string | null) {
-    if (!publishedAt) {
-        return { label: 'Draft', variant: 'outline' as const };
-    }
-
-    const publishDate = new Date(publishedAt);
-    const now = new Date();
-
-    if (publishDate > now) {
-        return { label: 'Scheduled', variant: 'secondary' as const };
-    }
-
-    return { label: 'Published', variant: 'default' as const };
-}
 
 function ViewPublicPostDetails({ post, children }: ViewPublicPostDetailsProps) {
     const statusInfo = getStatusInfo(post.published_at);
@@ -152,10 +124,9 @@ function ViewPublicPostDetails({ post, children }: ViewPublicPostDetailsProps) {
                         ])}
                     </div>
 
-                    {/* Original Report Details */}
                     <div className="flex flex-col gap-2">
                         <p className="text-md font-medium">
-                            Original Report Information
+                            Report Information
                         </p>
                         {renderDetailItems([
                             {

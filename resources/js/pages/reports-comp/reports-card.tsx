@@ -29,8 +29,10 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
     return (
         <div className="grid auto-rows-min gap-4 md:grid-cols-4">
             {reports.length === 0 && (
-                <div className="py-8 text-center text-gray-500">
-                    No reports found matching your selection.
+                <div className="flex min-h-[200px] items-center justify-center rounded-[var(--radius)] border border-dashed">
+                    <p className="text-sm text-muted-foreground">
+                        No reports found at the moment
+                    </p>
                 </div>
             )}
 

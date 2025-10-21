@@ -1,7 +1,6 @@
+import { TextField } from '@/components/text-field';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Sheet,
     SheetClose,
@@ -14,6 +13,12 @@ import {
 } from '@/components/ui/sheet';
 import { MoveLeft } from 'lucide-react';
 
+import {
+    getInitials,
+    getUserBarangay,
+    getUserFullName,
+    getUserPhoneNumber,
+} from '@/lib/user-utils';
 import { users_T } from '@/types/user-types';
 
 type ViewUserProps = {
@@ -22,56 +27,6 @@ type ViewUserProps = {
 };
 
 function ViewUser({ user, children }: ViewUserProps) {
-    // Function to generate initials from user's name
-    const getInitials = (user: users_T) => {
-        let firstName = '';
-        let lastName = '';
-
-        if (user.official_details) {
-            firstName = user.official_details.first_name;
-            lastName = user.official_details.last_name;
-        } else if (user.citizen_details) {
-            firstName = user.citizen_details.first_name;
-            lastName = user.citizen_details.last_name;
-        } else {
-            // Fallback to name splitting
-            const nameParts = user.name.split(' ');
-            firstName = nameParts[0] || '';
-            lastName = nameParts[nameParts.length - 1] || '';
-        }
-
-        const firstInitial = firstName?.charAt(0)?.toUpperCase() || '';
-        const lastInitial = lastName?.charAt(0)?.toUpperCase() || '';
-        return firstInitial + lastInitial;
-    };
-
-    const getUserFullName = (user: users_T) => {
-        if (user.official_details) {
-            return `${user.official_details.first_name} ${user.official_details.middle_name ? user.official_details.middle_name + ' ' : ''}${user.official_details.last_name}`;
-        } else if (user.citizen_details) {
-            return `${user.citizen_details.first_name} ${user.citizen_details.middle_name ? user.citizen_details.middle_name + ' ' : ''}${user.citizen_details.last_name}`;
-        }
-        return user.name;
-    };
-
-    const getUserPhoneNumber = (user: users_T) => {
-        if (user.official_details) {
-            return user.official_details.contact_number || 'N/A';
-        } else if (user.citizen_details) {
-            return user.citizen_details.phone_number || 'N/A';
-        }
-        return 'N/A';
-    };
-
-    const getUserBarangay = (user: users_T) => {
-        if (user.official_details) {
-            return user.official_details.assigned_brgy || 'N/A';
-        } else if (user.citizen_details) {
-            return user.citizen_details.barangay || 'N/A';
-        }
-        return 'N/A';
-    };
-
     return (
         <Sheet>
             <SheetTrigger asChild>{children}</SheetTrigger>
@@ -108,34 +63,23 @@ function ViewUser({ user, children }: ViewUserProps) {
                                     Contact Information
                                 </p>
                             </div>
-                            <div className="grid gap-4">
-                                <Label htmlFor="email">Email</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        value={user.email}
-                                        readOnly
-                                        tabIndex={-1}
-                                        placeholder="Enter email address"
-                                        className="cursor-not-allowed border-none bg-muted select-none focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid gap-4">
-                                <Label htmlFor="contact">Contact Number</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="contact"
-                                        type="tel"
-                                        value={getUserPhoneNumber(user)}
-                                        readOnly
-                                        tabIndex={-1}
-                                        placeholder="Enter contact number"
-                                        className="cursor-not-allowed border-none bg-muted select-none focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
-                                    />
-                                </div>
-                            </div>
+                            <TextField
+                                id="email"
+                                label="Email"
+                                type="email"
+                                value={user.email}
+                                onChange={() => {}}
+                                placeholder="Enter email address"
+                                readOnly
+                            />
+                            <TextField
+                                id="contact"
+                                label="Contact Number"
+                                value={getUserPhoneNumber(user)}
+                                onChange={() => {}}
+                                placeholder="Enter contact number"
+                                readOnly
+                            />
                         </div>
                         <div className="flex flex-col gap-2">
                             <div className="grid">
@@ -145,47 +89,38 @@ function ViewUser({ user, children }: ViewUserProps) {
                             </div>
                             <div className="flex w-full flex-row gap-4">
                                 <div className="grid flex-1 gap-4">
-                                    <Label htmlFor="role">Role</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="role"
-                                            type="role"
-                                            value={
-                                                user.role
-                                                    ? user.role.name
-                                                    : 'N/A'
-                                            }
-                                            readOnly
-                                            tabIndex={-1}
-                                            placeholder="Enter role address"
-                                            className="cursor-not-allowed border-none bg-muted select-none focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
-                                        />
-                                    </div>
+                                    <TextField
+                                        id="role"
+                                        label="Role"
+                                        value={
+                                            user.role ? user.role.name : 'N/A'
+                                        }
+                                        onChange={() => {}}
+                                        placeholder="Enter role"
+                                        readOnly
+                                    />
                                 </div>
                                 <div className="grid flex-1 gap-4">
-                                    <Label htmlFor="contact">
-                                        Assigned Barangay
-                                    </Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="contact"
-                                            type="tel"
-                                            value={getUserBarangay(user)}
-                                            readOnly
-                                            tabIndex={-1}
-                                            placeholder="Enter contact number"
-                                            className="cursor-not-allowed border-none bg-muted select-none focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
-                                        />
-                                    </div>
+                                    <TextField
+                                        id="barangay"
+                                        label="Assigned Barangay"
+                                        value={getUserBarangay(user)}
+                                        onChange={() => {}}
+                                        placeholder="Enter barangay"
+                                        readOnly
+                                    />
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <SheetFooter className="px-4">
+                <SheetFooter className="flex w-full flex-col items-end justify-end px-4">
                     <SheetClose asChild>
-                        <Button variant="outline">
+                        <Button
+                            variant="outline"
+                            className="w-1/4 cursor-pointer py-4"
+                        >
                             <MoveLeft className="mr-2 h-6 w-6" />
                             Return
                         </Button>

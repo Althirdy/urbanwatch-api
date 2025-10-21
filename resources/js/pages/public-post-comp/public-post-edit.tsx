@@ -11,9 +11,17 @@ import {
     SheetHeader,
     SheetTrigger,
 } from '@/components/ui/sheet';
+import { Textarea } from '@/components/ui/textarea';
 import { PublicPost_T } from '@/types/public-post-types';
 import { router, useForm } from '@inertiajs/react';
-import { Calendar, Globe, MoveLeft, TriangleAlert, User } from 'lucide-react';
+import {
+    Calendar,
+    Globe,
+    MoveLeft,
+    Save,
+    TriangleAlert,
+    User,
+} from 'lucide-react';
 import { FormEvent, useState } from 'react';
 
 type EditPublicPostProps = {
@@ -132,7 +140,7 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                         {/* Report Content - Editable */}
                         <div className="flex w-full flex-col gap-4">
                             <div className="grid gap-3">
-                                <p className="text-sm font-medium text-[var(--gray)]">
+                                <p className="text-sm font-medium">
                                     Report Content
                                 </p>
                             </div>
@@ -145,8 +153,8 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                                         {post.report?.report_type}
                                     </span>
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <User className="h-3 w-3" />
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <User className="h-4 w-4" />
                                     <span>
                                         Reported by:{' '}
                                         {post.report?.user?.name || 'Unknown'}
@@ -158,7 +166,7 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                             <div className="grid gap-3">
                                 <Label htmlFor="transcript">Transcript</Label>
                                 <div className="relative">
-                                    <textarea
+                                    <Textarea
                                         id="transcript"
                                         value={data.transcript}
                                         onChange={(e) =>
@@ -169,7 +177,7 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                                         }
                                         placeholder="Enter report transcript or summary"
                                         rows={4}
-                                        className={`w-full resize-none rounded-md border px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none ${
+                                        className={`w-full rounded-md border px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none ${
                                             errors.transcript
                                                 ? 'border-red-500 focus:ring-red-500'
                                                 : 'border-input'
@@ -187,7 +195,7 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                             <div className="grid gap-3">
                                 <Label htmlFor="description">Description</Label>
                                 <div className="relative">
-                                    <textarea
+                                    <Textarea
                                         id="description"
                                         value={data.description}
                                         onChange={(e) =>
@@ -197,8 +205,7 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                                             )
                                         }
                                         placeholder="Enter detailed description of the incident"
-                                        rows={6}
-                                        className={`w-full resize-none rounded-md border px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none ${
+                                        className={`w-full rounded-md border px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none ${
                                             errors.description
                                                 ? 'border-red-500 focus:ring-red-500'
                                                 : 'border-input'
@@ -355,7 +362,7 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                         </div>
                     </div>
 
-                    <SheetFooter className="px-4">
+                    <SheetFooter className="">
                         <div className="flex w-full flex-row justify-end gap-2">
                             <SheetClose asChild>
                                 <Button
@@ -365,7 +372,7 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                                     className="cursor-pointer"
                                 >
                                     <MoveLeft className="mr-2 h-4 w-4" />
-                                    Cancel
+                                    Return
                                 </Button>
                             </SheetClose>
                             <Button
@@ -373,6 +380,7 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                                 disabled={processing}
                                 className="cursor-pointer"
                             >
+                                <Save className="h-4 w-4" />
                                 {processing ? 'Saving...' : 'Save Changes'}
                             </Button>
                         </div>

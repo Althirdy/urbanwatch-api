@@ -13,12 +13,12 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from '@/components/ui/pagination';
+import { location_T, LocationCategory_T } from '@/types/cctv-location-types';
 import { Cctv, MapPin } from 'lucide-react';
 import { paginated_T } from '../../types/cctv-location-types';
-import { location_T, LocationCategory_T } from '../locations';
-import DeleteLocation from './archiveLocation';
-import EditLocation from './editLocation';
-import ViewLocation from './viewLocation';
+import DeleteLocation from './location-archive';
+import EditLocation from './location-edit';
+import ViewLocation from './location-view';
 
 function LocationCardView({
     location,
@@ -31,6 +31,14 @@ function LocationCardView({
         <div className="space-y-6">
             {/* Location Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {(location?.data || []).length === 0 && (
+                    <div className="flex min-h-[200px] items-center justify-center rounded-[var(--radius)] border border-dashed">
+                        <p className="text-sm text-muted-foreground">
+                            No locations found at the moment
+                        </p>
+                    </div>
+                )}
+
                 {(location?.data || []).map((loc: location_T) => (
                     <Card
                         key={loc.id}
@@ -38,7 +46,7 @@ function LocationCardView({
                     >
                         <CardHeader className="flex-row items-center p-0">
                             <MapPin className="h-6 w-6 text-muted-foreground" />
-                            <div className="flex flex-1 items-center justify-between">
+                            <div className="flex items-center justify-between">
                                 <div>
                                     <h3 className="font-semibold">
                                         {loc.location_name}

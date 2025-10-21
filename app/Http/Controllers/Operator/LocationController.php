@@ -13,14 +13,21 @@ class LocationController extends Controller
     public function store(LocationRequest $request)
     {
         try {
+            // Get validated data
             $validated = $request->validated();
+            
+            // Ensure latitude and longitude are numeric
+            $validated['latitude'] = (float) $validated['latitude'];
+            $validated['longitude'] = (float) $validated['longitude'];
+            $validated['location_category'] = (int) $validated['location_category'];
 
             $location = Locations::create($validated);
 
             return redirect()->back()->with('success', 'Location created successfully!');
         } catch (\Exception $e) {
+            \Log::error('Location creation failed: ' . $e->getMessage());
             return redirect()->back()
-                ->with('error', 'An error occurred while creating the location.')
+                ->with('error', 'An error occurred while creating the location: ' . $e->getMessage())
                 ->withInput();
         }
     }

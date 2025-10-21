@@ -9,6 +9,19 @@ use Inertia\Inertia;
 Route::middleware('auth')->group(function () {
     Route::get('locations', function () {
         $locationCategory = LocationCategory::select('id', 'name')->get();
+        
+        // Get unique barangays from locations
+        $barangays = Locations::select('barangay')
+            ->distinct()
+            ->orderBy('barangay')
+            ->get()
+            ->map(function ($location, $index) {
+                return [
+                    'id' => $index + 1,
+                    'name' => $location->barangay
+                ];
+            })
+            ->values();
         // $locations = Locations::with('locationCategory:id,name')
         //     ->withCount('cctvDevices')
         //     ->select('id', 'location_category', 'location_name', 'landmark', 'barangay', 'latitude', 'longitude', 'description')
@@ -29,11 +42,12 @@ Route::middleware('auth')->group(function () {
 
         return Inertia::render('locations', [
             'locationCategories' => $locationCategory,
-            'locations' => $locations
+            'locations' => $locations,
+            'barangays' => $barangays
         ]);
     })->name('locations');
 
-    Route::post('locations', [LocationController::class, 'store'])->name('locations.store');
-    Route::put('locations/{location}', [LocationController::class, 'update'])->name('locations.update');
-    Route::delete('locations/{location}', [LocationController::class, 'destroy'])->name('locations.destroy');
+    Route::post('location', [LocationController::class, 'store'])->name('locations.store');
+    Route::put('location/{location}', [LocationController::class, 'update'])->name('locations.update');
+    Route::delete('location/{location}', [LocationController::class, 'destroy'])->name('locations.destroy');
 });

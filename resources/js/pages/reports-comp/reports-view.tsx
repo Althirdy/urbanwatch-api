@@ -35,7 +35,7 @@ type DetailItem = {
     text: string;
 };
 
-function renderDetailItems(items: DetailItem[]) {
+export function renderDetailItems(items: DetailItem[]) {
     return items.map(({ icon: Icon, text }, index) => (
         <div
             key={index}
@@ -45,6 +45,21 @@ function renderDetailItems(items: DetailItem[]) {
             <span>{text}</span>
         </div>
     ));
+}
+
+export function getStatusInfo(publishedAt: string | null) {
+    if (!publishedAt) {
+        return { label: 'Draft', variant: 'outline' as const };
+    }
+
+    const publishDate = new Date(publishedAt);
+    const now = new Date();
+
+    if (publishDate > now) {
+        return { label: 'Scheduled', variant: 'secondary' as const };
+    }
+
+    return { label: 'Published', variant: 'default' as const };
 }
 
 function ViewReportDetails({ report, children }: ViewReportDetailsProps) {

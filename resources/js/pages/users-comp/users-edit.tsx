@@ -1,6 +1,6 @@
+import { TextField } from '@/components/text-field';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -17,129 +17,35 @@ import {
     SheetHeader,
     SheetTrigger,
 } from '@/components/ui/sheet';
-import { roles_T } from '@/types/role-types';
-import { users_T } from '@/types/user-types';
+import {
+    extractUserFormData,
+    getInitials,
+    getUserFullName,
+} from '@/lib/user-utils';
+import { EditUserForm, EditUserProps } from '@/types/user-types';
 import { useForm } from '@inertiajs/react';
 import { MoveLeft } from 'lucide-react';
 import { FormEvent } from 'react';
 
-type EditUserProps = {
-    user: users_T;
-    roles: roles_T[];
-    children: React.ReactNode;
-};
-
-type EditUserForm = {
-    first_name: string;
-    middle_name: string;
-    last_name: string;
-    suffix: string;
-    email: string;
-    phone_number: string;
-    role_id: string;
-    status: string;
-    // For citizens
-    date_of_birth: string;
-    address: string;
-    barangay: string;
-    city: string;
-    province: string;
-    postal_code: string;
-    is_verified: boolean;
-    // For officials
-    office_address: string;
-    assigned_brgy: string;
-    latitude: string;
-    longitude: string;
-};
-
-function EditUser({ user, roles, children }: EditUserProps) {
-    // Function to generate initials from user's name
-    const getInitials = (user: users_T) => {
-        let firstName = '';
-        let lastName = '';
-
-        if (user.official_details) {
-            firstName = user.official_details.first_name;
-            lastName = user.official_details.last_name;
-        } else if (user.citizen_details) {
-            firstName = user.citizen_details.first_name;
-            lastName = user.citizen_details.last_name;
-        } else {
-            const nameParts = user.name.split(' ');
-            firstName = nameParts[0] || '';
-            lastName = nameParts[nameParts.length - 1] || '';
-        }
-
-        const firstInitial = firstName?.charAt(0)?.toUpperCase() || '';
-        const lastInitial = lastName?.charAt(0)?.toUpperCase() || '';
-        return firstInitial + lastInitial;
-    };
-
-    const getUserFullName = (user: users_T) => {
-        if (user.official_details) {
-            return `${user.official_details.first_name} ${user.official_details.middle_name ? user.official_details.middle_name + ' ' : ''}${user.official_details.last_name}`;
-        } else if (user.citizen_details) {
-            return `${user.citizen_details.first_name} ${user.citizen_details.middle_name ? user.citizen_details.middle_name + ' ' : ''}${user.citizen_details.last_name}`;
-        }
-        return user.name;
-    };
-
+function EditUser({
+    user,
+    roles,
+    barangays,
+    statusOptions,
+    children,
+}: EditUserProps) {
     const { data, setData, put, processing, errors, reset } =
-        useForm<EditUserForm>({
-            first_name:
-                user.official_details?.first_name ||
-                user.citizen_details?.first_name ||
-                '',
-            middle_name:
-                user.official_details?.middle_name ||
-                user.citizen_details?.middle_name ||
-                '',
-            last_name:
-                user.official_details?.last_name ||
-                user.citizen_details?.last_name ||
-                '',
-            suffix:
-                user.official_details?.suffix ||
-                user.citizen_details?.suffix ||
-                '',
-            email: user.email || '',
-            phone_number:
-                user.official_details?.contact_number ||
-                user.citizen_details?.phone_number ||
-                '',
-            role_id: user.role?.id?.toString() || '',
-            status: user.status || 'Active',
-            // Citizen fields
-            date_of_birth: user.citizen_details?.date_of_birth || '',
-            address: user.citizen_details?.address || '',
-            barangay:
-                user.citizen_details?.barangay ||
-                user.official_details?.assigned_brgy ||
-                '',
-            city: user.citizen_details?.city || '',
-            province: user.citizen_details?.province || '',
-            postal_code: user.citizen_details?.postal_code || '',
-            is_verified: user.citizen_details?.is_verified || false,
-            // Official fields
-            office_address: user.official_details?.office_address || '',
-            assigned_brgy: user.official_details?.assigned_brgy || '',
-            latitude: user.official_details?.latitude || '',
-            longitude: user.official_details?.longitude || '',
-        });
+        useForm<EditUserForm>(extractUserFormData(user));
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
-
         put(`/user/${user.id}`, {
-            onSuccess: (page) => {
+            onSuccess: () => {
                 reset();
-                const closeButton = document.querySelector(
-                    '[data-sheet-close]',
-                ) as HTMLButtonElement;
-                if (closeButton) closeButton.click();
+                document
+                    .querySelector<HTMLButtonElement>('[data-sheet-close]')
+                    ?.click();
             },
-            onError: (errors) => {},
             preserveScroll: true,
         });
     };
@@ -168,180 +74,103 @@ function EditUser({ user, roles, children }: EditUserProps) {
                     </SheetHeader>
 
                     <div className="flex w-full flex-col justify-start gap-10 px-4 py-2">
-                        {/* Basic Information */}
-
-                        {/* Contact Information & Role */}
                         <div className="flex w-full flex-col gap-6">
+                            {/* Personal Information */}
                             <div className="grid flex-1 auto-rows-min gap-2">
-                                <div className="grid gap-3">
-                                    <p className="text-sm font-medium text-[var(--gray)]">
-                                        Personal Information
-                                    </p>
-                                </div>
-                                <div className="grid gap-3">
-                                    <Label htmlFor="first-name">
-                                        First Name
-                                    </Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="first-name"
-                                            value={data.first_name}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'first_name',
-                                                    e.target.value,
-                                                )
-                                            }
-                                            placeholder="Enter first name"
-                                            className={
-                                                errors.first_name
-                                                    ? 'border-[var(--destructive)] focus:ring-[var(--ring)]'
-                                                    : ''
-                                            }
-                                        />
-                                        {errors.first_name && (
-                                            <span className="absolute -bottom-5 left-0 text-xs text-[var(--destructive)]">
-                                                {errors.first_name}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="grid gap-3">
-                                    <Label htmlFor="middle-name">
-                                        Middle Name
-                                    </Label>
-                                    <Input
-                                        id="middle-name"
-                                        value={data.middle_name}
-                                        onChange={(e) =>
-                                            setData(
-                                                'middle_name',
-                                                e.target.value,
-                                            )
-                                        }
-                                        placeholder="Enter middle name (optional)"
-                                    />
-                                </div>
-                                <div className="grid gap-3">
-                                    <Label htmlFor="last-name">Last Name</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="last-name"
-                                            value={data.last_name}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'last_name',
-                                                    e.target.value,
-                                                )
-                                            }
-                                            placeholder="Enter last name"
-                                            className={
-                                                errors.last_name
-                                                    ? 'border-red-500 focus:ring-red-500'
-                                                    : ''
-                                            }
-                                        />
-                                        {errors.last_name && (
-                                            <span className="absolute -bottom-5 left-0 text-xs text-red-500">
-                                                {errors.last_name}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="grid gap-3">
-                                    <Label htmlFor="suffix">
-                                        Suffix (Optional)
-                                    </Label>
-                                    <Input
-                                        id="suffix"
-                                        value={data.suffix}
-                                        onChange={(e) =>
-                                            setData('suffix', e.target.value)
-                                        }
-                                        placeholder="Jr., Sr., III, etc."
-                                    />
-                                </div>
+                                <p className="text-sm font-medium text-[var(--gray)]">
+                                    Personal Information
+                                </p>
+                                <TextField
+                                    id="first-name"
+                                    label="First Name"
+                                    value={data.first_name}
+                                    onChange={(val) =>
+                                        setData('first_name', val)
+                                    }
+                                    placeholder="Enter first name"
+                                    error={errors.first_name}
+                                    required
+                                />
+                                <TextField
+                                    id="middle-name"
+                                    label="Middle Name"
+                                    value={data.middle_name}
+                                    onChange={(val) =>
+                                        setData('middle_name', val)
+                                    }
+                                    placeholder="Enter middle name"
+                                />
+                                <TextField
+                                    id="last-name"
+                                    label="Last Name"
+                                    value={data.last_name}
+                                    onChange={(val) =>
+                                        setData('last_name', val)
+                                    }
+                                    placeholder="Enter last name"
+                                    error={errors.last_name}
+                                    required
+                                />
+                                <TextField
+                                    id="suffix"
+                                    label="Suffix"
+                                    value={data.suffix}
+                                    onChange={(val) => setData('suffix', val)}
+                                    placeholder="Jr., Sr., III, etc."
+                                />
                             </div>
+                            {/* Contact Information */}
                             <div className="flex flex-col gap-4">
-                                <div className="grid">
-                                    <p className="text-sm font-medium text-[var(--gray)]">
-                                        Contact Information
-                                    </p>
-                                </div>
-                                <div className="grid gap-4">
-                                    <Label htmlFor="email">Email</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="email"
-                                            type="email"
-                                            value={data.email}
-                                            onChange={(e) =>
-                                                setData('email', e.target.value)
-                                            }
-                                            placeholder="Enter email address"
-                                            className={
-                                                errors.email
-                                                    ? 'border-red-500 focus:ring-red-500'
-                                                    : ''
-                                            }
-                                        />
-                                        {errors.email && (
-                                            <span className="absolute -bottom-5 left-0 text-xs text-red-500">
-                                                {errors.email}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="grid gap-4">
-                                    <Label htmlFor="contact">
-                                        Contact Number
-                                    </Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="contact"
-                                            type="number"
-                                            value={data.phone_number}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'phone_number',
-                                                    e.target.value,
-                                                )
-                                            }
-                                            placeholder="Enter contact number"
-                                            className={
-                                                errors.phone_number
-                                                    ? 'border-red-500 focus:ring-red-500'
-                                                    : ''
-                                            }
-                                        />
-                                        {errors.phone_number && (
-                                            <span className="absolute -bottom-5 left-0 text-xs text-red-500">
-                                                {errors.phone_number}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
+                                <p className="text-sm font-medium text-[var(--gray)]">
+                                    Contact Information
+                                </p>
+                                <TextField
+                                    id="email"
+                                    label="Email"
+                                    type="email"
+                                    value={data.email}
+                                    onChange={(val) => setData('email', val)}
+                                    placeholder="Enter email address"
+                                    error={errors.email}
+                                    required
+                                />
+                                <TextField
+                                    id="contact"
+                                    label="Contact Number"
+                                    type="number"
+                                    value={data.phone_number}
+                                    onChange={(val) =>
+                                        setData('phone_number', val)
+                                    }
+                                    placeholder="Enter contact number"
+                                    error={errors.phone_number}
+                                    required
+                                />
                             </div>
+                            {/* Role & Location */}
                             <div className="flex flex-col gap-2">
-                                <div className="grid">
-                                    <p className="text-sm font-medium text-[var(--gray)]">
-                                        Role & Location
-                                    </p>
-                                </div>
+                                <p className="text-sm font-medium text-[var(--gray)]">
+                                    Role & Location
+                                </p>
                                 <div className="flex w-full flex-row gap-4">
-                                    <div className="grid flex-1 gap-4">
-                                        <Label htmlFor="role">Role</Label>
+                                    <div className="grid flex-1 gap-2">
+                                        <Label
+                                            htmlFor="role"
+                                            className="text-muted-foreground"
+                                        >
+                                            Role
+                                        </Label>
                                         <div className="relative">
                                             <Select
                                                 value={data.role_id}
-                                                onValueChange={(value) =>
-                                                    setData('role_id', value)
+                                                onValueChange={(val) =>
+                                                    setData('role_id', val)
                                                 }
                                             >
                                                 <SelectTrigger
                                                     className={
                                                         errors.role_id
-                                                            ? 'border-red-500 focus:ring-red-500'
+                                                            ? 'border-red-500'
                                                             : ''
                                                     }
                                                 >
@@ -365,49 +194,42 @@ function EditUser({ user, roles, children }: EditUserProps) {
                                             )}
                                         </div>
                                     </div>
-                                    <div className="grid flex-1 gap-4">
-                                        <Label htmlFor="barangay">
+                                    <div className="grid flex-1 gap-2">
+                                        <Label
+                                            htmlFor="barangay"
+                                            className="text-muted-foreground"
+                                        >
                                             Assigned Barangay
                                         </Label>
                                         <div className="relative">
                                             <Select
                                                 value={data.barangay}
-                                                onValueChange={(value) => {
-                                                    setData('barangay', value);
+                                                onValueChange={(val) => {
+                                                    setData('barangay', val);
                                                     setData(
                                                         'assigned_brgy',
-                                                        value,
+                                                        val,
                                                     );
                                                 }}
                                             >
                                                 <SelectTrigger
                                                     className={
                                                         errors.barangay
-                                                            ? 'border-red-500 focus:ring-red-500'
+                                                            ? 'border-red-500'
                                                             : ''
                                                     }
                                                 >
                                                     <SelectValue placeholder="Select barangay" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="Barangay 176A">
-                                                        Barangay 176A
-                                                    </SelectItem>
-                                                    <SelectItem value="Barangay 176B">
-                                                        Barangay 176B
-                                                    </SelectItem>
-                                                    <SelectItem value="Barangay 176C">
-                                                        Barangay 176C
-                                                    </SelectItem>
-                                                    <SelectItem value="Barangay 176D">
-                                                        Barangay 176D
-                                                    </SelectItem>
-                                                    <SelectItem value="Barangay 176E">
-                                                        Barangay 176E
-                                                    </SelectItem>
-                                                    <SelectItem value="Barangay 176F">
-                                                        Barangay 176F
-                                                    </SelectItem>
+                                                    {barangays?.map((brgy) => (
+                                                        <SelectItem
+                                                            key={brgy}
+                                                            value={brgy}
+                                                        >
+                                                            {brgy}
+                                                        </SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
                                             {errors.barangay && (
@@ -419,49 +241,43 @@ function EditUser({ user, roles, children }: EditUserProps) {
                                     </div>
                                 </div>
                             </div>
+                            {/* Status */}
                             <div className="flex flex-col gap-2">
-                                <div className="grid">
-                                    <p className="text-sm font-medium text-[var(--gray)]">
-                                        Status
-                                    </p>
-                                </div>
-                                <div className="flex w-auto flex-row gap-4">
-                                    <div className="grid flex-2 gap-4">
-                                        <div className="relative">
-                                            <Select
-                                                value={data.status}
-                                                onValueChange={(value) =>
-                                                    setData('status', value)
-                                                }
-                                            >
-                                                <SelectTrigger
-                                                    className={
-                                                        errors.status
-                                                            ? 'border-red-500 focus:ring-red-500'
-                                                            : ''
-                                                    }
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    Status
+                                </p>
+                                <div className="relative">
+                                    <Select
+                                        value={data.status}
+                                        onValueChange={(val) =>
+                                            setData('status', val)
+                                        }
+                                    >
+                                        <SelectTrigger
+                                            className={
+                                                errors.status
+                                                    ? 'border-red-500'
+                                                    : ''
+                                            }
+                                        >
+                                            <SelectValue placeholder="Select status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {statusOptions?.map((status) => (
+                                                <SelectItem
+                                                    key={status}
+                                                    value={status}
                                                 >
-                                                    <SelectValue placeholder="Select status" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="Active">
-                                                        Active
-                                                    </SelectItem>
-                                                    <SelectItem value="Inactive">
-                                                        Inactive
-                                                    </SelectItem>
-                                                    <SelectItem value="Archived">
-                                                        Archived
-                                                    </SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            {errors.status && (
-                                                <span className="absolute -bottom-5 left-0 text-xs text-red-500">
-                                                    {errors.status}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
+                                                    {status}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.status && (
+                                        <span className="absolute -bottom-5 left-0 text-xs text-red-500">
+                                            {errors.status}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -474,17 +290,12 @@ function EditUser({ user, roles, children }: EditUserProps) {
                                     type="button"
                                     variant="outline"
                                     data-sheet-close
-                                    className="cursor-pointer"
                                 >
                                     <MoveLeft className="mr-2 h-4 w-4" />
                                     Cancel
                                 </Button>
                             </SheetClose>
-                            <Button
-                                type="submit"
-                                disabled={processing}
-                                className="cursor-pointer"
-                            >
+                            <Button type="submit" disabled={processing}>
                                 {processing ? 'Saving...' : 'Save Changes'}
                             </Button>
                         </div>

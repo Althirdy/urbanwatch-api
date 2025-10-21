@@ -22,9 +22,9 @@ import { Link } from '@inertiajs/react';
 import {
     File,
     FlagTriangleRight,
-    Folder,
     LayoutGrid,
     MapPin,
+    Scan,
     User,
     Users,
 } from 'lucide-react';
@@ -65,7 +65,7 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Devices',
         href: devices().url,
-        icon: Folder,
+        icon: Scan,
     },
 ];
 

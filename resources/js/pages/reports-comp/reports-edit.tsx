@@ -1,8 +1,9 @@
 import { MapModal } from '@/components/map-modal';
+import { TextField } from '@/components/text-field';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
 import {
     Select,
     SelectContent,
@@ -20,7 +21,7 @@ import {
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { formatDateTime } from '@/lib/utils';
-import { reports_T } from '@/types/report-types';
+import { EditReportForm, EditReportProps } from '@/types/report-types';
 import { useForm } from '@inertiajs/react';
 import {
     Globe,
@@ -30,21 +31,6 @@ import {
     User,
 } from 'lucide-react';
 import { FormEvent, useState } from 'react';
-
-type EditReportProps = {
-    report: reports_T;
-    reportTypes: string[];
-    children: React.ReactNode;
-};
-
-type EditReportForm = {
-    report_type: string;
-    description: string;
-    transcript: string;
-    latitute: string;
-    longtitude: string;
-    is_acknowledge: boolean;
-};
 
 function EditReport({ report, reportTypes, children }: EditReportProps) {
     const { data, setData, put, processing, errors, reset } =
@@ -230,52 +216,22 @@ function EditReport({ report, reportTypes, children }: EditReportProps) {
                                         coordinates={coordinates}
                                     />
                                     <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <Label htmlFor="latitude">
-                                                Latitude
-                                            </Label>
-                                            <div className="relative">
-                                                <Input
-                                                    id="latitude"
-                                                    value={coordinates.latitude}
-                                                    disabled
-                                                    className={
-                                                        errors.latitute
-                                                            ? 'border-red-500 focus:ring-red-500'
-                                                            : ''
-                                                    }
-                                                />
-                                                {errors.latitute && (
-                                                    <span className="absolute -bottom-5 left-0 text-xs text-red-500">
-                                                        {errors.latitute}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="longitude">
-                                                Longitude
-                                            </Label>
-                                            <div className="relative">
-                                                <Input
-                                                    id="longitude"
-                                                    value={
-                                                        coordinates.longitude
-                                                    }
-                                                    disabled
-                                                    className={
-                                                        errors.longtitude
-                                                            ? 'border-red-500 focus:ring-red-500'
-                                                            : ''
-                                                    }
-                                                />
-                                                {errors.longtitude && (
-                                                    <span className="absolute -bottom-5 left-0 text-xs text-red-500">
-                                                        {errors.longtitude}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
+                                        <TextField
+                                            id="latitude"
+                                            label="Latitude"
+                                            value={coordinates.latitude}
+                                            onChange={() => {}}
+                                            error={errors.latitute}
+                                            readOnly
+                                        />
+                                        <TextField
+                                            id="longitude"
+                                            label="Longitude"
+                                            value={coordinates.longitude}
+                                            onChange={() => {}}
+                                            error={errors.longtitude}
+                                            readOnly
+                                        />
                                     </div>
                                 </div>
                             </div>

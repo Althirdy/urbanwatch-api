@@ -57,10 +57,23 @@ class UserController extends Controller
                       ->withQueryString();
 
         $roles = Roles::all();
+        
+        $barangays = [
+            'Barangay 176A',
+            'Barangay 176B',
+            'Barangay 176C',
+            'Barangay 176D',
+            'Barangay 176E',
+            'Barangay 176F',
+        ];
+        
+        $statusOptions = ['Active', 'Inactive', 'Archived'];
 
         return Inertia::render('users', [
             'users' => $users,
             'roles' => $roles,
+            'barangays' => $barangays,
+            'statusOptions' => $statusOptions,
             'filters' => $request->only(['search', 'role_id', 'barangay']),
         ]);
     }

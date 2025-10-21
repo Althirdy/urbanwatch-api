@@ -1,4 +1,7 @@
-import React from 'react'
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Sheet,
     SheetClose,
@@ -8,14 +11,10 @@ import {
     SheetHeader,
     SheetTitle,
     SheetTrigger,
-} from "@/components/ui/sheet"
-import { Button } from '@/components/ui/button'
-import { ExternalLink, MapPin } from 'lucide-react'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { location_T } from '../locations'
+} from '@/components/ui/sheet';
+import { Textarea } from '@/components/ui/textarea';
+import { location_T } from '@/types/cctv-location-types';
+import { ExternalLink, MapPin } from 'lucide-react';
 
 interface ViewLocationProps {
     location: location_T;
@@ -25,7 +24,7 @@ function ViewLocation({ location }: ViewLocationProps) {
     return (
         <Sheet>
             <SheetTrigger asChild>
-                <div className='p-2 rounded-full hover:bg-secondary/20 cursor-pointer' >
+                <div className="cursor-pointer rounded-full p-2 hover:bg-secondary/20">
                     <ExternalLink size={20} />
                 </div>
             </SheetTrigger>
@@ -74,7 +73,9 @@ function ViewLocation({ location }: ViewLocationProps) {
                         <Label htmlFor="category">Category</Label>
                         <div className="p-2">
                             <Badge variant="secondary" className="text-sm">
-                                {location.location_category ? location.location_category.name : 'Uncategorized'}
+                                {location.location_category
+                                    ? location.location_category.name
+                                    : 'Uncategorized'}
                             </Badge>
                         </div>
                     </div>
@@ -100,22 +101,29 @@ function ViewLocation({ location }: ViewLocationProps) {
                         </div>
                     </div>
 
+                    {/* 
                     <div className="grid gap-3">
                         <Label htmlFor="cameras">Available Cameras</Label>
                         <div className="p-2">
                             <span className="text-2xl font-bold text-primary">
                                 {location.cameras || 0}
                             </span>
-                            <span className="text-sm text-muted-foreground ml-2">cameras</span>
+                            <span className="ml-2 text-sm text-muted-foreground">
+                                cameras
+                            </span>
                         </div>
-                    </div>
-
+                    </div>           
+                    */}
+                   
                     <div className="grid gap-3">
                         <Label htmlFor="description">Description</Label>
                         <Textarea
-                            id='description'
-                            className='resize-none bg-muted'
-                            value={location.description || 'No description provided.'}
+                            id="description"
+                            className="resize-none bg-muted"
+                            value={
+                                location.description ||
+                                'No description provided.'
+                            }
                             readOnly
                             rows={4}
                         />
@@ -128,7 +136,7 @@ function ViewLocation({ location }: ViewLocationProps) {
                 </SheetFooter>
             </SheetContent>
         </Sheet>
-    )
+    );
 }
 
-export default ViewLocation
+export default ViewLocation;

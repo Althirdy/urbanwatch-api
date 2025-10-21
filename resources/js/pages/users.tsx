@@ -8,10 +8,10 @@ import { useState } from 'react';
 
 import { roles_T } from '@/types/role-types';
 import { PaginatedUsers, users_T } from '@/types/user-types';
-import CreateUsers from './users-comp/users-create';
 import UserCard from './users-comp/users-card';
-import UserTable from './users-comp/users-table';
+import CreateUsers from './users-comp/users-create';
 import UserActionTab from './users-comp/users-tab';
+import UserTable from './users-comp/users-table';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -59,7 +59,13 @@ export default function Users({
                     </div>
 
                     <TabsContent value="table" className="w-full">
-                        <UserTable users={filtered_users} roles={roles} />
+                        <UserTable
+                            users={filtered_users}
+                            roles={roles}
+                            links={users.links}
+                            currentPage={users.current_page}
+                            lastPage={users.last_page}
+                        />
                     </TabsContent>
                     <TabsContent value="card" className="w-full">
                         <UserCard users={filtered_users} roles={roles} />

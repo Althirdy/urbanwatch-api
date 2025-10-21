@@ -59,4 +59,37 @@ export type PaginatedUsers = {
     total: number;
     per_page: number;
     last_page: number;
+    links?: any[];
+};
+
+export type EditUserProps = {
+    user: users_T;
+    roles: roles_T[];
+    barangays?: string[];
+    statusOptions?: string[];
+    children: React.ReactNode;
+};
+
+export type EditUserForm = {
+    first_name: string;
+    middle_name: string;
+    last_name: string;
+    suffix: string;
+    email: string;
+    phone_number: string;
+    role_id: string;
+    status: string;
+    // For citizens
+    date_of_birth: string;
+    address: string;
+    barangay: string;
+    city: string;
+    province: string;
+    postal_code: string;
+    is_verified: boolean;
+    // For officials
+    office_address: string;
+    assigned_brgy: string;
+    latitude: string;
+    longitude: string;
 };

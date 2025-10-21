@@ -85,7 +85,7 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
                 <Button>
-                    <Plus className="mr-2 h-4 w-4" /> Add CCTV
+                    <Plus className="h-4 w-4" /> Add CCTV
                 </Button>
             </SheetTrigger>
             <SheetContent className="flex h-full flex-col">

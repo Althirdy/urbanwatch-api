@@ -8,7 +8,7 @@ import { useState } from 'react';
 
 import { reports_T, ReportsProps } from '@/types/report-types';
 import ReportsCard from './reports-comp/reports-card';
-import ReportsCarousel from './reports-comp/reports-carousel';
+import OngoingReport from './reports-comp/reports-ongoing';
 import ReportActionTab from './reports-comp/reports-tab';
 import ReportsTable from './reports-comp/reports-table';
 
@@ -43,7 +43,23 @@ const Reports = ({
                             attention.
                         </p>
                     </div>
-                    <ReportsCarousel reports={pendingReports || []} />
+                    <div
+                        className="grid grid-cols-1 gap-4 overflow-y-auto pr-2 md:grid-cols-2 lg:grid-cols-3"
+                        style={{
+                            maxHeight:
+                                pendingReports && pendingReports.length > 6
+                                    ? '600px'
+                                    : 'auto',
+                        }}
+                    >
+                        {pendingReports &&
+                            pendingReports.map((report) => (
+                                <OngoingReport
+                                    key={report.id}
+                                    report={report}
+                                />
+                            ))}
+                    </div>
                 </div>
 
                 <Tabs defaultValue="table" className="w-full space-y-2">
@@ -74,6 +90,9 @@ const Reports = ({
                         <ReportsTable
                             reports={filteredReports}
                             reportTypes={reportTypes}
+                            links={reports.links}
+                            currentPage={reports.meta?.current_page || 1}
+                            lastPage={reports.meta?.last_page || 1}
                         />
                     </TabsContent>
                     <TabsContent value="card" className="w-full">

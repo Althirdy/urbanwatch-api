@@ -22,6 +22,8 @@ export type ReportsProps = {
         data: reports_T[];
         links: any[];
         meta: any;
+        current_page?: number;
+        last_page?: number;
     };
     pendingReports?: reports_T[];
     filters: {
@@ -31,4 +33,19 @@ export type ReportsProps = {
     };
     reportTypes: string[];
     statusOptions: { value: string; label: string }[];
+};
+
+export type EditReportProps = {
+    report: reports_T;
+    reportTypes: string[];
+    children: React.ReactNode;
+};
+
+export type EditReportForm = {
+    report_type: string;
+    description: string;
+    transcript: string;
+    latitute: string;
+    longtitude: string;
+    is_acknowledge: boolean;
 };

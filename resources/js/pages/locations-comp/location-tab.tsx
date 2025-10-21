@@ -17,101 +17,85 @@ import { cn } from '@/lib/utils';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { roles_T } from '@/types/role-types';
-import { PaginatedUsers, users_T } from '@/types/user-types';
+import {
+    location_T,
+    LocationCategory_T,
+    paginated_T,
+} from '@/types/cctv-location-types';
 
-const UserActionTab = ({
-    users,
-    roles,
-    setFilteredUsers,
+const LocationActionTab = ({
+    locations,
+    locationCategories,
+    setFilteredLocations,
 }: {
-    users: PaginatedUsers;
-    roles: roles_T[];
-    setFilteredUsers: (users: users_T[]) => void;
+    locations: paginated_T<location_T>;
+    locationCategories: LocationCategory_T[];
+    setFilteredLocations: (locations: location_T[]) => void;
 }) => {
-    const [open, setOpen] = useState(false);
+    const [categoryOpen, setCategoryOpen] = useState(false);
     const [barangayOpen, setBarangayOpen] = useState(false);
-    const [value, setValue] = useState<string | null>(null);
+    const [categoryValue, setCategoryValue] = useState<string | null>(null);
     const [barangayValue, setBarangayValue] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
-    const [searchable_roles, setSearchableRoles] = useState<string[]>([]);
     const [searchable_barangays, setSearchableBarangays] = useState<string[]>(
         [],
     );
 
-    // Extract unique roles and barangays from users data
+    // Extract unique barangays from locations data
     useEffect(() => {
-        const roles = users.data
-            .map((user: users_T) => user.role?.name)
-            .filter((roleName): roleName is string => Boolean(roleName))
-            .filter(
-                (value: string, index: number, self: string[]) =>
-                    self.indexOf(value) === index,
-            );
-        setSearchableRoles(roles);
-
-        const barangays = users.data
-            .map(
-                (user: users_T) =>
-                    user.citizen_details?.barangay ||
-                    user.official_details?.assigned_brgy,
-            )
+        const barangays = locations.data
+            .map((location: location_T) => location.barangay)
             .filter((barangay): barangay is string => Boolean(barangay))
             .filter(
                 (value: string, index: number, self: string[]) =>
                     self.indexOf(value) === index,
             );
         setSearchableBarangays(barangays);
-    }, [users.data]);
+    }, [locations.data]);
 
-    // Filter displayed users based on selected role, status, barangay and search query
+    // Filter displayed locations based on selected category, barangay and search query
     useEffect(() => {
-        let filteredResults = users.data;
+        let filteredResults = locations.data;
 
-        // Filter by role if selected
-        if (value) {
+        // Filter by category if selected
+        if (categoryValue) {
             filteredResults = filteredResults.filter(
-                (user: users_T) => user.role?.name === value,
+                (location: location_T) =>
+                    location.location_category?.name === categoryValue,
             );
         }
 
         // Filter by barangay if selected
         if (barangayValue) {
             filteredResults = filteredResults.filter(
-                (user: users_T) =>
-                    user.citizen_details?.barangay === barangayValue ||
-                    user.official_details?.assigned_brgy === barangayValue,
+                (location: location_T) => location.barangay === barangayValue,
             );
         }
 
-        // Filter by search query (name or email)
+        // Filter by search query (location name or landmark)
         if (searchQuery.trim()) {
-            filteredResults = filteredResults.filter((user: users_T) => {
-                let fullName = user.name.toLowerCase();
-
-                // Try to build full name from detail tables
-                if (user.official_details) {
-                    fullName =
-                        `${user.official_details.first_name} ${user.official_details.middle_name || ''} ${user.official_details.last_name}`.toLowerCase();
-                } else if (user.citizen_details) {
-                    fullName =
-                        `${user.citizen_details.first_name} ${user.citizen_details.middle_name || ''} ${user.citizen_details.last_name}`.toLowerCase();
-                }
-
-                const email = user.email.toLowerCase();
+            filteredResults = filteredResults.filter((location: location_T) => {
+                const locationName = location.location_name.toLowerCase();
+                const landmark = location.landmark.toLowerCase();
                 const query = searchQuery.toLowerCase();
 
-                return fullName.includes(query) || email.includes(query);
+                return locationName.includes(query) || landmark.includes(query);
             });
         }
 
-        setFilteredUsers(filteredResults);
-    }, [value, barangayValue, searchQuery, users.data, setFilteredUsers]);
+        setFilteredLocations(filteredResults);
+    }, [
+        categoryValue,
+        barangayValue,
+        searchQuery,
+        locations.data,
+        setFilteredLocations,
+    ]);
 
     return (
         <div className="flex max-w-4xl flex-wrap gap-4">
             <Input
-                placeholder="Search users by name or email"
+                placeholder="Search locations by name or landmark"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-12 min-w-[300px] flex-1"
@@ -186,65 +170,65 @@ const UserActionTab = ({
                     </Command>
                 </PopoverContent>
             </Popover>
-            <Popover open={open} onOpenChange={setOpen}>
+            <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
                 <PopoverTrigger asChild className="h-12">
                     <Button
                         variant="outline"
                         role="combobox"
-                        aria-expanded={open}
+                        aria-expanded={categoryOpen}
                         className="w-[180px] cursor-pointer justify-between"
                     >
-                        {value || 'Select role...'}
+                        {categoryValue || 'Select category...'}
                         <ChevronsUpDown className="opacity-50" />
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[180px] p-0">
                     <Command>
                         <CommandInput
-                            placeholder="Search role..."
+                            placeholder="Search category..."
                             className="h-9"
                         />
                         <CommandList>
-                            <CommandEmpty>No Role found.</CommandEmpty>
+                            <CommandEmpty>No Category found.</CommandEmpty>
                             <CommandGroup>
-                                {/* Add "All Roles" option */}
+                                {/* Add "All Categories" option */}
                                 <CommandItem
                                     key="all"
                                     value=""
                                     onSelect={() => {
-                                        setValue(null);
-                                        setOpen(false);
+                                        setCategoryValue(null);
+                                        setCategoryOpen(false);
                                     }}
                                 >
-                                    All Roles
+                                    All Categories
                                     <Check
                                         className={cn(
                                             'ml-auto',
-                                            value === null
+                                            categoryValue === null
                                                 ? 'opacity-100'
                                                 : 'opacity-0',
                                         )}
                                     />
                                 </CommandItem>
-                                {/* Use searchable_roles for dropdown options */}
-                                {searchable_roles.map((roleName) => (
+                                {/* Use locationCategories for dropdown options */}
+                                {locationCategories.map((category) => (
                                     <CommandItem
-                                        key={roleName}
-                                        value={roleName}
+                                        key={category.id}
+                                        value={category.name}
                                         onSelect={(currentValue) => {
-                                            setValue(
-                                                currentValue === value
+                                            setCategoryValue(
+                                                currentValue === categoryValue
                                                     ? null
                                                     : currentValue,
                                             );
-                                            setOpen(false);
+                                            setCategoryOpen(false);
                                         }}
                                     >
-                                        {roleName}
+                                        {category.name}
                                         <Check
                                             className={cn(
                                                 'ml-auto',
-                                                value === roleName
+                                                categoryValue === category.name
                                                     ? 'opacity-100'
                                                     : 'opacity-0',
                                             )}
@@ -260,4 +244,4 @@ const UserActionTab = ({
     );
 };
 
-export default UserActionTab;
+export default LocationActionTab;

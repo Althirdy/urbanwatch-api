@@ -24,8 +24,8 @@ import {
     location_T,
     paginated_T,
 } from '../../types/cctv-location-types';
-import EditCCTVDevice from './EditCCTV';
-import ArchiveCCTV from './archiveCCTV';
+import EditCCTVDevice from './cctv-edit';
+import ArchiveCCTV from './cctv-archive';
 
 interface CCTVDisplayProps {
     onEdit?: (device: any) => void;

@@ -17,164 +17,147 @@ import { cn } from '@/lib/utils';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { roles_T } from '@/types/role-types';
-import { PaginatedUsers, users_T } from '@/types/user-types';
+import { Contact } from '@/types/contacts-types';
 
-const UserActionTab = ({
-    users,
-    roles,
-    setFilteredUsers,
+const ContactsActionTab = ({
+    contacts,
+    setFilteredContacts,
 }: {
-    users: PaginatedUsers;
-    roles: roles_T[];
-    setFilteredUsers: (users: users_T[]) => void;
+    contacts: Contact[];
+    setFilteredContacts: (contacts: Contact[]) => void;
 }) => {
-    const [open, setOpen] = useState(false);
-    const [barangayOpen, setBarangayOpen] = useState(false);
-    const [value, setValue] = useState<string | null>(null);
-    const [barangayValue, setBarangayValue] = useState<string | null>(null);
+    const [typeOpen, setTypeOpen] = useState(false);
+    const [statusOpen, setStatusOpen] = useState(false);
+    const [typeValue, setTypeValue] = useState<string | null>(null);
+    const [statusValue, setStatusValue] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
-    const [searchable_roles, setSearchableRoles] = useState<string[]>([]);
-    const [searchable_barangays, setSearchableBarangays] = useState<string[]>(
-        [],
-    );
+    const [searchableTypes, setSearchableTypes] = useState<string[]>([]);
+    const [searchableStatuses, setSearchableStatuses] = useState<string[]>([]);
 
-    // Extract unique roles and barangays from users data
+    // Extract unique types and statuses from contacts data
     useEffect(() => {
-        const roles = users.data
-            .map((user: users_T) => user.role?.name)
-            .filter((roleName): roleName is string => Boolean(roleName))
+        const types = contacts
+            .map((contact: Contact) => contact.responder_type)
+            .filter((type): type is string => Boolean(type))
             .filter(
                 (value: string, index: number, self: string[]) =>
                     self.indexOf(value) === index,
             );
-        setSearchableRoles(roles);
+        setSearchableTypes(types);
 
-        const barangays = users.data
-            .map(
-                (user: users_T) =>
-                    user.citizen_details?.barangay ||
-                    user.official_details?.assigned_brgy,
-            )
-            .filter((barangay): barangay is string => Boolean(barangay))
-            .filter(
-                (value: string, index: number, self: string[]) =>
-                    self.indexOf(value) === index,
-            );
-        setSearchableBarangays(barangays);
-    }, [users.data]);
+        const statuses = [
+            ...new Set(
+                contacts.map((contact: Contact) =>
+                    contact.active ? 'Active' : 'Inactive',
+                ),
+            ),
+        ] as string[];
+        setSearchableStatuses(statuses);
+    }, [contacts]);
 
-    // Filter displayed users based on selected role, status, barangay and search query
+    // Filter displayed contacts based on selected type, status and search query
     useEffect(() => {
-        let filteredResults = users.data;
+        let filteredResults = contacts;
 
-        // Filter by role if selected
-        if (value) {
+        // Filter by type if selected
+        if (typeValue) {
             filteredResults = filteredResults.filter(
-                (user: users_T) => user.role?.name === value,
+                (contact: Contact) => contact.responder_type === typeValue,
             );
         }
 
-        // Filter by barangay if selected
-        if (barangayValue) {
-            filteredResults = filteredResults.filter(
-                (user: users_T) =>
-                    user.citizen_details?.barangay === barangayValue ||
-                    user.official_details?.assigned_brgy === barangayValue,
-            );
-        }
-
-        // Filter by search query (name or email)
-        if (searchQuery.trim()) {
-            filteredResults = filteredResults.filter((user: users_T) => {
-                let fullName = user.name.toLowerCase();
-
-                // Try to build full name from detail tables
-                if (user.official_details) {
-                    fullName =
-                        `${user.official_details.first_name} ${user.official_details.middle_name || ''} ${user.official_details.last_name}`.toLowerCase();
-                } else if (user.citizen_details) {
-                    fullName =
-                        `${user.citizen_details.first_name} ${user.citizen_details.middle_name || ''} ${user.citizen_details.last_name}`.toLowerCase();
-                }
-
-                const email = user.email.toLowerCase();
-                const query = searchQuery.toLowerCase();
-
-                return fullName.includes(query) || email.includes(query);
+        // Filter by status if selected
+        if (statusValue) {
+            filteredResults = filteredResults.filter((contact: Contact) => {
+                const contactStatus = contact.active ? 'Active' : 'Inactive';
+                return contactStatus === statusValue;
             });
         }
 
-        setFilteredUsers(filteredResults);
-    }, [value, barangayValue, searchQuery, users.data, setFilteredUsers]);
+        // Filter by search query (name, branch unit, location, or contact person)
+        if (searchQuery.trim()) {
+            filteredResults = filteredResults.filter((contact: Contact) => {
+                const query = searchQuery.toLowerCase();
+                return (
+                    contact.branch_unit_name.toLowerCase().includes(query) ||
+                    contact.location.toLowerCase().includes(query) ||
+                    (contact.contact_person &&
+                        contact.contact_person.toLowerCase().includes(query)) ||
+                    contact.primary_mobile.includes(query)
+                );
+            });
+        }
+
+        setFilteredContacts(filteredResults);
+    }, [typeValue, statusValue, searchQuery, contacts, setFilteredContacts]);
 
     return (
         <div className="flex max-w-4xl flex-wrap gap-4">
             <Input
-                placeholder="Search users by name or email"
+                placeholder="Search contacts by name, branch, location, or number"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-12 min-w-[300px] flex-1"
             />
-            <Popover open={barangayOpen} onOpenChange={setBarangayOpen}>
+            <Popover open={typeOpen} onOpenChange={setTypeOpen}>
                 <PopoverTrigger asChild className="h-12">
                     <Button
                         variant="outline"
                         role="combobox"
-                        aria-expanded={barangayOpen}
+                        aria-expanded={typeOpen}
                         className="w-[180px] cursor-pointer justify-between"
                     >
-                        {barangayValue || 'Select barangay...'}
+                        {typeValue || 'Select type...'}
                         <ChevronsUpDown className="opacity-50" />
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[180px] p-0">
                     <Command>
                         <CommandInput
-                            placeholder="Search barangay..."
+                            placeholder="Search type..."
                             className="h-9"
                         />
                         <CommandList>
-                            <CommandEmpty>No Barangay found.</CommandEmpty>
+                            <CommandEmpty>No Type found.</CommandEmpty>
                             <CommandGroup>
-                                {/* Add "All Barangays" option */}
+                                {/* Add "All Types" option */}
                                 <CommandItem
-                                    key="all-barangay"
+                                    key="all-type"
                                     value=""
                                     onSelect={() => {
-                                        setBarangayValue(null);
-                                        setBarangayOpen(false);
+                                        setTypeValue(null);
+                                        setTypeOpen(false);
                                     }}
                                 >
-                                    All Barangays
+                                    All Types
                                     <Check
                                         className={cn(
                                             'ml-auto',
-                                            barangayValue === null
+                                            typeValue === null
                                                 ? 'opacity-100'
                                                 : 'opacity-0',
                                         )}
                                     />
                                 </CommandItem>
-                                {/* Use searchable_barangays for dropdown options */}
-                                {searchable_barangays.map((barangayName) => (
+                                {/* Use searchable_types for dropdown options */}
+                                {searchableTypes.map((typeName) => (
                                     <CommandItem
-                                        key={barangayName}
-                                        value={barangayName}
+                                        key={typeName}
+                                        value={typeName}
                                         onSelect={(currentValue) => {
-                                            setBarangayValue(
-                                                currentValue === barangayValue
+                                            setTypeValue(
+                                                currentValue === typeValue
                                                     ? null
                                                     : currentValue,
                                             );
-                                            setBarangayOpen(false);
+                                            setTypeOpen(false);
                                         }}
                                     >
-                                        {barangayName}
+                                        {typeName}
                                         <Check
                                             className={cn(
                                                 'ml-auto',
-                                                barangayValue === barangayName
+                                                typeValue === typeName
                                                     ? 'opacity-100'
                                                     : 'opacity-0',
                                             )}
@@ -186,65 +169,65 @@ const UserActionTab = ({
                     </Command>
                 </PopoverContent>
             </Popover>
-            <Popover open={open} onOpenChange={setOpen}>
+            <Popover open={statusOpen} onOpenChange={setStatusOpen}>
                 <PopoverTrigger asChild className="h-12">
                     <Button
                         variant="outline"
                         role="combobox"
-                        aria-expanded={open}
+                        aria-expanded={statusOpen}
                         className="w-[180px] cursor-pointer justify-between"
                     >
-                        {value || 'Select role...'}
+                        {statusValue || 'Select status...'}
                         <ChevronsUpDown className="opacity-50" />
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[180px] p-0">
                     <Command>
                         <CommandInput
-                            placeholder="Search role..."
+                            placeholder="Search status..."
                             className="h-9"
                         />
                         <CommandList>
-                            <CommandEmpty>No Role found.</CommandEmpty>
+                            <CommandEmpty>No Status found.</CommandEmpty>
                             <CommandGroup>
-                                {/* Add "All Roles" option */}
+                                {/* Add "All Status" option */}
                                 <CommandItem
-                                    key="all"
+                                    key="all-status"
                                     value=""
                                     onSelect={() => {
-                                        setValue(null);
-                                        setOpen(false);
+                                        setStatusValue(null);
+                                        setStatusOpen(false);
                                     }}
                                 >
-                                    All Roles
+                                    All Status
                                     <Check
                                         className={cn(
                                             'ml-auto',
-                                            value === null
+                                            statusValue === null
                                                 ? 'opacity-100'
                                                 : 'opacity-0',
                                         )}
                                     />
                                 </CommandItem>
-                                {/* Use searchable_roles for dropdown options */}
-                                {searchable_roles.map((roleName) => (
+                                {/* Use searchable_statuses for dropdown options */}
+                                {searchableStatuses.map((statusName) => (
                                     <CommandItem
-                                        key={roleName}
-                                        value={roleName}
+                                        key={statusName}
+                                        value={statusName}
                                         onSelect={(currentValue) => {
-                                            setValue(
-                                                currentValue === value
+                                            setStatusValue(
+                                                currentValue === statusValue
                                                     ? null
                                                     : currentValue,
                                             );
-                                            setOpen(false);
+                                            setStatusOpen(false);
                                         }}
                                     >
-                                        {roleName}
+                                        {statusName}
                                         <Check
                                             className={cn(
                                                 'ml-auto',
-                                                value === roleName
+                                                statusValue === statusName
                                                     ? 'opacity-100'
                                                     : 'opacity-0',
                                             )}
@@ -260,4 +243,4 @@ const UserActionTab = ({
     );
 };
 
-export default UserActionTab;
+export default ContactsActionTab;

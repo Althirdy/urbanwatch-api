@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/button';
 import {
     Pagination,
     PaginationContent,
@@ -21,44 +20,57 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Archive, ExternalLink as Open, SquarePen } from 'lucide-react';
 
-import { roles_T } from '@/types/role-types';
-import { users_T } from '@/types/user-types';
-import ArchiveUser from './users-archive';
-import EditUser from './users-edit';
-import ViewUser from './users-view';
+import { Contact } from '@/types/contacts-types';
+import DeleteContacts from './contacts-delete';
+import EditContacts from './contacts-edit';
+import ViewContacts from './contacts-view';
 
-const UserTable = ({
-    users,
-    roles,
+const ContactsTable = ({
+    contacts,
     links,
     currentPage = 1,
     lastPage = 1,
 }: {
-    users: users_T[];
-    roles: roles_T[];
+    contacts: Contact[];
     links?: any[];
     currentPage?: number;
     lastPage?: number;
 }) => {
+    const getResponderTypeColor = (type: string) => {
+        const colorMap: { [key: string]: string } = {
+            BEST: 'bg-blue-100 text-blue-800',
+            BCCM: 'bg-green-100 text-green-800',
+            BCPC: 'bg-purple-100 text-purple-800',
+            BDRRM: 'bg-red-100 text-red-800',
+            BHERT: 'bg-orange-100 text-orange-800',
+            BHW: 'bg-pink-100 text-pink-800',
+            BPSO: 'bg-indigo-100 text-indigo-800',
+            BTMO: 'bg-cyan-100 text-cyan-800',
+            VAWC: 'bg-yellow-100 text-yellow-800',
+        };
+        return colorMap[type] || 'bg-gray-100 text-gray-800';
+    };
+
     return (
         <div className="overflow-hidden rounded-[var(--radius)] bg-[var(--sidebar)]">
             <Table className="m-0 border">
                 <TableHeader className="bg-muted/50">
                     <TableRow>
                         <TableHead className="border-r py-4 text-center font-semibold">
-                            User ID
+                            Contact ID
                         </TableHead>
                         <TableHead className="border-r py-4 text-center font-semibold">
-                            Name
-                        </TableHead>
-
-                        <TableHead className="border-r py-4 text-center font-semibold">
-                            Role
+                            Branch/Unit Name
                         </TableHead>
                         <TableHead className="border-r py-4 text-center font-semibold">
-                            Assigned Barangay
+                            Responder Type
+                        </TableHead>
+                        <TableHead className="border-r py-4 text-center font-semibold">
+                            Primary Number
+                        </TableHead>
+                        <TableHead className="border-r py-4 text-center font-semibold">
+                            Location
                         </TableHead>
                         <TableHead className="border-r py-4 text-center font-semibold">
                             Status
@@ -69,93 +81,105 @@ const UserTable = ({
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {users.length === 0 ? (
+                    {contacts.length === 0 ? (
                         <TableRow>
                             <TableCell
                                 colSpan={7}
                                 className="h-24 text-center text-muted-foreground"
                             >
-                                No reports found at the moment
+                                No contacts found at the moment
                             </TableCell>
                         </TableRow>
                     ) : (
-                        users.map((user) => (
+                        contacts.map((contact) => (
                             <TableRow
-                                key={user.id}
+                                key={contact.id}
                                 className="text-center text-muted-foreground"
                             >
                                 <TableCell className="py-3">
-                                    #{user.id}
+                                    #{contact.id}
                                 </TableCell>
                                 <TableCell className="py-3">
-                                    {user.name}
-                                </TableCell>
-
-                                <TableCell className="py-3">
-                                    {user.role ? user.role.name : 'N/A'}
-                                </TableCell>
-
-                                <TableCell className="py-3">
-                                    {user.citizen_details?.barangay ||
-                                        user.official_details?.assigned_brgy ||
-                                        'N/A'}
+                                    <div className="font-medium">
+                                        {contact.branch_unit_name}
+                                    </div>
+                                    {contact.contact_person && (
+                                        <div className="text-xs text-muted-foreground">
+                                            {contact.contact_person}
+                                        </div>
+                                    )}
                                 </TableCell>
                                 <TableCell className="py-3">
-                                    {(
-                                        user.citizen_details?.status ||
-                                        user.official_details?.status ||
-                                        'ACTIVE'
-                                    ).toLocaleUpperCase()}
+                                    <span
+                                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getResponderTypeColor(contact.responder_type)}`}
+                                    >
+                                        {contact.responder_type}
+                                    </span>
+                                </TableCell>
+                                <TableCell className="py-3">
+                                    <div className="font-medium">
+                                        {contact.primary_mobile}
+                                    </div>
+                                    {contact.backup_mobile && (
+                                        <div className="text-xs text-muted-foreground">
+                                            Backup: {contact.backup_mobile}
+                                        </div>
+                                    )}
+                                </TableCell>
+                                <TableCell className="py-3">
+                                    <div className="font-medium">
+                                        {contact.location}
+                                    </div>
+                                    {contact.latitude && contact.longitude && (
+                                        <div className="text-xs text-muted-foreground">
+                                            {contact.latitude},{' '}
+                                            {contact.longitude}
+                                        </div>
+                                    )}
+                                </TableCell>
+                                <TableCell className="py-3">
+                                    <span
+                                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                            contact.active
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-gray-100 text-gray-800'
+                                        }`}
+                                    >
+                                        ●{' '}
+                                        {contact.active ? 'Active' : 'Inactive'}
+                                    </span>
                                 </TableCell>
                                 <TableCell className="py-3">
                                     <div className="flex justify-center gap-2">
                                         <Tooltip>
-                                            <ViewUser user={user}>
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="cursor-pointer"
-                                                    >
-                                                        <Open className="h-4 w-4" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                            </ViewUser>
+                                            <TooltipTrigger asChild>
+                                                <ViewContacts
+                                                    contact={contact}
+                                                />
+                                            </TooltipTrigger>
                                             <TooltipContent>
                                                 <p>View Details</p>
                                             </TooltipContent>
                                         </Tooltip>
                                         <Tooltip>
-                                            <EditUser user={user} roles={roles}>
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="cursor-pointer"
-                                                    >
-                                                        <SquarePen className="h-4 w-4" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                            </EditUser>
+                                            <TooltipTrigger asChild>
+                                                <EditContacts
+                                                    contact={contact}
+                                                />
+                                            </TooltipTrigger>
                                             <TooltipContent>
-                                                <p>Edit User</p>
+                                                <p>Edit Contact</p>
                                             </TooltipContent>
                                         </Tooltip>
 
                                         <Tooltip>
-                                            <ArchiveUser user={user}>
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="cursor-pointer"
-                                                    >
-                                                        <Archive className="h-4 w-4 text-[var(--destructive)]" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                            </ArchiveUser>
+                                            <TooltipTrigger asChild>
+                                                <DeleteContacts
+                                                    contact={contact}
+                                                />
+                                            </TooltipTrigger>
                                             <TooltipContent>
-                                                <p>Archive User</p>
+                                                <p>Delete Contact</p>
                                             </TooltipContent>
                                         </Tooltip>
                                     </div>
@@ -204,4 +228,4 @@ const UserTable = ({
     );
 };
 
-export default UserTable;
+export default ContactsTable;
