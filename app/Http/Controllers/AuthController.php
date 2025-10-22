@@ -18,7 +18,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|unique:users',
             'password' => 'required|min:6',
-            'national_id' => 'required|string|size:12|unique:citizen_details',
+            'national_id' => 'required|string|size:16|unique:citizen_details',
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
@@ -57,7 +57,7 @@ class AuthController extends Controller
             
             \Log::info('User created successfully', ['user_id' => $user->id]);
 
-            // Create citizen_details
+            // Create citizen_details (with national_id from user input)
             $citizenDetail = CitizenDetails::create([
                 'user_id' => $user->id,
                 'national_id' => $request->national_id,
@@ -72,7 +72,7 @@ class AuthController extends Controller
                 'city' => $request->city,
                 'province' => $request->province,
                 'postal_code' => $request->postal_code,
-                'is_verified' => true,
+                'is_verified' => false, // Will be verified after ID scanning comparison
             ]);
             
             \Log::info('CitizenDetails created successfully', ['citizen_id' => $citizenDetail->id]);
@@ -166,5 +166,76 @@ class AuthController extends Controller
             'verified' => $user->hasVerifiedEmail(),
             'email' => $user->email
         ]);
+    }
+
+    /**
+     * Compare scanned National ID with stored National ID
+     */
+    public function verifyNationalId(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'scanned_national_id' => 'required|string|size:16',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $citizenDetail = CitizenDetails::where('user_id', $request->user_id)->first();
+            
+            if (!$citizenDetail) {
+                return response()->json([
+                    'message' => 'Citizen details not found'
+                ], 404);
+            }
+
+            $storedNationalId = $citizenDetail->national_id;
+            $scannedNationalId = $request->scanned_national_id;
+            $isMatch = $storedNationalId === $scannedNationalId;
+
+            if ($isMatch) {
+                // Update verification status if IDs match
+                $citizenDetail->update(['is_verified' => true]);
+                
+                \Log::info('National ID verification successful', [
+                    'user_id' => $request->user_id,
+                    'stored_id' => $storedNationalId,
+                    'scanned_id' => $scannedNationalId,
+                    'citizen_id' => $citizenDetail->id
+                ]);
+            } else {
+                \Log::warning('National ID mismatch', [
+                    'user_id' => $request->user_id,
+                    'stored_id' => $storedNationalId,
+                    'scanned_id' => $scannedNationalId,
+                    'citizen_id' => $citizenDetail->id
+                ]);
+            }
+
+            return response()->json([
+                'message' => $isMatch ? 'National ID verification successful' : 'National ID mismatch',
+                'is_match' => $isMatch,
+                'stored_national_id' => $storedNationalId,
+                'scanned_national_id' => $scannedNationalId,
+                'citizen' => $citizenDetail,
+            ], 200);
+
+        } catch (\Exception $e) {
+            \Log::error('National ID verification failed', [
+                'error' => $e->getMessage(),
+                'user_id' => $request->user_id,
+                'scanned_national_id' => $request->scanned_national_id
+            ]);
+
+            return response()->json([
+                'message' => 'National ID verification failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

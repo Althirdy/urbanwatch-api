@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 Route::post('/login', [ApiLoginController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/register/citizen', [AuthController::class, 'register']);
+Route::post('/verify-national-id', [AuthController::class, 'verifyNationalId']);
 Route::post('/logout', [ApiLoginController::class, 'logout'])->middleware('auth:sanctum');
 
 // Email verification routes
