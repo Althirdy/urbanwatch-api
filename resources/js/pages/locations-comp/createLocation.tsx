@@ -49,6 +49,8 @@ function CreateLocation({ locationCategory = [] }: { locationCategory?: Location
     // Sheet control state
     const [sheetOpen, setSheetOpen] = useState(false);
 
+    // Track if form has been submitted to control error display
+
     // Inertia form handling
     const { data, setData, post, processing, errors, reset } = useForm({
         location_name: '',
@@ -144,31 +146,34 @@ function CreateLocation({ locationCategory = [] }: { locationCategory?: Location
                     <Plus className="mr-2 h-4 w-4" /> Add Location
                 </Button>
             </SheetTrigger>
-            <SheetContent>
-                <form onSubmit={onSubmit}>
-                    <SheetHeader>
+            <SheetContent className="flex flex-col h-full">
+                <form onSubmit={onSubmit} className="flex flex-col h-full">
+                    {/* Fixed Header */}
+                    <SheetHeader className="flex-shrink-0 pb-4 border-b">
                         <SheetTitle>Create New Location</SheetTitle>
                         <SheetDescription>
                             Add a new location with its details and coordinates.
                         </SheetDescription>
                     </SheetHeader>
-                    <div className="grid flex-1 auto-rows-min gap-10 px-4 py-6">
-                        <div className="grid gap-3">
-                            <div className=''>
+
+                    {/* Scrollable Form Content */}
+                    <div className="flex-1 overflow-y-auto py-6 px-4 space-y-6">
+                        <div className="space-y-4">
+                            <div>
                                 <Label htmlFor="location-name">Location Name</Label>
                                 <Input
                                     id="location-name"
-                                    placeholder="Ph-1 Palengke"
+                                    placeholder="e.g Ph-1 Palengke"
                                     value={data.location_name}
                                     onChange={(e) => setData('location_name', e.target.value)}
                                 />
                                 {errors.location_name && <p className="text-red-500 text-sm mt-1">{errors.location_name}</p>}
                             </div>
-                            <div >
+                            <div>
                                 <Label htmlFor="location-landmark">Near Landmark</Label>
                                 <Input
                                     id="location-landmark"
-                                    placeholder="Enter nearby landmark"
+                                    placeholder="e.g sto nino parish"
                                     value={data.landmark}
                                     onChange={(e) => setData('landmark', e.target.value)}
                                 />
@@ -184,6 +189,7 @@ function CreateLocation({ locationCategory = [] }: { locationCategory?: Location
                                     <div>
                                         <Label className='mb-2'>Barangay</Label>
                                         <Button
+                                            type='button'
                                             variant="outline"
                                             role="combobox"
                                             aria-expanded={barangayState.open}
@@ -234,6 +240,7 @@ function CreateLocation({ locationCategory = [] }: { locationCategory?: Location
                                     <div>
                                         <Label className='mb-2'>Zone Category</Label>
                                         <Button
+                                            type='button'
                                             variant="outline"
                                             role="combobox"
                                             aria-expanded={categoryState.open}
@@ -312,18 +319,20 @@ function CreateLocation({ locationCategory = [] }: { locationCategory?: Location
                                 />
                                 {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
                             </div>
-
                         </div>
                     </div>
-                    <SheetFooter className="px-4">
+
+                    {/* Fixed Footer */}
+                    <SheetFooter className="flex-shrink-0 pt-4 border-t bg-background">
                         <Button
                             type="submit"
                             disabled={processing}
+                            className="flex-1"
                         >
                             {processing ? 'Creating...' : 'Add Location'}
                         </Button>
                         <SheetClose asChild>
-                            <Button variant='outline' type="button">Cancel</Button>
+                            <Button variant='outline' type="button" className="flex-1">Cancel</Button>
                         </SheetClose>
                     </SheetFooter>
                 </form>

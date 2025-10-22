@@ -123,4 +123,16 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cloudinary Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for Cloudinary file upload service.
+    |
+    */
+
+    'cloudinary_cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+    'cloudinary_upload_preset' => env('CLOUDINARY_UNSIGNED_UPLOAD_PRESET'),
+
 ];
