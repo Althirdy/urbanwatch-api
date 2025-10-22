@@ -66,6 +66,7 @@ class ApiLoginController extends BaseApiController
                         'suffix' => $citizenDetails->suffix,
                         'email' => $user->email,
                         'role' => $user->role->name,
+                        'nationalId' => $citizenDetails->national_id,
                         'address' => $citizenDetails->address,
                         'phoneNumber' => $citizenDetails->phone_number,
                         'barangay' => $citizenDetails->barangay,
@@ -73,6 +74,7 @@ class ApiLoginController extends BaseApiController
                         'province' => $citizenDetails->province,
                         'postalCode' => $citizenDetails->postal_code,
                         'isVerified' => $citizenDetails->is_verified,
+                        'email_verified_at' => $user->email_verified_at,
                     ]
                 ]);
             }
@@ -138,6 +140,7 @@ class ApiLoginController extends BaseApiController
                         'suffix' => $citizenDetails->suffix,
                         'email' => $user->email,
                         'role' => $user->role->name,
+                        'nationalId' => $citizenDetails->national_id,
                         'address' => $citizenDetails->address,
                         'phoneNumber' => $citizenDetails->phone_number,
                         'barangay' => $citizenDetails->barangay,
@@ -145,6 +148,7 @@ class ApiLoginController extends BaseApiController
                         'province' => $citizenDetails->province,
                         'zipCode' => $citizenDetails->postal_code,
                         'isVerified' => $citizenDetails->is_verified,
+                        'email_verified_at' => $user->email_verified_at,
                     ]
                 ]);
             }

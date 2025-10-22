@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class CitizenDetails extends Model
 {
+    use HasFactory;
+
     protected $table = 'citizen_details';
 
     protected $fillable = [
@@ -22,6 +25,12 @@ class CitizenDetails extends Model
         'province',
         'postal_code',
         'is_verified',
+        'status',
+    ];
+
+    protected $casts = [
+        'date_of_birth' => 'date',
+        'is_verified' => 'boolean',
     ];
 
     public function user()
