@@ -53,7 +53,9 @@ class ConcernController extends BaseApiController
 
                 foreach ($uploadResults['successful'] as $upload) {
                     $media = IncidentMedia::create([
-                        'concern_id' => $concern->id,
+                        'source_type' => \App\Models\Citizen\Concern::class,
+                        'source_id' => $concern->id,
+                        'source_category' => 'citizen_concern',
                         'media_type' => 'image', // Assuming all uploads are images for now
                         'original_path' => $upload['secure_url'] ?? null,
                         'blurred_path' => null, // You can implement blurring if needed
@@ -61,6 +63,7 @@ class ConcernController extends BaseApiController
                         'original_filename' => $upload['original_filename'] ?? null,
                         'file_size' => $upload['file_size'] ?? null,
                         'mime_type' => $upload['mime_type'] ?? null,
+                        'captured_at' => now(), // Set capture time to current time
                     ]);
                     $uploadedMedia[] = $media['original_path'];
                 }

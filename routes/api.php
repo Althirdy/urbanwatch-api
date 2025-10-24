@@ -21,4 +21,6 @@ Route::get('health', function () {
 });
 
 
+Route::apiResource('yolo/accidents', App\Http\Controllers\Api\Yolo\AccidentController::class);
+
 require __DIR__ . '/Citizen/ConcernManagement.php';

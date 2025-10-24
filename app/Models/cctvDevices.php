@@ -27,4 +27,30 @@ class cctvDevices extends Model
     {
         return $this->belongsTo(Locations::class, 'location_id');
     }
+
+    /**
+     * Get all media captured by this CCTV device.
+     */
+    public function media()
+    {
+        return $this->morphMany(\App\Models\IncidentMedia::class, 'source');
+    }
+
+    /**
+     * Get snapshots captured by this device.
+     */
+    public function snapshots()
+    {
+        return $this->morphMany(\App\Models\IncidentMedia::class, 'source')
+                    ->where('source_category', 'device_snapshot');
+    }
+
+    /**
+     * Get YOLO detections from this device.
+     */
+    public function detections()
+    {
+        return $this->morphMany(\App\Models\IncidentMedia::class, 'source')
+                    ->where('source_category', 'cctv_detection');
+    }
 }
