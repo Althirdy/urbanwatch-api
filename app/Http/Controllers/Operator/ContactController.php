@@ -51,18 +51,18 @@ class ContactController extends Controller
     public function store(ContactRequest $request)
     {
         DB::beginTransaction();
-        
+
         try {
             $validated = $request->validated();
-            
+
             $contact = Contact::create($validated);
-            
+
             DB::commit();
-            
+
             return redirect()->back()->with('success', 'Contact created successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return redirect()->back()
                 ->with('error', 'An error occurred while creating the contact.')
                 ->withInput();
@@ -85,18 +85,18 @@ class ContactController extends Controller
     public function update(ContactRequest $request, Contact $contact)
     {
         DB::beginTransaction();
-        
+
         try {
             $validated = $request->validated();
-            
+
             $contact->update($validated);
-            
+
             DB::commit();
-            
+
             return redirect()->back()->with('success', 'Contact updated successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return redirect()->back()
                 ->with('error', 'An error occurred while updating the contact.')
                 ->withInput();
@@ -109,18 +109,29 @@ class ContactController extends Controller
     public function destroy(Contact $contact)
     {
         DB::beginTransaction();
-        
+
         try {
             $contact->delete();
-            
+
             DB::commit();
-            
+
             return redirect()->back()->with('success', 'Contact deleted successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return redirect()->back()
                 ->with('error', 'An error occurred while deleting the contact.');
         }
+    }
+
+    public function heatMapContacts()
+    {
+        $contacts = Contact::all();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Contacts retrieved successfully',
+            'data' => $contacts,
+        ], 200);
     }
 }

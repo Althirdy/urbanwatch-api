@@ -21,4 +21,12 @@ Route::get('health', function () {
 });
 
 
+Route::post('yolo/accidents/snapshot', [App\Http\Controllers\Api\Yolo\YoloAccidentController::class, 'ProcessSnapShot']);
+
+//========HeatmapContacts========//
+
+Route::get('contacts/heatmap', [App\Http\Controllers\Operator\ContactController::class, 'heatMapContacts']);
+
+
+
 require __DIR__ . '/Citizen/ConcernManagement.php';

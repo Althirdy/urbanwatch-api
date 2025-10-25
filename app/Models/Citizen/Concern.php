@@ -30,11 +30,6 @@ class Concern extends Model
 
     public function media()
     {
-        return $this->hasMany(IncidentMedia::class, 'concern_id');
-    }
-
-    public function citizen()
-    {
-        return $this->belongsTo(User::class, 'citizen_id');
+        return $this->morphMany(IncidentMedia::class, 'source');
     }
 }

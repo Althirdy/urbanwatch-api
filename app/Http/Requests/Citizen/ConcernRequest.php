@@ -29,8 +29,8 @@ class ConcernRequest extends FormRequest
             'transcript_text' => 'nullable|string',
             'longitude' => 'nullable|numeric',
             'latitude' => 'nullable|numeric',
-            'files' => 'nullable|array|min:1|max:3', // Maximum 3 files, minimum 1 if provided
-            'files.*' => 'file|mimes:jpeg,jpg,png,gif|max:3072', // Each file max 3MB, images only
+            // 'files' => 'nullable|array|min:1|max:3', // Maximum 3 files, minimum 1 if provided
+            // 'files.*' => 'file|mimes:jpeg,jpg,png,gif|max:3072', // Each file max 3MB, images only
         ];
     }
 
