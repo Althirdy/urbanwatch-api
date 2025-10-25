@@ -26,6 +26,15 @@ import { toast } from "@/components/use-toast"
 import { Switch } from "@/components/ui/switch"
 
 const responderTypes = [
+    { id: 1, name: 'Fire' },
+    { id: 2, name: 'Emergency' },
+    { id: 3, name: 'Crime' },
+    { id: 4, name: 'Traffic' },
+    { id: 5, name: 'Barangay' },
+    { id: 6, name: 'Others' },
+]
+
+const branchUnitNames = [
     { id: 1, name: 'BEST' },
     { id: 2, name: 'BCCM' },
     { id: 3, name: 'BCPC' },
@@ -38,14 +47,39 @@ const responderTypes = [
 ]
 
 const locations = [
-    { id: 1, name: 'Monumento Circle' },
-    { id: 2, name: 'Grace Park' },
-    { id: 3, name: 'Bagong Barrio' },
-    { id: 4, name: 'Maypajo' },
-    { id: 5, name: 'Camarin' },
+    { id: 1, name: 'Pkg. 1A Bicolandia' },
+    { id: 2, name: 'Pkg. 1B Powerline' },
+    { id: 3, name: 'Pkg. 1C Sampalukan' },
+    { id: 4, name: 'Pkg. 2 Botlog' },
+    { id: 5, name: 'Pkg. 2 GK Staging' },
+    { id: 6, name: 'Pkg. 3 Kaunlaran' },
+    { id: 7, name: 'Pkg. 3 Maharlika' },
+    { id: 8, name: 'Pkg. 3 Maharlika 2' },
+    { id: 9, name: 'Pkg. 3 Damayan' },
+    { id: 10, name: 'Pkg. 4A Atlantika' },
+    { id: 11, name: 'Pkg. 4B Aklan Wire' },
+    { id: 12, name: 'Pkg. 5 San Roque' },
+    { id: 13, name: 'Pkg. 5 Brgy. Annex (BFP)' },
+    { id: 14, name: 'Pkg. 5 Crasher' },
+    { id: 15, name: 'Pkg. 5 Gatnai' },
+    { id: 16, name: 'Pkg. 6 Bayanihan' },
+    { id: 17, name: 'Pkg. 7A Lakan' },
+    { id: 18, name: 'Pkg. 7B PhilRad' },
+    { id: 19, name: 'Pkg. 7B  Khulits Court' },
+    { id: 20, name: 'Pkg. 7B Dating Daan' },
+    { id: 21, name: 'Pkg. 7C GS Senior High' },
+    { id: 22, name: 'Pkg. 8A North Cal' },
+    { id: 23, name: 'Pkg. 8B Makati' },
+    { id: 24, name: 'Pkg. 9 Plaza Maria Upper' },
+    { id: 25, name: 'Pkg. 9 Plaza Maria Lower' },
 ]
 
 type ResponderType = {
+    id: number;
+    name: string;
+}
+
+type BranchUnitName = {
     id: number;
     name: string;
 }
@@ -56,7 +90,7 @@ type Location = {
 }
 
 type SelectionState = {
-    value: ResponderType | Location | null;
+    value: ResponderType | BranchUnitName | Location | null;
     open: boolean;
 }
 
@@ -93,6 +127,11 @@ function AddContacts() {
     });
 
     // Combined states for selectors
+    const [branchUnitNameState, setBranchUnitNameState] = useState<SelectionState>({
+        value: null,
+        open: false
+    });
+
     const [responderTypeState, setResponderTypeState] = useState<SelectionState>({
         value: null,
         open: false
@@ -107,6 +146,15 @@ function AddContacts() {
         latitude: '',
         longitude: ''
     });
+
+    // Handlers for branch/unit name selection
+    const handleBranchUnitNameSelect = (selected: BranchUnitName | null) => {
+        setBranchUnitNameState({
+            value: selected,
+            open: false
+        });
+        setData('branch_unit_name', selected ? selected.name : '');
+    };
 
     // Handlers for responder type selection
     const handleResponderTypeSelect = (selected: ResponderType | null) => {
@@ -162,7 +210,7 @@ function AddContacts() {
         if (!data.location.trim()) {
             toast({
                 title: "Validation Error",
-                description: "Address is required.",
+                description: "Package is required.",
                 variant: "destructive",
             });
             return;
@@ -211,6 +259,7 @@ function AddContacts() {
                 setSheetOpen(false);
                 setHasAttemptedSubmit(false);
                 // Reset all state when successful
+                setBranchUnitNameState({ value: null, open: false });
                 setResponderTypeState({ value: null, open: false });
                 setLocationState({ value: null, open: false });
                 setCoordinates({ latitude: '', longitude: '' });
@@ -235,6 +284,7 @@ function AddContacts() {
             if (!open) {
                 // Reset all states when closing
                 setHasAttemptedSubmit(false);
+                setBranchUnitNameState({ value: null, open: false });
                 setResponderTypeState({ value: null, open: false });
                 setLocationState({ value: null, open: false });
                 setCoordinates({ latitude: '', longitude: '' });
@@ -262,22 +312,6 @@ function AddContacts() {
                     <div className="flex-1 overflow-y-auto px-4 py-6">
                         <div className="space-y-4">
                             
-                            {/* Branch/Unit Name */}
-                            <div>
-                                <Label htmlFor="branch_unit_name">Branch/Unit Name</Label>
-                                <Input
-                                    id="branch_unit_name"
-                                    placeholder=""
-                                    value={data.branch_unit_name}
-                                    onChange={(e) => setData('branch_unit_name', e.target.value)}
-                                    className={hasAttemptedSubmit && !data.branch_unit_name.trim() ? 'border-red-500' : ''}
-                                />
-                                {hasAttemptedSubmit && !data.branch_unit_name.trim() && (
-                                    <p className="text-red-500 text-sm mt-1">Branch/Unit Name is required</p>
-                                )}
-                                {errors.branch_unit_name && <p className="text-red-500 text-sm mt-1">{errors.branch_unit_name}</p>}
-                            </div>
-
                             {/* Contact Person (Optional) */}
                             <div>
                                 <Label htmlFor="contact_person">Contact Person (Optional)</Label>
@@ -290,7 +324,54 @@ function AddContacts() {
                                 {errors.contact_person && <p className="text-red-500 text-sm mt-1">{errors.contact_person}</p>}
                             </div>
 
-                            {/* Responder Type and Address - Side by Side */}
+                            {/* Branch/Unit Name - Now a Dropdown */}
+                            <div>
+                                <Label>Branch/Unit Name</Label>
+                                <Popover open={branchUnitNameState.open} onOpenChange={(open) => setBranchUnitNameState({ ...branchUnitNameState, open })}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={branchUnitNameState.open}
+                                            className={`w-full justify-between ${hasAttemptedSubmit && !data.branch_unit_name ? 'border-red-500' : ''}`}
+                                        >
+                                            {branchUnitNameState.value ? branchUnitNameState.value.name : "Select Branch/Unit"}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-full p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Search branch/unit..." />
+                                            <CommandList>
+                                                <CommandEmpty>No branch/unit found.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {branchUnitNames.map((branch) => (
+                                                        <CommandItem
+                                                            key={branch.id}
+                                                            value={branch.name}
+                                                            onSelect={() => handleBranchUnitNameSelect(branch)}
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    branchUnitNameState.value?.id === branch.id ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                            {branch.name}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                                {hasAttemptedSubmit && !data.branch_unit_name && (
+                                    <p className="text-red-500 text-sm mt-1">Branch/Unit Name is required</p>
+                                )}
+                                {errors.branch_unit_name && <p className="text-red-500 text-sm mt-1">{errors.branch_unit_name}</p>}
+                            </div>
+
+                            {/* Responder Type and Package - Side by Side */}
                             <div className="grid grid-cols-2 gap-4">
                                 {/* Responder Type */}
                                 <div>
@@ -339,21 +420,66 @@ function AddContacts() {
                                     {errors.responder_type && <p className="text-red-500 text-sm mt-1">{errors.responder_type}</p>}
                                 </div>
 
-                                {/* Address - Typable */}
+                                {/* Package - Dropdown */}
                                 <div>
-                                    <Label htmlFor="location">Address</Label>
-                                    <Input
-                                        id="location"
-                                        placeholder=""
-                                        value={data.location}
-                                        onChange={(e) => setData('location', e.target.value)}
-                                        className={hasAttemptedSubmit && !data.location.trim() ? 'border-red-500' : ''}
-                                    />
-                                    {hasAttemptedSubmit && !data.location.trim() && (
-                                        <p className="text-red-500 text-sm mt-1">Address is required</p>
+                                    <Label>Package</Label>
+                                    <Popover open={locationState.open} onOpenChange={(open) => setLocationState({ ...locationState, open })}>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                role="combobox"
+                                                aria-expanded={locationState.open}
+                                                className={`w-full justify-between ${hasAttemptedSubmit && !data.location ? 'border-red-500' : ''}`}
+                                            >
+                                                {locationState.value ? locationState.value.name : "Select Package"}
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-full p-0">
+                                            <Command>
+                                                <CommandInput placeholder="Search package..." />
+                                                <CommandList className="max-h-[300px] overflow-y-auto">
+                                                    <CommandEmpty>No package found.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        {locations.map((location) => (
+                                                            <CommandItem
+                                                                key={location.id}
+                                                                value={location.name}
+                                                                onSelect={() => handleLocationSelect(location)}
+                                                            >
+                                                                <Check
+                                                                    className={cn(
+                                                                        "mr-2 h-4 w-4",
+                                                                        locationState.value?.id === location.id ? "opacity-100" : "opacity-0"
+                                                                    )}
+                                                                />
+                                                                {location.name}
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                    {hasAttemptedSubmit && !data.location && (
+                                        <p className="text-red-500 text-sm mt-1">Package is required</p>
                                     )}
                                     {errors.location && <p className="text-red-500 text-sm mt-1">{errors.location}</p>}
                                 </div>
+                            </div>
+
+                            {/* GPS Coordinates - Barangay 176E Area */}
+                            <div className="space-y-2">
+                                <Label>GPS Coordinate (Barangay 176E, Bagong Silang)</Label>
+                                <MapModal
+                                    onLocationSelect={handleMapLocationSelect}
+                                    coordinates={coordinates}
+                                />
+                                {hasAttemptedSubmit && (!data.latitude || !data.longitude) && (
+                                    <p className="text-red-500 text-sm mt-1">GPS Coordinate is required</p>
+                                )}
+                                {errors.latitude && <p className="text-red-500 text-sm mt-1">{errors.latitude}</p>}
+                                {errors.longitude && <p className="text-red-500 text-sm mt-1">{errors.longitude}</p>}
                             </div>
 
                             {/* Communication Data Section */}
@@ -400,20 +526,6 @@ function AddContacts() {
                                     <p className="text-red-500 text-sm mt-1">Must be exactly 11 digits</p>
                                 )}
                                 {errors.backup_mobile && <p className="text-red-500 text-sm mt-1">{errors.backup_mobile}</p>}
-                            </div>
-
-                            {/* GPS Coordinates */}
-                            <div className="space-y-2">
-                                <Label>GPS Coordinate</Label>
-                                <MapModal
-                                    onLocationSelect={handleMapLocationSelect}
-                                    coordinates={coordinates}
-                                />
-                                {hasAttemptedSubmit && (!data.latitude || !data.longitude) && (
-                                    <p className="text-red-500 text-sm mt-1">GPS Coordinate is required</p>
-                                )}
-                                {errors.latitude && <p className="text-red-500 text-sm mt-1">{errors.latitude}</p>}
-                                {errors.longitude && <p className="text-red-500 text-sm mt-1">{errors.longitude}</p>}
                             </div>
 
                             {/* Active Toggle Switch */}

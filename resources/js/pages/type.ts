@@ -27,6 +27,24 @@ export type cctv_T = {
     fps: number,
 }
 
+export type uwDevice_T = {
+    id: number,
+    device_name: string,
+    location_id: number | null,
+    cctv_id: number | null,
+    status: 'active' | 'inactive' | 'maintenance',
+    custom_address: string | null,
+    custom_latitude: number | null,
+    custom_longitude: number | null,
+    location?: location_T,
+    cctv_device?: cctv_T,
+    cctv_cameras?: cctv_T[], // Array of linked CCTV cameras
+    latitude?: number | null, // Helper property for display (from location or custom)
+    longitude?: number | null, // Helper property for display (from location or custom)
+    created_at: string,
+    updated_at: string,
+}
+
 export type location_T = {
     id: number,
     location_name: string,

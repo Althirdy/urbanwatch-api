@@ -44,12 +44,23 @@ const UserCard = ({ users, roles }: { users: users_T[]; roles: roles_T[] }) => {
                             <p className="text-sm font-medium">
                                 Role & Location
                             </p>
-                            <p className="text-sm font-medium text-muted-foreground">
-                                {user.role ? user.role.name : 'N/A'} at{' '}
-                                {user.citizen_details?.barangay ||
-                                    user.official_details?.assigned_brgy ||
-                                    'N/A'}
-                            </p>
+                            <div className="flex items-center gap-2">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    user.role?.name === 'Operator' ? 'bg-blue-100 text-blue-800' :
+                                    user.role?.name === 'Citizen' ? 'bg-purple-100 text-purple-800' :
+                                    user.role?.name === 'Purok Leader' ? 'bg-green-100 text-green-800' :
+                                    user.role?.name === 'Admin' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
+                                }`}>
+                                    {user.role ? user.role.name : 'N/A'}
+                                </span>
+                                <span className="text-sm text-muted-foreground">
+                                    at{' '}
+                                    {user.citizen_details?.barangay ||
+                                        user.official_details?.assigned_brgy ||
+                                        'N/A'}
+                                </span>
+                            </div>
                         </div>
                     </CardContent>
                     <CardFooter>

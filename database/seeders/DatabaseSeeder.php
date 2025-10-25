@@ -69,5 +69,8 @@ class DatabaseSeeder extends Seeder
         $this->call(UserSeeder::class);
         $this->call(ReportSeeder::class);
         $this->call(PublicPostSeeder::class);
+        $this->call(ContactSeeder::class);
+        $this->call(CctvDeviceSeeder::class);
+        $this->call(UwDeviceSeeder::class);
     }
 }
