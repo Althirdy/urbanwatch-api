@@ -22,14 +22,14 @@ class ContactRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'branch_unit_name' => 'required|string|max:255',
+            'branch_unit_name' => 'required|string|in:BEST,BCCM,BCPC,BDRRM,BHERT,BHW,BPSO,BTMO,VAWC',
             'contact_person' => 'nullable|string|max:255',
-            'responder_type' => 'required|string|in:BEST,BCCM,BCPC,BDRRM,BHERT,BHW,BPSO,BTMO,VAWC',
+            'responder_type' => 'required|string|in:Fire,Emergency,Crime,Traffic,Barangay,Others',
             'location' => 'required|string|max:255',
-            'primary_mobile' => 'required|string|max:20',
-            'backup_mobile' => 'nullable|string|max:20',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
+            'primary_mobile' => 'required|string|size:11|regex:/^[0-9]{11}$/',
+            'backup_mobile' => 'nullable|string|size:11|regex:/^[0-9]{11}$/',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
             'active' => 'boolean',
         ];
     }
@@ -43,17 +43,21 @@ class ContactRequest extends FormRequest
     {
         return [
             'branch_unit_name.required' => 'Branch/Unit name is required.',
-            'branch_unit_name.max' => 'Branch/Unit name cannot exceed 255 characters.',
+            'branch_unit_name.in' => 'The selected branch/unit name is invalid.',
             'contact_person.max' => 'Contact person name cannot exceed 255 characters.',
             'responder_type.required' => 'Responder type is required.',
             'responder_type.in' => 'The selected responder type is invalid.',
-            'location.required' => 'Location is required.',
-            'location.max' => 'Location cannot exceed 255 characters.',
+            'location.required' => 'Package location is required.',
+            'location.max' => 'Package location cannot exceed 255 characters.',
             'primary_mobile.required' => 'Primary mobile number is required.',
-            'primary_mobile.max' => 'Primary mobile number cannot exceed 20 characters.',
-            'backup_mobile.max' => 'Backup mobile number cannot exceed 20 characters.',
+            'primary_mobile.size' => 'Primary mobile number must be exactly 11 digits.',
+            'primary_mobile.regex' => 'Primary mobile number must be 11 digits.',
+            'backup_mobile.size' => 'Backup mobile number must be exactly 11 digits.',
+            'backup_mobile.regex' => 'Backup mobile number must be 11 digits.',
+            'latitude.required' => 'GPS coordinate (latitude) is required.',
             'latitude.numeric' => 'Latitude must be a valid number.',
             'latitude.between' => 'Latitude must be between -90 and 90.',
+            'longitude.required' => 'GPS coordinate (longitude) is required.',
             'longitude.numeric' => 'Longitude must be a valid number.',
             'longitude.between' => 'Longitude must be between -180 and 180.',
             'active.boolean' => 'Active status must be true or false.',

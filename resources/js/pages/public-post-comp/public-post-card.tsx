@@ -22,17 +22,17 @@ import ViewPublicPostDetails from './public-post-view';
 
 function getStatusInfo(publishedAt: string | null) {
     if (!publishedAt) {
-        return { label: 'Draft', variant: 'outline' as const };
+        return { label: 'Draft', className: 'bg-gray-100 text-gray-800' };
     }
 
     const publishDate = new Date(publishedAt);
     const now = new Date();
 
     if (publishDate > now) {
-        return { label: 'Scheduled', variant: 'secondary' as const };
+        return { label: 'Scheduled', className: 'bg-yellow-100 text-yellow-800' };
     }
 
-    return { label: 'Published', variant: 'default' as const };
+    return { label: 'Published', className: 'bg-green-100 text-green-800' };
 }
 
 const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
@@ -55,12 +55,9 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
                         <CardHeader>
                             <CardTitle> Post ID: #{post.id}</CardTitle>
                             <CardDescription>
-                                <Badge
-                                    variant={statusInfo.variant}
-                                    className="w-fit text-sm"
-                                >
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.className}`}>
                                     {statusInfo.label}
-                                </Badge>
+                                </span>
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -69,9 +66,14 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
                                     Report Content
                                 </p>
                                 <div className="rounded-lg border bg-muted/30 p-3">
-                                    <p className="mb-2 text-sm font-medium">
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mb-2 ${
+                                        post.report?.report_type === 'CCTV' ? 'bg-blue-100 text-blue-800' :
+                                        post.report?.report_type === 'Citizen Concern' ? 'bg-purple-100 text-purple-800' :
+                                        post.report?.report_type === 'Emergency' ? 'bg-red-100 text-red-800' :
+                                        'bg-gray-100 text-gray-800'
+                                    }`}>
                                         {post.report?.report_type}
-                                    </p>
+                                    </span>
                                     <p className="mb-2 text-sm text-muted-foreground">
                                         {post.report?.transcript ||
                                             'No transcript available'}

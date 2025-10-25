@@ -46,10 +46,24 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                             <span>Report ID: #{report.id}</span>
                         </CardTitle>
                         <CardDescription>
-                            {' '}
-                            <Badge variant="default" className="text-sm">
-                                {report.status}
-                            </Badge>
+                            <div className="flex gap-2">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    report.report_type === 'CCTV' ? 'bg-blue-100 text-blue-800' :
+                                    report.report_type === 'Citizen Concern' ? 'bg-purple-100 text-purple-800' :
+                                    report.report_type === 'Emergency' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
+                                }`}>
+                                    {report.report_type}
+                                </span>
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    report.status === 'Ongoing' ? 'bg-yellow-100 text-yellow-800' :
+                                    report.status === 'Pending' ? 'bg-orange-100 text-orange-800' :
+                                    report.status === 'Resolved' ? 'bg-green-100 text-green-800' :
+                                    'bg-gray-100 text-gray-800'
+                                }`}>
+                                    {report.status}
+                                </span>
+                            </div>
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

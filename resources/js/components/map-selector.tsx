@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
+import type { LeafletMouseEvent } from 'leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -25,7 +26,7 @@ function MapEvents({ onLocationSelect, setPosition }: {
     setPosition: (position: [number, number]) => void;
 }) {
     useMapEvents({
-        click(e: any) {
+        click(e: LeafletMouseEvent) {
             const { lat, lng } = e.latlng;
             setPosition([lat, lng]);
             onLocationSelect({ lat, lng });
@@ -39,6 +40,7 @@ function DraggableMarker({ position, onLocationSelect }: {
     onLocationSelect: (location: { lat: number; lng: number }) => void;
 }) {
     const [markerPosition, setMarkerPosition] = useState(position);
+    const markerRef = useRef<L.Marker>(null);
 
     const eventHandlers = {
         dragend: (e: L.DragEndEvent) => {
@@ -53,10 +55,17 @@ function DraggableMarker({ position, onLocationSelect }: {
         setMarkerPosition(position);
     }, [position]);
 
+    useEffect(() => {
+        const marker = markerRef.current;
+        if (marker) {
+            marker.dragging?.enable();
+        }
+    }, []);
+
     return (
         <Marker
+            ref={markerRef}
             position={markerPosition}
-            draggable={true}
             eventHandlers={eventHandlers}
             icon={createMarkerIcon()}
         />
@@ -67,8 +76,8 @@ export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
     const [position, setPosition] = useState<[number, number] | null>(null);
     const [isClient, setIsClient] = useState(false);
 
-    // Default center coordinates (Caloocan City)
-    const defaultCenter: [number, number] = [14.775, 121.044];
+    // Default center coordinates (Barangay 176E, Bagong Silang, Caloocan City)
+    const defaultCenter: [number, number] = [14.78043, 121.0375];
 
     useEffect(() => {
         setIsClient(true);

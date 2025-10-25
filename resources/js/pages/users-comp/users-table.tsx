@@ -67,7 +67,15 @@ const UserTable = ({
                             <TableCell className="py-3">{user.name}</TableCell>
 
                             <TableCell className="py-3">
-                                {user.role ? user.role.name : 'N/A'}
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    user.role?.name === 'Operator' ? 'bg-blue-100 text-blue-800' :
+                                    user.role?.name === 'Citizen' ? 'bg-purple-100 text-purple-800' :
+                                    user.role?.name === 'Purok Leader' ? 'bg-green-100 text-green-800' :
+                                    user.role?.name === 'Admin' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
+                                }`}>
+                                    {user.role ? user.role.name : 'N/A'}
+                                </span>
                             </TableCell>
 
                             <TableCell className="py-3">
@@ -76,11 +84,17 @@ const UserTable = ({
                                     'N/A'}
                             </TableCell>
                             <TableCell className="py-3">
-                                {(
-                                    user.citizen_details?.status ||
-                                    user.official_details?.status ||
-                                    'ACTIVE'
-                                ).toLocaleUpperCase()}
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                    (user.citizen_details?.status || user.official_details?.status || 'ACTIVE').toLocaleUpperCase() === 'ACTIVE' 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                    ● {(
+                                        user.citizen_details?.status ||
+                                        user.official_details?.status ||
+                                        'ACTIVE'
+                                    ).toLocaleUpperCase()}
+                                </span>
                             </TableCell>
                             <TableCell className="py-3">
                                 <div className="flex justify-center gap-2">
