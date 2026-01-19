@@ -22,7 +22,7 @@ class ConcernResource extends JsonResource
             'status' => $this->status,
             'severity' => $this->severity,
             'category' => $this->category,
-
+            'type' => $this->type,
             // AI Category Detection Fields
             // 'userSelectedCategory' => $this->user_selected_category,
             // 'userSelectedSeverity' => $this->user_selected_severity,
