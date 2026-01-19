@@ -49,7 +49,7 @@ class ConcernResource extends JsonResource
             'assignedTo' => $this->whenLoaded('distribution', function () {
                 $purokLeader = $this->distribution->purokLeader ?? null;
 
-                if (! $purokLeader) {
+                if (!$purokLeader) {
                     return null;
                 }
 
@@ -63,7 +63,7 @@ class ConcernResource extends JsonResource
                 ];
             }),
 
-            'timeline' => $this->whenLoaded('histories', fn () => $this->histories->map(fn ($history) => [
+            'timeline' => $this->whenLoaded('histories', fn() => $this->histories->map(fn($history) => [
                 'id' => $history->id,
                 'status' => $history->status,
                 'remarks' => $history->remarks,
