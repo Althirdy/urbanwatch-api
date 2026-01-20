@@ -34,13 +34,26 @@ class Concern extends Model
         'ai_severity',
         'ai_confidence',
         'ai_processed_at',
+        'parent_concern_id',
+        'is_duplicate',
     ];
 
     protected $casts = [
         'longitude' => 'decimal:7',
         'latitude' => 'decimal:7',
         'ai_processed_at' => 'datetime',
+        'is_duplicate' => 'boolean',
     ];
+
+    public function parentConcern()
+    {
+        return $this->belongsTo(Concern::class, 'parent_concern_id');
+    }
+
+    public function duplicates()
+    {
+        return $this->hasMany(Concern::class, 'parent_concern_id');
+    }
 
     public function media()
     {

@@ -30,7 +30,7 @@ class ProcessVoiceConcernJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(GeminiService $geminiService)
+    public function handle(GeminiService $geminiService, \App\Services\ConcernService $concernService)
     {
         try {
             $concern = Concern::with(['media' => function ($query) {
@@ -49,6 +49,7 @@ class ProcessVoiceConcernJob implements ShouldQueue
             if (! $audioMedia) {
                 Log::warning('ProcessVoiceConcernJob: No audio media found for concern', ['concern_id' => $concern->id]);
 
+                // Still finalize even if media is missing
                 return;
             }
 
@@ -124,7 +125,7 @@ class ProcessVoiceConcernJob implements ShouldQueue
 
                 // Refresh to get latest data
                 $concern->refresh();
-                $concern->load('distribution');
+                // $concern->load('distribution'); // Distribution not created yet
 
                 // Fire AI Category Updated Event if we have AI data
                 if (isset($analysis['category']) && isset($analysis['severity'])) {
@@ -161,6 +162,10 @@ class ProcessVoiceConcernJob implements ShouldQueue
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+        } finally {
+            // Finalize the concern (Deduplication -> Assignment -> Notification)
+            Log::info('ProcessVoiceConcernJob: Finalizing concern', ['concern_id' => $this->concernId]);
+            $concernService->finalizeConcern($this->concernId);
         }
     }
 }

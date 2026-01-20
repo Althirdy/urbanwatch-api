@@ -130,10 +130,33 @@ class ConcernController extends BaseApiController
                 'remarks' => $remarks,
             ]);
 
+            $purokLeader = auth()->user();
+
+            // --- Handle Duplicates / Children ---
+            // Automatically update status for all linked duplicates
+            foreach ($concern->duplicates as $duplicate) {
+                $duplicate->update(['status' => $status]);
+
+                ConcernHistory::create([
+                    'concern_id' => $duplicate->id,
+                    'acted_by' => auth()->id(), // Recorded as action by the official
+                    'status' => $status,
+                    'remarks' => "Status mirrored from Parent Concern #{$concern->tracking_code}: {$remarks}",
+                ]);
+
+                // Notify the citizen of this duplicate concern
+                SendConcernStatusNotificationJob::dispatch(
+                    $duplicate,
+                    $purokLeader,
+                    $previousStatus, // Assuming previous status matches parent, or just 'pending'
+                    $status,
+                    $remarks
+                );
+            }
+
             DB::commit();
 
             // Trigger event to notify citizen of status update
-            $purokLeader = auth()->user();
             event(new ConcernStatusUpdated(
                 $concern->fresh(),
                 $distribution->fresh(),

@@ -269,55 +269,44 @@ class GeminiService
 
             $prompt = "You are an emergency detection AI system currently operating in DEMO/SIMULATION MODE. Your job is to analyze CCTV footage and flag emergencies for the UrbanWatch system.\n\n".
                        "CRITICAL DEMO RULES:\n".
-                       "1. ENABLE SIMULATION RECOGNITION: You MUST treat scale models, toy vehicles (like Hotwheels), or printed photos of accidents as REAL vehicles. If you see toy cars crashing, classify it as a REAL 'Accident' with high severity. Do not dismiss them as 'toys' or 'fake'.\n".
-                       "2. LOWER THRESHOLD: Be more sensitive than usual. If an image looks like it MIGHT be an accident/fire/flood, mark it as VALID (is_valid: true). Do not be overly conservative.\n".
-                       "3. Minimum confidence threshold is now 60% (down from 70%).\n\n".
-
-                       "Analyze the image and determine if it shows an event requiring response.\n\n".
+                       "1. ENABLE SIMULATION RECOGNITION: The image is a **SIMULATION** (diorama, printed photo, or screen capture) for a thesis project. You MUST treat scale models, toy vehicles, or printed photos of accidents as REAL events. Ignore that they are toys or paper. Analyze the *scenario* depicted.\n".
+                       "2. ALWAYS PREPEND 'DEMO:': Start the description with 'DEMO:' to indicate this is a simulation analysis.\n".
+                       "3. LOWER THRESHOLD: Be sensitive. If it looks like an accident/fire/flood (even if simulated), mark it as VALID (is_valid: true).\n".
+                       "4. LANGUAGE: Use conversational Tagalog (Taglish). Use terms like 'Accident', 'Fire', 'Flood' mixed with Tagalog sentences.\n\n".
 
                        "VALID EMERGENCIES (is_valid: true):\n".
-                       "- Fire: Flames, smoke (real or simulated), red/orange lighting suggesting fire\n".
-                       "- Flood: Water covering roads (real or simulated)\n".
-                       "- Accident: Vehicle collisions (real cars OR toy cars), overturned vehicles, debris\n\n".
+                       "- Fire: Flames consuming a structure/vehicle (real or diorama), large smoke.\n".
+                       "- Flood: Water covering roads/areas (real or diorama).\n".
+                       "- Accident: Vehicle collisions (real or toy cars), debris.\n\n".
 
-                       "FALSE ALARMS (is_valid: false) - Only reject if clearly nothing is happening:\n".
-                       "- Empty roads with no obstacles\n".
-                       "- Normal traffic flow (without collision)\n".
-                       "- Clear weather with no water/fire\n".
-                       "- Blurry images where absolutely nothing is distinguishable\n\n".
+                       "FALSE ALARMS (is_valid: false):\n".
+                       "- TRIVIAL FIRE: Lighters, matchsticks, candles, stove burners (unless out of control).\n".
+                       "- TRIVIAL WATER: Wet floors, small spills, puddles indoors.\n".
+                       "- Normal traffic, empty roads, blurry images.\n\n".
 
-                       "If the image shows a VALID EMERGENCY (is_valid: true):\n".
-                       "1. accident_type: Choose exactly one: 'Fire', 'Flood', or 'Accident'\n".
-                       "2. severity: 'Low', 'Medium', or 'High' (Treat toy car crashes as 'High' for the demo)\n".
-                       "3. title: Generate a clear 5-8 word title in conversational Filipino/Tagalog. Example: 'May banggaan ng sasakyan sa kalsada'\n".
-                       "4. description: Generate a natural 2-3 sentence description in conversational Filipino/Tagalog. Describe what is happening simply. Example: 'May dalawang sasakyan na nagpang-abot sa gitna ng daan. Mukhang matindi ang tama sa harapan ng kotse.'\n".
-                       "5. confidence: Number from 60-100.\n".
-                       "6. detected_objects: Array of objects (e.g., ['car', 'toy_car', 'collision']).\n".
-                       "7. reasoning: Brief explanation in English. If it's a simulation, state: 'Simulation detected: Toy cars in collision state.'\n\n".
+                       "OUTPUT FORMAT (JSON):\n".
+                       "If VALID EMERGENCY (is_valid: true):\n".
+                       "1. accident_type: 'Fire', 'Flood', or 'Accident'\n".
+                       "2. severity: 'Low', 'Medium', or 'High'\n".
+                       "3. title: 5-8 words in Tagalog. Example: 'DEMO: May banggaan ng sasakyan sa kalsada'\n".
+                       "4. description: Start with 'DEMO: Paki-check ang picture na ito mula sa CCTV. Sa tingin ko may [Incident]...' followed by details in Tagalog.\n".
+                       "   Example: 'DEMO: Paki-check ang picture na ito mula sa CCTV. Sa tingin ko may car accident. Dalawang sasakyan ang nagbanggaan sa gitna ng daan.'\n".
+                       "5. confidence: 60-100\n".
+                       "6. detected_objects: ['car', 'toy_car', ...]\n".
+                       "7. reasoning: English explanation (e.g., 'Simulation detected: Toy cars colliding').\n\n".
 
                        "If FALSE ALARM (is_valid: false):\n".
-                       "1. Set is_valid to false\n".
-                       "2. Set all other fields to null except reasoning\n".
-                       "3. reasoning: Explain why no emergency is seen.\n\n".
+                       "1. is_valid: false\n".
+                       "2. Set others to null except reasoning.\n\n".
 
                        $contextInfo."\n".
 
-                       "Return ONLY valid JSON with this exact structure:\n".
-                       "{\n".
-                       "  \"is_valid\": boolean,\n".
-                       "  \"accident_type\": \"Fire|Flood|Accident\" or null,\n".
-                       "  \"severity\": \"Low|Medium|High\" or null,\n".
-                       "  \"title\": \"string in Tagalog\" or null,\n".
-                       "  \"description\": \"string in Tagalog\" or null,\n".
-                       "  \"confidence\": number (0-100) or null,\n".
-                       "  \"detected_objects\": [\"array\", \"of\", \"strings\"] or null,\n".
-                       "  \"reasoning\": \"explanation in English\"\n".
-                       "}\n\n".
-                       'Do not include markdown formatting (like ```json) in the response.';
+                       "Return ONLY valid JSON with keys: is_valid, accident_type, severity, title, description, confidence, detected_objects, reasoning.\n".
+                       'Do not include markdown formatting.';
 
             $response = Http::timeout(60)->withHeaders([
                 'Content-Type' => 'application/json',
-            ])->post("{$this->baseUrl}?key={$this->apiKey}", [
+            ])->post("{$this->audioModel}?key={$this->apiKey}", [
                 'contents' => [
                     [
                         'parts' => [

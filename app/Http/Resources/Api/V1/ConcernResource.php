@@ -78,6 +78,18 @@ class ConcernResource extends JsonResource
                 'date' => $history->created_at->toIso8601String(),
             ])),
 
+            // 6. Threaded Updates (Duplicates)
+            'updates' => $this->whenLoaded('duplicates', fn () => $this->duplicates->map(fn ($duplicate) => [
+                'id' => $duplicate->id,
+                'title' => $duplicate->title,
+                'description' => $duplicate->description,
+                'createdAt' => $duplicate->created_at->diffForHumans(),
+                // Optimization: Only show media if it was explicitly loaded (i.e., in Detail View)
+                'media' => $duplicate->relationLoaded('media')
+                    ? MediaResource::collection($duplicate->media)
+                    : [],
+            ])),
+
             'createdAt' => $this->created_at->diffForHumans(),
             // 'updatedAt' => $this->updated_at->diffForHumans(),
         ];

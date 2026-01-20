@@ -36,6 +36,7 @@ class ConcernService
         }
 
         $query = Concern::where('citizen_id', $userId)
+            ->where('is_duplicate', false) // Only show Parent Concerns
             ->select([
                 'id',
                 'tracking_code',
@@ -63,6 +64,9 @@ class ConcernService
         $concerns = $query
             ->with([
                 'distribution.purokLeader.officialDetails',
+                'duplicates' => function ($q) {
+                    $q->orderBy('created_at', 'asc'); // Chronological thread (No media loaded for list view optimization)
+                },
             ])
             ->orderBy('created_at', 'desc')
             ->orderBy('id', 'desc')
@@ -77,7 +81,8 @@ class ConcernService
             throw new UrbanWatchException('User not found.');
         }
 
-        $query = Concern::where('citizen_id', $userId);
+        $query = Concern::where('citizen_id', $userId)
+            ->where('is_duplicate', false); // Count only distinct incidents
 
         // Apply the same filters as getUserConcerns
         if (! empty($filters['status'])) {
@@ -111,6 +116,10 @@ class ConcernService
                 },
                 'distribution.purokLeader.officialDetails',
                 'histories.actor.officialDetails',
+                'duplicates' => function ($q) {
+                    $q->orderBy('created_at', 'asc')->with('media');
+                },
+                'parentConcern', // If user accidentally navigates to a child, show parent link
             ])
             ->first();
         if (! User::find($userId)) {
@@ -199,33 +208,12 @@ class ConcernService
                 }
             }
 
-            // Distribute to Purok Leader (Hardcoded ID=2 for now per requirements)
-            $purokLeaderId = 2;
-
-            $purokLeaderDetails = \App\Models\OfficialsDetails::where('id', $purokLeaderId)->first();
-
-            if (! $purokLeaderDetails) {
-                throw new UrbanWatchException('Purok Leader not found for distribution.');
-            }
-
-            $distribution = ConcernDistribution::create([
-                'concern_id' => $concern->id,
-                'purok_leader_id' => $purokLeaderId,
-                'status' => 'assigned',
-                'assigned_at' => now(),
-            ]);
-
-            $distribution->load('purokLeader.officialDetails');
-
             // Create History Log
             ConcernHistory::create([
                 'concern_id' => $concern->id,
                 'status' => 'pending',
-                'remarks' => 'Concern submitted and automatically distributed to Purok Leader.',
+                'remarks' => 'Concern submitted. Processing for verification...',
             ]);
-
-            // Broadcast Event
-            event(new ConcernAssigned($concern, $distribution, $uploadedMedia));
 
             DB::commit();
 
@@ -237,7 +225,7 @@ class ConcernService
                 ProcessManualConcernJob::dispatch($concern->id);
             }
 
-            return $concern->load(['media', 'distribution.purokLeader.officialDetails']);
+            return $concern->load(['media']);
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
@@ -280,10 +268,112 @@ class ConcernService
         $concern->delete();
     }
 
+    /**
+     * Finalize the concern after AI processing.
+     * Handles Deduplication, Assignment, and Notification.
+     */
+    public function finalizeConcern(int $concernId)
+    {
+        $concern = Concern::find($concernId);
+
+        if (! $concern) {
+            Log::error("Concern #{$concernId} not found during finalization.");
+
+            return;
+        }
+
+        // 1. Deduplication Logic
+        $parentConcern = $this->findParentConcern($concern);
+
+        if ($parentConcern) {
+            // It's a duplicate
+            $concern->update([
+                'parent_concern_id' => $parentConcern->id,
+                'is_duplicate' => true,
+            ]);
+
+            ConcernHistory::create([
+                'concern_id' => $concern->id,
+                'status' => $concern->status,
+                'remarks' => "Marked as duplicate of Concern #{$parentConcern->tracking_code}. Notifications silenced.",
+            ]);
+
+            Log::info("Concern #{$concern->id} marked as duplicate of #{$parentConcern->id}");
+
+            return; // Stop here. No notifications.
+        }
+
+        // 2. Assignment Logic (If not a duplicate)
+        // Check if already assigned to avoid double distribution
+        if ($concern->distribution) {
+            Log::info("Concern #{$concern->id} already distributed.");
+
+            return;
+        }
+
+        // Distribute to Purok Leader (Hardcoded ID=2 for now per requirements)
+        $purokLeaderId = 2;
+        $purokLeaderDetails = \App\Models\OfficialsDetails::where('user_id', $purokLeaderId)->first();
+
+        if (! $purokLeaderDetails) {
+            Log::error("Purok Leader not found for Concern #{$concern->id}");
+
+            // We might want to assign to admin or default instead, but for now just log
+            return;
+        }
+
+        $distribution = ConcernDistribution::create([
+            'concern_id' => $concern->id,
+            'purok_leader_id' => $purokLeaderId,
+            'status' => 'assigned',
+            'assigned_at' => now(),
+        ]);
+
+        $distribution->load('purokLeader.officialDetails');
+
+        // Create History Log
+        ConcernHistory::create([
+            'concern_id' => $concern->id,
+            'status' => 'pending',
+            'remarks' => 'Concern verified and assigned to Purok Leader.',
+        ]);
+
+        // Broadcast Event
+        $uploadedMedia = $concern->media->pluck('original_path')->toArray();
+        event(new ConcernAssigned($concern, $distribution, $uploadedMedia));
+    }
+
+    /**
+     * Find a matching Parent Concern within radius and time window.
+     */
+    private function findParentConcern(Concern $concern)
+    {
+        $radius = 0.05; // 50 meters in kilometers (approx)
+        // For more precision 50m = 0.05km.
+        // 1 degree of latitude ~= 111km.
+        // 0.05km is approx 0.00045 degrees.
+
+        // Using Haversine formula for strict 50m check
+        // Or using a simple bounding box for speed since 50m is very small.
+        // Let's use Haversine for accuracy.
+
+        return Concern::query()
+            ->select('concerns.*')
+            ->selectRaw('(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance', [$concern->latitude, $concern->longitude, $concern->latitude])
+            ->where('id', '!=', $concern->id) // Not itself
+            ->where('is_duplicate', false) // Only link to parents
+            ->where('category', $concern->category) // Strict Category Match
+            ->where('created_at', '>=', now()->subHour()) // Within last 1 hour
+            ->whereNotIn('status', ['resolved', 'archived']) // Active concerns only
+            ->having('distance', '<', 0.05) // 50 meters
+            ->orderBy('created_at', 'asc') // Link to the oldest (original) one
+            ->first();
+    }
+
     private function checkIfUserSuspended(int $userId, string $action = 'perform this action'): void
     {
-        if (\App\Models\UserSuspension::isUserSuspended(auth()->id())) {
-            $activeSuspension = \App\Models\UserSuspension::getActiveSuspension(auth()->id());
+        if (\App\Models\UserSuspension::isUserSuspended($userId)) {
+            $activeSuspension = \App\Models\UserSuspension::getActiveSuspension($userId);
 
             $message = "Your account is currently suspended and cannot {$action}.";
             if ($activeSuspension) {
