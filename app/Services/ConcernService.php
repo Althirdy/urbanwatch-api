@@ -10,7 +10,9 @@ use App\Models\Citizen\Concern;
 use App\Models\ConcernDistribution;
 use App\Models\ConcernHistory;
 use App\Models\IncidentMedia;
+use App\Models\SystemSetting;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -139,6 +141,13 @@ class ConcernService
     public function createConcern(array $data, int $userId, $files = null)
     {
         $this->checkIfUserSuspended($userId, 'create concerns');
+
+        // Check Geofencing (Boundary Restriction)
+        if (isset($data['latitude']) && isset($data['longitude'])) {
+            if (! $this->isInsideBoundary($data['latitude'], $data['longitude'])) {
+                throw new UrbanWatchException('Your location is outside the service area (Barangay 176 E). Concern submission is restricted.');
+            }
+        }
 
         DB::beginTransaction();
 
@@ -391,5 +400,50 @@ class ConcernService
 
             throw new UrbanWatchException($message);
         }
+    }
+
+    /**
+     * Check if a coordinate is inside the defined geofence boundary.
+     * Uses Ray Casting algorithm (Point-in-Polygon).
+     */
+    private function isInsideBoundary($latitude, $longitude)
+    {
+        // 1. Check if Geofencing is Enabled (Cached for 5 mins)
+        $isEnabled = Cache::remember('geofencing_enabled', 300, function () {
+            return SystemSetting::get('geofencing_enabled') === 'true';
+        });
+
+        if (! $isEnabled) {
+            return true; // Bypass check if feature is OFF
+        }
+
+        // 2. Point-in-Polygon Algorithm
+        $vertices = config('geofencing.boundary');
+
+        if (empty($vertices)) {
+            Log::warning('Geofencing boundary is empty in config/geofencing.php');
+
+            return true; // Fail safe: Allow if config is missing
+        }
+
+        $x = $longitude;
+        $y = $latitude;
+
+        $inside = false;
+        for ($i = 0, $j = count($vertices) - 1; $i < count($vertices); $j = $i++) {
+            $xi = $vertices[$i][0]; // Longitude
+            $yi = $vertices[$i][1]; // Latitude
+            $xj = $vertices[$j][0];
+            $yj = $vertices[$j][1];
+
+            $intersect = (($yi > $y) != ($yj > $y))
+                && ($x < ($xj - $xi) * ($y - $yi) / ($yj - $yi) + $xi);
+
+            if ($intersect) {
+                $inside = ! $inside;
+            }
+        }
+
+        return $inside;
     }
 }

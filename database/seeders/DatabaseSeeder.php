@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call([
+            SystemSettingsSeeder::class,
             UserSeeder::class,
             LocationSeeder::class,
             CctvDeviceSeeder::class,
