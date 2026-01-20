@@ -419,9 +419,10 @@ class ConcernService
 
         // 2. Point-in-Polygon Algorithm
         $vertices = config('geofencing.boundary');
-        
+
         if (empty($vertices)) {
             Log::warning('Geofencing boundary is empty in config/geofencing.php');
+
             return true; // Fail safe: Allow if config is missing
         }
 
