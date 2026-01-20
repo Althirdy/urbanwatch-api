@@ -16,6 +16,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('users');
     })->name('users');
 
+    Route::get('system-settings', [\App\Http\Controllers\Operator\SystemSettingController::class, 'index'])->name('system-settings.index');
+    Route::patch('system-settings', [\App\Http\Controllers\Operator\SystemSettingController::class, 'update'])->name('system-settings.update');
+
 });
 
 require __DIR__.'/settings.php';
