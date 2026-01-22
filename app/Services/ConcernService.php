@@ -309,6 +309,9 @@ class ConcernService
 
             Log::info("Concern #{$concern->id} marked as duplicate of #{$parentConcern->id}");
 
+            // Notify the citizen that their concern was merged
+            event(new \App\Events\ConcernMerged($concern, $parentConcern));
+
             return; // Stop here. No notifications.
         }
 
