@@ -315,7 +315,6 @@ class ConcernService
             return; // Stop here. No notifications.
         }
 
-
         // 2. Assignment Logic (If not a duplicate)
         // Check if already assigned to avoid double distribution
         if ($concern->distribution) {

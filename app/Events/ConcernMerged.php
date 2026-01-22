@@ -34,7 +34,7 @@ class ConcernMerged implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('App.Models.User.' . $this->duplicateConcern->citizen_id),
+            new PrivateChannel('App.Models.User.'.$this->duplicateConcern->citizen_id),
         ];
     }
 
