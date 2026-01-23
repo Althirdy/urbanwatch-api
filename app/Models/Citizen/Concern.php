@@ -36,6 +36,9 @@ class Concern extends Model
         'ai_processed_at',
         'parent_concern_id',
         'is_duplicate',
+        'rejection_reason',
+        'is_valid',
+        'ai_analysis_raw',
     ];
 
     protected $casts = [
@@ -43,6 +46,8 @@ class Concern extends Model
         'latitude' => 'decimal:7',
         'ai_processed_at' => 'datetime',
         'is_duplicate' => 'boolean',
+        'is_valid' => 'boolean',
+        'ai_analysis_raw' => 'array',
     ];
 
     public function parentConcern()

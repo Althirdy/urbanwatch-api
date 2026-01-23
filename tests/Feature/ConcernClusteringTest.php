@@ -36,7 +36,11 @@ beforeEach(function () {
 
     // Mock the FileUploadService
     $this->fileUploadService = Mockery::mock(FileUploadService::class);
-    $this->concernService = new ConcernService($this->fileUploadService);
+    $this->textBeeService = Mockery::mock(App\Services\TextBeeService::class);
+    // Allow any calls to TextBeeService (we don't strictly test SMS in clustering tests)
+    $this->textBeeService->shouldIgnoreMissing();
+
+    $this->concernService = new ConcernService($this->fileUploadService, $this->textBeeService);
 });
 
 test('it creates a new concern and assigns it when no parent exists', function () {
@@ -54,6 +58,9 @@ test('it creates a new concern and assigns it when no parent exists', function (
     ];
 
     $concern = $this->concernService->createConcern($data, $this->citizen->id);
+
+    // Simulate AI Validation success
+    $concern->update(['status' => 'pending']);
 
     // Simulate the Job finishing and calling finalizeConcern
     $this->concernService->finalizeConcern($concern->id);

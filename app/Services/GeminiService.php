@@ -23,7 +23,7 @@ class GeminiService
      *
      * @param  string  $fileContent  Raw binary content of the file
      * @param  string  $mimeType  Mime type of the file (e.g., 'audio/mp3')
-     * @return array|null Returns array with 'transcription_text', 'title', 'description', 'category', 'severity', 'confidence' or null on failure
+     * @return array|null Returns array with 'transcription_text', 'title', 'description', 'category', 'severity', 'confidence', 'is_valid', 'rejection_reason' or null on failure
      */
     public function analyzeAudio(string $fileContent, string $mimeType)
     {
@@ -41,18 +41,18 @@ class GeminiService
                       'Generate a concise 3-5 word title in Tagalog (Filipino). '.
                       'Generate a brief 1-sentence summary description in Tagalog (Filipino). '.
                       "\n\n".
-                      'Also analyze the concern to determine the category and severity:'."\n".
-                      'CATEGORIES: safety, security, infrastructure, environment, noise, other'."\n".
-                      'SEVERITY LEVELS: low, medium, high'."\n".
+                      'Also analyze the concern for VALIDITY and CLASSIFICATION:'."\n".
+                      '- is_valid: true if it describes a real community issue.'."\n".
+                      '- rejection_reason: Brief Tagalog explanation if invalid, else null.'."\n".
+                      '- CATEGORIES: safety, security, infrastructure, environment, noise, other'."\n".
+                      '- SEVERITY LEVELS: low, medium, high'."\n".
                       "\n".
                       'EXAMPLES:'."\n".
-                      '- "May sunog" → category: safety, severity: high'."\n".
-                      '- "Maraming basura" → category: environment, severity: medium'."\n".
-                      '- "Sira ang daan" → category: infrastructure, severity: medium'."\n".
-                      '- "Malakas ang ingay" → category: noise, severity: low'."\n".
+                      '- "May sunog" → category: safety, severity: high, is_valid: true'."\n".
+                      '- "Maraming basura" → category: environment, severity: medium, is_valid: true'."\n".
                       "\n".
-                      "Return strictly valid JSON with keys: 'transcription_text', 'title', 'description', 'category', 'severity', 'confidence'. ".
-                      'Do not include markdown formatting (like ```json) in the response.';
+                      "Return strictly valid JSON with keys: 'transcription_text', 'title', 'description', 'category', 'severity', 'confidence', 'is_valid', 'rejection_reason'. ".
+                      'Do not include markdown formatting.';
 
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json',
@@ -375,6 +375,92 @@ class GeminiService
             Log::error('GeminiService Exception (Image Analysis)', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Validate and classify a citizen concern (text and optional image).
+     *
+     * @param  string  $text  The concern text
+     * @param  string|null  $fileContent  Optional image binary content
+     * @param  string|null  $mimeType  Optional image mime type
+     * @return array|null Returns array with 'is_valid', 'rejection_reason', 'category', 'severity', 'confidence', 'reasoning'
+     */
+    public function validateAndClassify(string $text, ?string $fileContent = null, ?string $mimeType = null)
+    {
+        try {
+            if (! $this->apiKey) {
+                Log::error('Gemini API Key is missing.');
+
+                return null;
+            }
+
+            $prompt = 'You are an AI gatekeeper for UrbanWatch, a community concern reporting system. '.
+                      'Your task is to VALIDATE if a report is a legitimate community issue and CLASSIFY it.'."\n\n".
+                      'VALIDATION CRITERIA:'."\n".
+                      '- is_valid: true IF it describes a real issue (e.g., accidents, fire, broken roads, garbage, noise, security threats).'."\n".
+                      '- is_valid: false IF it is gibberish ("asdf"), irrelevant chat ("Kumain ka na?"), test spam, or personal/non-community issues.'."\n\n".
+                      'CLASSIFICATION (Only if is_valid is true):'."\n".
+                      '- CATEGORIES: safety, security, infrastructure, environment, noise, other'."\n".
+                      '- SEVERITY: low, medium, high'."\n\n".
+                      'INPUT TEXT: '.$text."\n\n".
+                      'Return strictly valid JSON:'."\n".
+                      '{'."\n".
+                      '  "is_valid": boolean,'."\n".
+                      '  "rejection_reason": "Brief Tagalog explanation if invalid, else null",'."\n".
+                      '  "category": "category string or null",'."\n".
+                      '  "severity": "severity string or null",'."\n".
+                      '  "confidence": float (0.0-1.0),'."\n".
+                      '  "reasoning": "Internal English reasoning"'."\n".
+                      '}';
+
+            $parts = [['text' => $prompt]];
+
+            if ($fileContent && $mimeType) {
+                $parts[] = [
+                    'inline_data' => [
+                        'mime_type' => $mimeType,
+                        'data' => base64_encode($fileContent),
+                    ],
+                ];
+            }
+
+            $response = Http::timeout(30)->withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post("{$this->baseUrl}?key={$this->apiKey}", [
+                'contents' => [['parts' => $parts]],
+                'generationConfig' => [
+                    'response_mime_type' => 'application/json',
+                    'temperature' => 0.1,
+                ],
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Gemini API Error (Validate and Classify)', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                return null;
+            }
+
+            $responseData = $response->json();
+            $jsonString = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+            if (! $jsonString) {
+                return null;
+            }
+
+            $jsonString = preg_replace('/^```json\s*|\s*```$/', '', trim($jsonString));
+            $result = json_decode($jsonString, true);
+
+            return $result;
+        } catch (\Exception $e) {
+            Log::error('GeminiService Exception (Validate and Classify)', [
+                'error' => $e->getMessage(),
             ]);
 
             return null;

@@ -31,6 +31,7 @@ class User extends Authenticatable
         'phone_number',
         'assigned_brgy',
         'status',
+        'false_alarm_strikes',
     ];
 
     /**
