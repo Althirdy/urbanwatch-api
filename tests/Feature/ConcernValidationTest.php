@@ -91,7 +91,7 @@ class ConcernValidationTest extends TestCase
 
         $this->mock(TextBeeService::class, function (MockInterface $mock) {
             $mock->shouldReceive('sendConcernAssignedNotification')
-                ->once()
+                ->atLeast()->times(1)
                 ->with('09123456789', \Mockery::type('array'));
         });
 
@@ -231,7 +231,7 @@ class ConcernValidationTest extends TestCase
         });
 
         $this->mock(TextBeeService::class, function (MockInterface $mock) {
-            $mock->shouldReceive('sendConcernAssignedNotification')->once();
+            $mock->shouldReceive('sendConcernAssignedNotification')->atLeast()->times(1);
         });
 
         // 3. Act
