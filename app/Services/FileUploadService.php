@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 class FileUploadService
 {
@@ -33,20 +33,20 @@ class FileUploadService
         // Optimization for Images
         if (str_starts_with($mimeType, 'image/') && $mimeType !== 'image/gif') {
             try {
-                $manager = new ImageManager(new Driver());
+                $manager = new ImageManager(new Driver);
                 $image = $manager->read($file);
 
                 // 1. Scrub EXIF & Resize (Max Width 1200px)
                 $image->scale(width: 1200);
 
                 // 2. Generate optimized filename
-                $filename = pathinfo($originalFilename, PATHINFO_FILENAME) . '_' . uniqid() . '.jpg';
-                $path = $directory . '/' . $filename;
+                $filename = pathinfo($originalFilename, PATHINFO_FILENAME).'_'.uniqid().'.jpg';
+                $path = $directory.'/'.$filename;
 
                 // 3. Compress and Store (Quality 80)
                 $encoded = $image->toJpeg(80);
                 Storage::disk($disk)->put($path, (string) $encoded);
-                
+
                 $fileSize = strlen((string) $encoded);
                 $mimeType = 'image/jpeg'; // Standardized to jpeg
             } catch (\Exception $e) {

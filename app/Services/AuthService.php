@@ -51,8 +51,8 @@ class AuthService
             $decryptedToken = Crypt::decryptString($data['verificationToken']);
             $tokenData = json_decode($decryptedToken, true);
 
-            if (!$tokenData || !isset($tokenData['phone']) || !isset($tokenData['expires_at'])) {
-                throw new \Exception("Invalid token format.");
+            if (! $tokenData || ! isset($tokenData['phone']) || ! isset($tokenData['expires_at'])) {
+                throw new \Exception('Invalid token format.');
             }
 
             // Check Expiration
@@ -70,7 +70,7 @@ class AuthService
         } catch (UrbanWatchException $e) {
             throw $e;
         } catch (\Exception $e) {
-            throw new UrbanWatchException('Verification failed: ' . $e->getMessage(), 403);
+            throw new UrbanWatchException('Verification failed: '.$e->getMessage(), 403);
         }
 
         DB::beginTransaction();

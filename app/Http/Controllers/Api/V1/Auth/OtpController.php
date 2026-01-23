@@ -7,7 +7,6 @@ use App\Jobs\SendOtpJob;
 use App\Models\Otp;
 use App\Services\AbstractApiService;
 use App\Services\MailService;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -160,7 +159,7 @@ class OtpController extends Controller
             'verified_at' => now()->toIso8601String(),
             'expires_at' => now()->addMinutes(15)->toIso8601String(),
         ];
-        
+
         $verificationToken = Crypt::encryptString(json_encode($tokenData));
 
         return response()->json([
