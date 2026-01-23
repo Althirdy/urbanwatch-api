@@ -73,6 +73,14 @@ class ConcernService
             $query->where('severity', $filters['severity']);
         }
 
+        if (! empty($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
+
+        if (! empty($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
+        }
+
         $concerns = $query
             ->with([
                 'distribution.purokLeader.officialDetails',
@@ -81,6 +89,71 @@ class ConcernService
                 },
             ])
             ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->cursorPaginate($perPage);
+
+        return $concerns;
+    }
+
+    /**
+     * Get paginated archived (soft-deleted) concerns for the current user.
+     */
+    public function getUserArchivedConcerns(int $userId, int $perPage = 15, array $filters = [])
+    {
+        if (! User::find($userId)) {
+            throw new UrbanWatchException('User not found.');
+        }
+
+        $query = Concern::onlyTrashed()
+            ->where('citizen_id', $userId)
+            ->where('is_duplicate', false)
+            ->withCount('duplicates')
+            ->select([
+                'id',
+                'tracking_code',
+                'title',
+                'severity',
+                'description',
+                'status',
+                'category',
+                'type',
+                'transcript_text',
+                'ai_category',
+                'ai_severity',
+                'ai_confidence',
+                'created_at',
+                'deleted_at',
+            ]);
+
+        // Apply same filters
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['category'])) {
+            $query->where('category', $filters['category']);
+        }
+
+        if (! empty($filters['severity'])) {
+            $query->where('severity', $filters['severity']);
+        }
+
+        if (! empty($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
+
+        if (! empty($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
+        }
+
+        $concerns = $query
+            ->with([
+                'distribution.purokLeader.officialDetails',
+                'duplicates' => function ($q) {
+                    $q->onlyTrashed()->orderBy('created_at', 'asc');
+                },
+            ])
+            ->orderBy('deleted_at', 'desc')
             ->orderBy('id', 'desc')
             ->cursorPaginate($perPage);
 
@@ -109,9 +182,51 @@ class ConcernService
             $query->where('severity', $filters['severity']);
         }
 
+        if (! empty($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
+
+        if (! empty($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
+        }
+
         $count = $query->count();
 
         return $count;
+    }
+
+    public function getArchivedConcernsCount(int $userId, array $filters = [])
+    {
+        if (! User::find($userId)) {
+            throw new UrbanWatchException('User not found.');
+        }
+
+        $query = Concern::onlyTrashed()
+            ->where('citizen_id', $userId)
+            ->where('is_duplicate', false);
+
+        // Apply the same filters
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['category'])) {
+            $query->where('category', $filters['category']);
+        }
+
+        if (! empty($filters['severity'])) {
+            $query->where('severity', $filters['severity']);
+        }
+
+        if (! empty($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
+
+        if (! empty($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
+        }
+
+        return $query->count();
     }
 
     /**

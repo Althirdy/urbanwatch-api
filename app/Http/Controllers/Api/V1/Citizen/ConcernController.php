@@ -24,16 +24,7 @@ class ConcernController extends BaseApiController
         $perPage = $request->input('per_page', 4);
 
         // Build filters array from request
-        $filters = [];
-        if ($request->filled('status')) {
-            $filters['status'] = $request->input('status');
-        }
-        if ($request->filled('category')) {
-            $filters['category'] = $request->input('category');
-        }
-        if ($request->filled('severity')) {
-            $filters['severity'] = $request->input('severity');
-        }
+        $filters = $this->extractFilters($request);
 
         $concerns = $this->concernService->getUserConcerns(auth()->id(), $perPage, $filters);
         $concernsCount = $this->concernService->getConcernsCount(auth()->id(), $filters);
@@ -45,6 +36,34 @@ class ConcernController extends BaseApiController
             'next_cursor' => $concerns->nextCursor()?->encode(),
             'prev_cursor' => $concerns->previousCursor()?->encode(),
         ], 'Concerns retrieved successfully', status: 201);
+    }
+
+    public function archived(Request $request)
+    {
+        $perPage = $request->input('per_page', 4);
+        $filters = $this->extractFilters($request);
+
+        $concerns = $this->concernService->getUserArchivedConcerns(auth()->id(), $perPage, $filters);
+        $concernsCount = $this->concernService->getArchivedConcernsCount(auth()->id(), $filters);
+
+        return $this->sendResponse([
+            'concerns' => ConcernResource::collection($concerns),
+            'concerns_count' => $concernsCount,
+            'next_cursor' => $concerns->nextCursor()?->encode(),
+            'prev_cursor' => $concerns->previousCursor()?->encode(),
+        ], 'Archived concerns retrieved successfully', status: 200);
+    }
+
+    private function extractFilters(Request $request): array
+    {
+        $filters = [];
+        foreach (['status', 'category', 'severity', 'date_from', 'date_to'] as $field) {
+            if ($request->filled($field)) {
+                $filters[$field] = $request->input($field);
+            }
+        }
+
+        return $filters;
     }
 
     public function store(StoreConcernRequest $request)

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 // Citizen Concern Management Routes
 Route::middleware(['auth:sanctum', 'ability.access'])->group(function () {
     // Citizen routes
+    Route::get('concerns/archived', [ConcernController::class, 'archived']);
     Route::apiResource('concerns', ConcernController::class);
 
     // Purok Leader routes

@@ -439,6 +439,104 @@ class ConcernManagementTest extends TestCase
 
     /*
     |--------------------------------------------------------------------------
+    | Tests: Archived Concerns
+    |--------------------------------------------------------------------------
+    */
+
+    public function test_can_list_archived_concerns()
+    {
+        Sanctum::actingAs($this->citizen, ['*']);
+
+        // Create 1 active concern
+        Concern::factory()->create([
+            'citizen_id' => $this->citizen->id,
+            'tracking_code' => 'ACTIVE-001',
+        ]);
+
+        // Create 1 soft-deleted (archived) concern for this user
+        $archived = Concern::factory()->create([
+            'citizen_id' => $this->citizen->id,
+            'tracking_code' => 'ARCHIVED-001',
+            'deleted_at' => now(),
+        ]);
+
+        // Create 1 soft-deleted concern for another user
+        Concern::factory()->create([
+            'citizen_id' => $this->otherCitizen->id,
+            'tracking_code' => 'OTHER-ARCHIVED',
+            'deleted_at' => now(),
+        ]);
+
+        $response = $this->getJson('/api/v1/concerns/archived');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.concerns_count', 1)
+            ->assertJsonPath('data.concerns.0.trackingCode', 'ARCHIVED-001');
+    }
+
+    public function test_can_archive_rejected_concern()
+    {
+        Sanctum::actingAs($this->citizen, ['*']);
+
+        $concern = Concern::factory()->create([
+            'citizen_id' => $this->citizen->id,
+            'status' => 'rejected',
+            'tracking_code' => 'REJ-001',
+        ]);
+
+        $response = $this->deleteJson("/api/v1/concerns/{$concern->id}");
+
+        $response->assertStatus(200);
+        $this->assertSoftDeleted('concerns', ['id' => $concern->id]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tests: Filtration
+    |--------------------------------------------------------------------------
+    */
+
+    public function test_can_filter_concerns_by_status()
+    {
+        Sanctum::actingAs($this->citizen, ['*']);
+
+        Concern::factory()->create(['citizen_id' => $this->citizen->id, 'status' => 'pending', 'tracking_code' => 'P-001']);
+        Concern::factory()->create(['citizen_id' => $this->citizen->id, 'status' => 'resolved', 'tracking_code' => 'R-001']);
+
+        $response = $this->getJson('/api/v1/concerns?status=resolved');
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.concerns_count', 1)
+            ->assertJsonPath('data.concerns.0.status', 'resolved');
+    }
+
+    public function test_can_filter_concerns_by_date_range()
+    {
+        Sanctum::actingAs($this->citizen, ['*']);
+
+        // Old concern
+        Concern::factory()->create([
+            'citizen_id' => $this->citizen->id,
+            'created_at' => '2023-01-15 10:00:00',
+            'tracking_code' => 'OLD-001',
+        ]);
+
+        // New concern
+        Concern::factory()->create([
+            'citizen_id' => $this->citizen->id,
+            'created_at' => now(),
+            'tracking_code' => 'NEW-001',
+        ]);
+
+        $response = $this->getJson('/api/v1/concerns?date_from='.now()->format('Y-m-d').'&date_to='.now()->format('Y-m-d'));
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.concerns_count', 1)
+            ->assertJsonPath('data.concerns.0.trackingCode', 'NEW-001');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | Helpers
     |--------------------------------------------------------------------------
     */

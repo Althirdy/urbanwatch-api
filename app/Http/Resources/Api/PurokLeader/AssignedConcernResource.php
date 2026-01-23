@@ -52,7 +52,7 @@ class AssignedConcernResource extends JsonResource
             'transcript' => $concern->transcript_text,
 
             // Clustering Info
-            'related_reports_count' => $concern->duplicates()->count(),
+            'relatedReportsCount' => $concern->duplicates()->count(),
 
             // Citizen Relationship
             'citizen' => [
