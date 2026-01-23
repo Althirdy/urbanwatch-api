@@ -22,14 +22,14 @@ class ConcernResource extends JsonResource
             'status' => $this->status,
             'severity' => $this->severity,
             'category' => $this->category,
-
+            'type' => $this->type,
             // AI Category Detection Fields
-            // 'userSelectedCategory' => $this->user_selected_category,
-            // 'userSelectedSeverity' => $this->user_selected_severity,
-            // 'aiCategory' => $this->ai_category,
-            // 'aiSeverity' => $this->ai_severity,
-            // 'aiConfidence' => $this->ai_confidence,
-            // 'aiProcessedAt' => $this->ai_processed_at?->toIso8601String(),
+            'userSelectedCategory' => $this->user_selected_category,
+            'userSelectedSeverity' => $this->user_selected_severity,
+            'aiCategory' => $this->ai_category,
+            'aiSeverity' => $this->ai_severity,
+            'aiConfidence' => $this->ai_confidence,
+            'aiProcessedAt' => $this->ai_processed_at?->toIso8601String(),
 
             // 2. Conditional Location (Only send if latitude exists)
             // Grouping lat/lng is cleaner for Maps API
@@ -78,7 +78,20 @@ class ConcernResource extends JsonResource
                 'date' => $history->created_at->toIso8601String(),
             ])),
 
+            // 6. Threaded Updates (Duplicates)
+            'updates' => $this->whenLoaded('duplicates', fn () => $this->duplicates->map(fn ($duplicate) => [
+                'id' => $duplicate->id,
+                'title' => $duplicate->title,
+                'description' => $duplicate->description,
+                'createdAt' => $duplicate->created_at->diffForHumans(),
+                // Optimization: Only show media if it was explicitly loaded (i.e., in Detail View)
+                'media' => $duplicate->relationLoaded('media')
+                    ? MediaResource::collection($duplicate->media)
+                    : [],
+            ])),
+
             'createdAt' => $this->created_at->diffForHumans(),
+            'duplicatesCount' => $this->duplicates_count ?? 0,
             // 'updatedAt' => $this->updated_at->diffForHumans(),
         ];
     }

@@ -10,7 +10,7 @@ import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import { type User } from '@/types';
 import { Link, router } from '@inertiajs/react';
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut, Settings, Wrench } from 'lucide-react';
 
 interface UserMenuContentProps {
     user: User;
@@ -45,6 +45,22 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                         Settings
                     </Link>
                 </DropdownMenuItem>
+                
+                {/* System Settings for Operator/Admin */}
+                {(user.role_id === 1) && (
+                    <DropdownMenuItem asChild>
+                        <Link
+                            className="block w-full"
+                            href="/system-settings"
+                            as="button"
+                            prefetch
+                            onClick={cleanup}
+                        >
+                            <Wrench className=" " />
+                            System Config
+                        </Link>
+                    </DropdownMenuItem>
+                )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>

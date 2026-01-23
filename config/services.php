@@ -50,6 +50,7 @@ return [
     'textbee' => [
         'api_key' => env('TEXTBEE_API_KEY'),
         'device_id' => env('TEXTBEE_DEVICE_ID'),
+        'sms_notification_enabled' => env('TEXTBEE_SMS_NOTIFICATION_ENABLED', true),
     ],
 
     // YOLO Python Script API Key

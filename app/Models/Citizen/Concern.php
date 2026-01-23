@@ -6,12 +6,13 @@ use App\Models\ConcernDistribution;
 use App\Models\ConcernHistory;
 use App\Models\IncidentMedia;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Concern extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'citizen_id',
@@ -33,13 +34,31 @@ class Concern extends Model
         'ai_severity',
         'ai_confidence',
         'ai_processed_at',
+        'parent_concern_id',
+        'is_duplicate',
+        'rejection_reason',
+        'is_valid',
+        'ai_analysis_raw',
     ];
 
     protected $casts = [
         'longitude' => 'decimal:7',
         'latitude' => 'decimal:7',
         'ai_processed_at' => 'datetime',
+        'is_duplicate' => 'boolean',
+        'is_valid' => 'boolean',
+        'ai_analysis_raw' => 'array',
     ];
+
+    public function parentConcern()
+    {
+        return $this->belongsTo(Concern::class, 'parent_concern_id');
+    }
+
+    public function duplicates()
+    {
+        return $this->hasMany(Concern::class, 'parent_concern_id');
+    }
 
     public function media()
     {

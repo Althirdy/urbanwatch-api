@@ -61,7 +61,7 @@ jobs:
     - name: Execute tests (Unit and Feature)
       env:
         # Override the phpunit.xml sqlite defaults
-        DB_CONNECTION: mariadb
+        DB_CONNECTION: mysql
         DB_HOST: 127.0.0.1
         DB_PORT: 3306
         DB_DATABASE: urbanwatch_testing

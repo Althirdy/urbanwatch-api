@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Events\ConcernAICategoryUpdated;
 use App\Models\Citizen\Concern;
 use App\Services\GeminiService;
 use Illuminate\Bus\Queueable;
@@ -29,7 +28,7 @@ class ProcessManualConcernJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(GeminiService $geminiService)
+    public function handle(GeminiService $geminiService, \App\Services\ConcernService $concernService)
     {
         try {
             Log::info('ProcessManualConcernJob: Starting job', ['concern_id' => $this->concernId]);
@@ -42,93 +41,46 @@ class ProcessManualConcernJob implements ShouldQueue
                 return;
             }
 
-            Log::info('ProcessManualConcernJob: Concern found', [
-                'concern_id' => $concern->id,
-                'title' => $concern->title,
-                'description' => substr($concern->description, 0, 100),
-            ]);
-
             // Combine title and description for analysis
             $textToAnalyze = trim($concern->title.' '.$concern->description);
 
-            if (empty($textToAnalyze)) {
-                Log::warning('ProcessManualConcernJob: No text to analyze', ['concern_id' => $concern->id]);
+            if (! empty($textToAnalyze)) {
+                Log::info('ProcessManualConcernJob: Calling Gemini for Validation & Classification', [
+                    'concern_id' => $concern->id,
+                ]);
 
-                return;
-            }
+                $analysis = $geminiService->validateAndClassify($textToAnalyze);
 
-            // Analyze category and severity
-            Log::info('ProcessManualConcernJob: Calling Gemini API', [
-                'concern_id' => $concern->id,
-                'text_length' => strlen($textToAnalyze),
-            ]);
+                Log::info('ProcessManualConcernJob: AI Result', [
+                    'concern_id' => $concern->id,
+                    'is_valid' => $analysis['is_valid'] ?? 'unknown',
+                ]);
 
-            $categoryAnalysis = $geminiService->analyzeConcernCategoryAndSeverity($textToAnalyze);
-
-            Log::info('ProcessManualConcernJob: Gemini API response received', [
-                'concern_id' => $concern->id,
-                'analysis' => $categoryAnalysis,
-            ]);
-
-            if ($categoryAnalysis) {
-                $updateData = [
-                    'ai_category' => $categoryAnalysis['category'] ?? null,
-                    'ai_severity' => $categoryAnalysis['severity'] ?? null,
-                    'ai_confidence' => $categoryAnalysis['confidence'] ?? null,
-                    'ai_processed_at' => now(),
-                ];
-
-                // If confidence is high enough, update the main category and severity
-                $confidenceThreshold = 0.7;
-                if (isset($categoryAnalysis['confidence']) && $categoryAnalysis['confidence'] >= $confidenceThreshold) {
-                    $updateData['category'] = $categoryAnalysis['category'];
-                    $updateData['severity'] = $categoryAnalysis['severity'];
+                if ($analysis) {
+                    if ($analysis['is_valid'] === true) {
+                        $concernService->markAsValid($concern->id, $analysis);
+                    } else {
+                        $reason = $analysis['rejection_reason'] ?? 'Ang iyong ulat ay tinukoy bilang spam o hindi wasto ng aming system.';
+                        $concernService->markAsInvalid($concern->id, $reason, $analysis);
+                    }
+                } else {
+                    // Fallback: If AI fails, default to valid for manual review
+                    Log::warning('ProcessManualConcernJob: AI failed. Defaulting to valid.', ['concern_id' => $concern->id]);
+                    $concernService->markAsValid($concern->id, [
+                        'category' => $concern->category,
+                        'severity' => $concern->severity,
+                        'confidence' => 0,
+                    ]);
                 }
-
-                $concern->update($updateData);
-
-                Log::info('ProcessManualConcernJob: Concern updated with AI category analysis', [
-                    'concern_id' => $concern->id,
-                    'ai_category' => $categoryAnalysis['category'] ?? null,
-                    'ai_severity' => $categoryAnalysis['severity'] ?? null,
-                    'confidence' => $categoryAnalysis['confidence'] ?? null,
-                    'reasoning' => $categoryAnalysis['reasoning'] ?? null,
-                ]);
-
-                // Refresh the model to get the latest data
-                $concern->refresh();
-
-                Log::info('ProcessManualConcernJob: Concern refreshed, preparing to fire event', [
-                    'concern_id' => $concern->id,
-                    'ai_processed_at_type' => gettype($concern->ai_processed_at),
-                    'ai_processed_at_value' => $concern->ai_processed_at,
-                ]);
-
-                // Fire AI Category Updated Event
-                $concern->load('distribution');
-
-                Log::info('ProcessManualConcernJob: Firing ConcernAICategoryUpdated event', [
-                    'concern_id' => $concern->id,
-                    'citizen_id' => $concern->citizen_id,
-                ]);
-
-                event(new ConcernAICategoryUpdated($concern));
-
-                Log::info('ProcessManualConcernJob: Event fired successfully', [
-                    'concern_id' => $concern->id,
-                ]);
-            } else {
-                Log::warning('ProcessManualConcernJob: Gemini category analysis failed or returned null', [
-                    'concern_id' => $concern->id,
-                ]);
             }
 
         } catch (\Exception $e) {
-            Log::error('ProcessManualConcernJob: Error processing manual concern', [
+            Log::error('ProcessManualConcernJob: Error', [
                 'concern_id' => $this->concernId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
+            // Fallback: Mark as valid if job crashes to avoid lost reports
+            $concernService->markAsValid($this->concernId, []);
         }
     }
 }

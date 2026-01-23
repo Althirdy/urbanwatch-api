@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Events\ConcernTranscribed;
 use App\Models\Citizen\Concern;
 use App\Services\GeminiService;
 use Illuminate\Bus\Queueable;
@@ -30,7 +29,7 @@ class ProcessVoiceConcernJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(GeminiService $geminiService)
+    public function handle(GeminiService $geminiService, \App\Services\ConcernService $concernService)
     {
         try {
             $concern = Concern::with(['media' => function ($query) {
@@ -49,6 +48,7 @@ class ProcessVoiceConcernJob implements ShouldQueue
             if (! $audioMedia) {
                 Log::warning('ProcessVoiceConcernJob: No audio media found for concern', ['concern_id' => $concern->id]);
 
+                // Still finalize even if media is missing
                 return;
             }
 
@@ -56,8 +56,16 @@ class ProcessVoiceConcernJob implements ShouldQueue
             // Assuming public_id stores the relative storage path as per FileUploadService
             $storagePath = $audioMedia->public_id;
 
-            // Use the default configured disk (S3 in your case)
+            // Use the same disk logic as FileUploadService for consistency
             $disk = config('filesystems.default');
+
+            // Apply same fallback logic as FileUploadService
+            if ($disk === 's3' && empty(config('filesystems.disks.s3.bucket'))) {
+                $disk = 'public';
+            }
+            if ($disk === 'local') {
+                $disk = 'public';
+            }
 
             if (! Storage::disk($disk)->exists($storagePath)) {
                 Log::error('ProcessVoiceConcernJob: Audio file not found in storage', [
@@ -73,7 +81,7 @@ class ProcessVoiceConcernJob implements ShouldQueue
             $fileContent = Storage::disk($disk)->get($storagePath);
             $mimeType = $audioMedia->mime_type ?? 'audio/mp3'; // Default fallback
 
-            // Call Gemini Service - now includes category and severity analysis
+            // Call Gemini Service - now includes category, severity, and validity analysis
             $analysis = $geminiService->analyzeAudio($fileContent, $mimeType);
 
             if ($analysis) {
@@ -84,75 +92,29 @@ class ProcessVoiceConcernJob implements ShouldQueue
                     'transcript_text' => $analysis['transcription_text'] ?? null,
                 ];
 
-                // Add AI category and severity if available from audio analysis
-                if (isset($analysis['category']) && isset($analysis['severity'])) {
-                    $updateData['ai_category'] = $analysis['category'];
-                    $updateData['ai_severity'] = $analysis['severity'];
-                    $updateData['ai_confidence'] = $analysis['confidence'] ?? 0.95;
-                    $updateData['ai_processed_at'] = now();
-
-                    // If confidence is high enough, update the main category and severity
-                    $confidenceThreshold = 0.7;
-                    if (isset($analysis['confidence']) && $analysis['confidence'] >= $confidenceThreshold) {
-                        $updateData['category'] = $analysis['category'];
-                        $updateData['severity'] = $analysis['severity'];
-                    }
-
-                    Log::info('ProcessVoiceConcernJob: Category and severity detected from audio', [
-                        'concern_id' => $concern->id,
-                        'category' => $analysis['category'],
-                        'severity' => $analysis['severity'],
-                        'confidence' => $analysis['confidence'] ?? 0.95,
-                    ]);
-                }
-
-                // Update concern with all data
                 $concern->update($updateData);
 
-                Log::info('ProcessVoiceConcernJob: Concern updated with transcription and AI analysis', [
-                    'concern_id' => $concern->id,
-                    'has_category' => isset($analysis['category']),
-                ]);
-
-                // Refresh to get latest data
-                $concern->refresh();
-                $concern->load('distribution');
-
-                // Fire AI Category Updated Event if we have AI data
-                if (isset($analysis['category']) && isset($analysis['severity'])) {
-                    Log::info('ProcessVoiceConcernJob: Firing ConcernAICategoryUpdated event', [
-                        'concern_id' => $concern->id,
-                        'category' => $concern->category,
-                        'severity' => $concern->severity,
-                        'ai_category' => $concern->ai_category,
-                        'ai_severity' => $concern->ai_severity,
-                    ]);
-
-                    event(new \App\Events\ConcernAICategoryUpdated($concern));
-
-                    Log::info('ProcessVoiceConcernJob: ConcernAICategoryUpdated event fired');
+                if (isset($analysis['is_valid']) && $analysis['is_valid'] === true) {
+                    $concernService->markAsValid($concern->id, $analysis);
+                } else {
+                    $reason = $analysis['rejection_reason'] ?? 'Ang iyong voice report ay tinukoy bilang spam o hindi wasto.';
+                    $concernService->markAsInvalid($concern->id, $reason, $analysis);
                 }
-
-                // Fire Transcribed Event
-                Log::info('ProcessVoiceConcernJob: Firing ConcernTranscribed event', [
-                    'concern_id' => $concern->id,
-                ]);
-
-                event(new ConcernTranscribed($concern));
-
-                Log::info('ProcessVoiceConcernJob: ConcernTranscribed event fired');
             } else {
                 Log::warning('ProcessVoiceConcernJob: Gemini analysis failed or returned null', [
                     'concern_id' => $concern->id,
                 ]);
+                // Fallback: Default to valid
+                $concernService->markAsValid($concern->id, []);
             }
 
         } catch (\Exception $e) {
             Log::error('ProcessVoiceConcernJob: Error processing voice concern', [
                 'concern_id' => $this->concernId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
+            // Fallback: Mark as valid
+            $concernService->markAsValid($this->concernId, []);
         }
     }
 }
