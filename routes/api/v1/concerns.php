@@ -7,7 +7,12 @@ use Illuminate\Support\Facades\Route;
 // Citizen Concern Management Routes
 Route::middleware(['auth:sanctum', 'ability.access'])->group(function () {
     // Citizen routes
-    Route::apiResource('concerns', ConcernController::class);
+    Route::get('concerns/archived', [ConcernController::class, 'archived']);
+    
+    // Custom throttle for concern submission
+    Route::post('concerns', [ConcernController::class, 'store'])->middleware('throttle:concerns.submit');
+    
+    Route::apiResource('concerns', ConcernController::class)->except(['store']);
 
     // Purok Leader routes
     Route::prefix('purok-leader')->middleware('role:2')->group(function () {

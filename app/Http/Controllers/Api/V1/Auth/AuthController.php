@@ -98,7 +98,7 @@ class AuthController extends BaseApiController
             }
 
             if ($this->authService->checkPcnNumberExists($analysis['data']['pcnNumber'])) {
-                return $this->sendError('The PCN number on this ID is already registered.', 400);
+                return $this->sendError('PhilSys ID Verification failed. Please ensure your ID is not already registered or contact support.', 400);
             }
 
             return $this->sendResponse([

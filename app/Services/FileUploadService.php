@@ -3,11 +3,13 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class FileUploadService
 {
     /**
-     * Upload a single file.
+     * Upload a single file with optimization for images.
      */
     public function uploadSingle($file, $directory = 'uploads')
     {
@@ -24,15 +26,48 @@ class FileUploadService
             $disk = 'public';
         }
 
-        $path = $file->store($directory, $disk);
+        $mimeType = $file->getMimeType();
+        $originalFilename = $file->getClientOriginalName();
+        $path = '';
+
+        // Optimization for Images
+        if (str_starts_with($mimeType, 'image/') && $mimeType !== 'image/gif') {
+            try {
+                $manager = new ImageManager(new Driver());
+                $image = $manager->read($file);
+
+                // 1. Scrub EXIF & Resize (Max Width 1200px)
+                $image->scale(width: 1200);
+
+                // 2. Generate optimized filename
+                $filename = pathinfo($originalFilename, PATHINFO_FILENAME) . '_' . uniqid() . '.jpg';
+                $path = $directory . '/' . $filename;
+
+                // 3. Compress and Store (Quality 80)
+                $encoded = $image->toJpeg(80);
+                Storage::disk($disk)->put($path, (string) $encoded);
+                
+                $fileSize = strlen((string) $encoded);
+                $mimeType = 'image/jpeg'; // Standardized to jpeg
+            } catch (\Exception $e) {
+                // Fallback to original if optimization fails
+                $path = $file->store($directory, $disk);
+                $fileSize = $file->getSize();
+            }
+        } else {
+            // Non-image files or GIFs (stored as-is)
+            $path = $file->store($directory, $disk);
+            $fileSize = $file->getSize();
+        }
+
         $publicUrl = Storage::disk($disk)->url($path);
 
         return [
             'public_url' => $publicUrl,
             'storage_path' => $path,
-            'original_filename' => $file->getClientOriginalName(),
-            'file_size' => $file->getSize(),
-            'mime_type' => $file->getMimeType(),
+            'original_filename' => $originalFilename,
+            'file_size' => $fileSize,
+            'mime_type' => $mimeType,
         ];
     }
 

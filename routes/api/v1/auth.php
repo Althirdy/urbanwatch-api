@@ -18,7 +18,7 @@ Route::prefix('auth')->group(function () {
     Route::post('/request_otp', [OtpController::class, 'registrationOtp']);
     Route::post('/password/reset', [PasswordResetController::class, 'reset']);
     Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/ocr', [AuthController::class, 'uploadNationalId']);
+    Route::post('/ocr', [AuthController::class, 'uploadNationalId'])->middleware('throttle:5,1');
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/login/purok_leader', [AuthController::class, 'loginPurokLeader']);
 });

@@ -16,17 +16,17 @@ class CitizenDetailsResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'user_id' => $this->user_id,
-            'first_name' => $this->first_name,
-            'middle_name' => $this->middle_name,
-            'last_name' => $this->last_name,
+            'userId' => $this->user_id,
+            'firstName' => $this->first_name,
+            'middleName' => $this->middle_name,
+            'lastName' => $this->last_name,
             'suffix' => $this->suffix,
-            'phone_number' => $this->phone_number,
+            'phoneNumber' => $this->phone_number,
             'address' => $this->address,
             'barangay' => $this->barangay,
             'city' => $this->city,
             'province' => $this->province,
-            'zip_code' => $this->zip_code,
+            'zipCode' => $this->zip_code,
             'birthdate' => $this->birthdate,
             'gender' => $this->gender,
         ];
