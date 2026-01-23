@@ -12,6 +12,7 @@ use App\Models\ConcernHistory;
 use App\Models\IncidentMedia;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Models\UserSuspension;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -21,9 +22,12 @@ class ConcernService
 {
     protected $fileUploadService;
 
-    public function __construct(FileUploadService $fileUploadService)
+    protected $textBeeService;
+
+    public function __construct(FileUploadService $fileUploadService, TextBeeService $textBeeService)
     {
         $this->fileUploadService = $fileUploadService;
+        $this->textBeeService = $textBeeService;
     }
 
     /**
@@ -39,6 +43,7 @@ class ConcernService
 
         $query = Concern::where('citizen_id', $userId)
             ->where('is_duplicate', false) // Only show Parent Concerns
+            ->withCount('duplicates')
             ->select([
                 'id',
                 'tracking_code',
@@ -47,6 +52,11 @@ class ConcernService
                 'description',
                 'status',
                 'category',
+                'type',
+                'transcript_text',
+                'ai_category',
+                'ai_severity',
+                'ai_confidence',
                 'created_at',
             ]);
 
@@ -112,6 +122,7 @@ class ConcernService
 
         $concern = Concern::where('id', $id)
             ->where('citizen_id', $userId)
+            ->withCount('duplicates')
             ->with([
                 'media' => function ($query) {
                     $query->where('source_category', 'citizen_concern');
@@ -174,7 +185,7 @@ class ConcernService
                 'citizen_id' => $userId,
                 'title' => $title,
                 'description' => $description,
-                'status' => 'pending',
+                'status' => 'analyzing',
                 'category' => $data['category'],
                 'severity' => $data['severity'] ?? 'low',
                 'user_selected_category' => $data['category'], // Store user's selection
@@ -353,6 +364,114 @@ class ConcernService
         // Broadcast Event
         $uploadedMedia = $concern->media->pluck('original_path')->toArray();
         event(new ConcernAssigned($concern, $distribution, $uploadedMedia));
+
+        // 3. Send SMS Notification to Purok Leader
+        try {
+            if ($purokLeaderDetails->contact_number) {
+                $this->textBeeService->sendConcernAssignedNotification(
+                    $purokLeaderDetails->contact_number,
+                    [
+                        'tracking_code' => $concern->tracking_code,
+                        'category' => $concern->category,
+                        'severity' => $concern->severity,
+                        'description' => $concern->description,
+                        'address' => $concern->address,
+                        'custom_location' => $concern->custom_location,
+                    ]
+                );
+            }
+        } catch (\Exception $e) {
+            Log::error("Failed to send SMS for Concern #{$concern->id}: ".$e->getMessage());
+        }
+    }
+
+    /**
+     * Mark a concern as valid after AI analysis.
+     */
+    public function markAsValid(int $concernId, array $analysis)
+    {
+        $concern = Concern::find($concernId);
+        if (! $concern) {
+            return;
+        }
+
+        $concern->update([
+            'is_valid' => true,
+            'status' => 'pending',
+            'category' => $analysis['category'] ?? $concern->category,
+            'severity' => $analysis['severity'] ?? $concern->severity,
+            'ai_category' => $analysis['category'] ?? null,
+            'ai_severity' => $analysis['severity'] ?? null,
+            'ai_confidence' => $analysis['confidence'] ?? null,
+            'ai_processed_at' => now(),
+            'ai_analysis_raw' => $analysis,
+        ]);
+
+        ConcernHistory::create([
+            'concern_id' => $concern->id,
+            'status' => 'pending',
+            'remarks' => 'Concern verified by AI and submitted.',
+        ]);
+
+        // Broadcast success to citizen
+        event(new \App\Events\ConcernValidationSuccess($concern));
+
+        // Proceed to finalization (Deduplication, Assignment, SMS)
+        $this->finalizeConcern($concern->id);
+    }
+
+    /**
+     * Mark a concern as invalid/spam after AI analysis.
+     */
+    public function markAsInvalid(int $concernId, string $reason, ?array $rawAnalysis = null)
+    {
+        $concern = Concern::find($concernId);
+        if (! $concern) {
+            return;
+        }
+
+        $concern->update([
+            'is_valid' => false,
+            'status' => 'rejected',
+            'rejection_reason' => $reason,
+            'ai_analysis_raw' => $rawAnalysis,
+        ]);
+
+        ConcernHistory::create([
+            'concern_id' => $concern->id,
+            'status' => 'rejected',
+            'remarks' => "Rejected by AI: {$reason}",
+        ]);
+
+        // Increment user strikes
+        $user = User::find($concern->citizen_id);
+        if ($user) {
+            $user->increment('false_alarm_strikes');
+            $strikes = $user->false_alarm_strikes;
+
+            // Apply automated suspension rules
+            $this->applyAutomatedSuspension($user);
+
+            // Broadcast failure to citizen
+            event(new \App\Events\ConcernValidationFailed($concern, $reason, $strikes));
+        }
+    }
+
+    /**
+     * Apply automated suspension based on strike count.
+     */
+    private function applyAutomatedSuspension(User $user)
+    {
+        $strikes = $user->false_alarm_strikes;
+        $adminId = 1; // System Admin ID
+
+        if ($strikes == 3) {
+            UserSuspension::applySuspension($user->id, 'warning_1', $adminId, 'Automated: 3 strikes for false alarms/spam.');
+        } elseif ($strikes == 4) {
+            UserSuspension::applySuspension($user->id, 'warning_2', $adminId, 'Automated: 4 strikes for false alarms/spam.');
+        } elseif ($strikes >= 5) {
+            UserSuspension::applySuspension($user->id, 'suspension', $adminId, 'Automated: 5+ strikes for false alarms/spam. Permanent ban.');
+        }
     }
 
     /**
