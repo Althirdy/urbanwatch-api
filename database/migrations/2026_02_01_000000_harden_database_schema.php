@@ -24,6 +24,10 @@ return new class extends Migration
         });
 
         // 2. Normalize Accidents Table (Section 7)
+        // First, normalize inconsistent status values
+        DB::statement("UPDATE accidents SET status = 'In Progress' WHERE status = 'Ongoing'");
+        DB::statement("UPDATE accidents SET status = 'Resolved' WHERE status = 'Archived'");
+        
         // Convert status and severity to lowercase
         DB::statement('UPDATE accidents SET status = LOWER(status), severity = LOWER(severity)');
 
