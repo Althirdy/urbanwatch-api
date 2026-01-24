@@ -6,6 +6,7 @@ use App\Exceptions\UrbanWatchException;
 use App\Models\CitizenDetails;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
@@ -45,6 +46,33 @@ class AuthService
 
     public function register(array $data)
     {
+        // 1. Verify OTP Token (Verified Token Pattern)
+        try {
+            $decryptedToken = Crypt::decryptString($data['verificationToken']);
+            $tokenData = json_decode($decryptedToken, true);
+
+            if (! $tokenData || ! isset($tokenData['phone']) || ! isset($tokenData['expires_at'])) {
+                throw new \Exception('Invalid token format.');
+            }
+
+            // Check Expiration
+            if (Carbon::parse($tokenData['expires_at'])->isPast()) {
+                throw new UrbanWatchException('Verification token has expired. Please request a new OTP.', 403);
+            }
+
+            // Check Phone Match
+            if ($tokenData['phone'] !== $data['phoneNumber']) {
+                throw new UrbanWatchException('Phone number mismatch. Please verify your phone number again.', 403);
+            }
+
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            throw new UrbanWatchException('Invalid verification token.', 403);
+        } catch (UrbanWatchException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            throw new UrbanWatchException('Verification failed: '.$e->getMessage(), 403);
+        }
+
         DB::beginTransaction();
         try {
             $fullName = trim($data['firstName'].' '.

@@ -25,6 +25,15 @@ class CitizenDetails extends Model
         'is_verified',
     ];
 
+    protected $casts = [
+        'first_name' => 'encrypted',
+        'middle_name' => 'encrypted',
+        'last_name' => 'encrypted',
+        'phone_number' => 'encrypted',
+        'address' => 'encrypted',
+        'is_verified' => 'boolean',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

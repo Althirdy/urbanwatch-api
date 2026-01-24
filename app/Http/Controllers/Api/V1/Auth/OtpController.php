@@ -10,6 +10,7 @@ use App\Services\MailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 
@@ -152,12 +153,22 @@ class OtpController extends Controller
         Cache::forget('otp_lock_'.$phone);
         RateLimiter::clear($key);
 
+        // Generate a temporary verification token (valid for 15 minutes)
+        $tokenData = [
+            'phone' => $phone,
+            'verified_at' => now()->toIso8601String(),
+            'expires_at' => now()->addMinutes(15)->toIso8601String(),
+        ];
+
+        $verificationToken = Crypt::encryptString(json_encode($tokenData));
+
         return response()->json([
             'success' => true,
             'message' => 'OTP verified successfully',
             'data' => [
                 'phone' => $phone,
                 'verified' => true,
+                'verificationToken' => $verificationToken,
             ],
         ]);
     }

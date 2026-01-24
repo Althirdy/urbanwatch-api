@@ -234,9 +234,30 @@ class ConcernService
      */
     public function getConcernDetails(string $id, int $userId)
     {
+        if (! User::find($userId)) {
+            throw new UrbanWatchException('User not found.');
+        }
 
         $concern = Concern::where('id', $id)
             ->where('citizen_id', $userId)
+            ->select([
+                'id',
+                'tracking_code',
+                'title',
+                'type',
+                'description',
+                'category',
+                'status',
+                'transcript_text',
+                'longitude',
+                'latitude',
+                'address',
+                'custom_location',
+                'severity',
+                'created_at',
+                'rejection_reason',
+                'is_valid',
+            ])
             ->withCount('duplicates')
             ->with([
                 'media' => function ($query) {
@@ -250,9 +271,6 @@ class ConcernService
                 'parentConcern', // If user accidentally navigates to a child, show parent link
             ])
             ->first();
-        if (! User::find($userId)) {
-            throw new UrbanWatchException('User not found.');
-        }
 
         if (! $concern) {
             throw new UrbanWatchException('Concern not found.');
