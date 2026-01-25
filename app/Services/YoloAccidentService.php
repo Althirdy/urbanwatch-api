@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Events\AccidentDetected;
 use App\Events\FalseAlarmDetected;
 use App\Models\Accident;
 use App\Models\cctvDevices;

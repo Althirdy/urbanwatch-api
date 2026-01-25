@@ -12,16 +12,19 @@ use App\Services\YoloAccidentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
-use Tests\TestCase;
 use Mockery;
+use Tests\TestCase;
 
 class YoloAccidentServiceTest extends TestCase
 {
     use RefreshDatabase;
 
     protected $yoloService;
+
     protected $geminiService;
+
     protected $fileUploadService;
+
     protected $device;
 
     protected function setUp(): void
@@ -75,12 +78,12 @@ class YoloAccidentServiceTest extends TestCase
             'description' => 'Test Description',
             'confidence' => 90,
             'detected_objects' => ['fire'],
-            'reasoning' => 'Test reasoning'
+            'reasoning' => 'Test reasoning',
         ]);
 
         $this->fileUploadService->shouldReceive('uploadSingle')->andReturn([
             'public_url' => 'http://test.com/fire.jpg',
-            'storage_path' => 'yolo/fire.jpg'
+            'storage_path' => 'yolo/fire.jpg',
         ]);
 
         $result = $this->yoloService->processDetection($file, $this->device->id);
@@ -116,12 +119,12 @@ class YoloAccidentServiceTest extends TestCase
             'description' => 'More intense fire',
             'confidence' => 95,
             'detected_objects' => ['fire'],
-            'reasoning' => 'Updated reasoning'
+            'reasoning' => 'Updated reasoning',
         ]);
 
         $this->fileUploadService->shouldReceive('uploadSingle')->andReturn([
             'public_url' => 'http://test.com/fire2.jpg',
-            'storage_path' => 'yolo/fire2.jpg'
+            'storage_path' => 'yolo/fire2.jpg',
         ]);
 
         $result = $this->yoloService->processDetection($file, $this->device->id);
@@ -162,12 +165,12 @@ class YoloAccidentServiceTest extends TestCase
             'description' => 'Flood description',
             'confidence' => 80,
             'detected_objects' => ['water'],
-            'reasoning' => 'Flood reasoning'
+            'reasoning' => 'Flood reasoning',
         ]);
 
         $this->fileUploadService->shouldReceive('uploadSingle')->andReturn([
             'public_url' => 'http://test.com/flood.jpg',
-            'storage_path' => 'yolo/flood.jpg'
+            'storage_path' => 'yolo/flood.jpg',
         ]);
 
         $result = $this->yoloService->processDetection($file, $this->device->id);

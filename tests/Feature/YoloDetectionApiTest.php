@@ -1,5 +1,7 @@
 <?php
 
+use App\Events\AccidentDetected;
+use App\Events\AccidentUpdated;
 use App\Models\Accident;
 use App\Models\cctvDevices;
 use App\Models\IncidentMedia;
@@ -9,8 +11,6 @@ use App\Services\GeminiService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
-use App\Events\AccidentDetected;
-use App\Events\AccidentUpdated;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -85,7 +85,7 @@ test('it creates a new accident on first detection', function () {
 
     expect(Accident::count())->toBe(1);
     expect(IncidentMedia::count())->toBe(1);
-    
+
     Event::assertDispatched(AccidentDetected::class);
 });
 
@@ -136,7 +136,7 @@ test('it updates existing accident on subsequent detection of same type', functi
 
     expect(Accident::count())->toBe(1);
     expect(IncidentMedia::count())->toBe(1); // One new media attached to the accident
-    
+
     $accident->refresh();
     expect(strtolower($accident->severity))->toBe('high');
     expect($accident->title)->toBe('DEMO: Serious Crash');

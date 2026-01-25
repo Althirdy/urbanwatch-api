@@ -14,13 +14,14 @@ class AccidentUpdated implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $accident;
+
     public $newMedia;
 
     /**
      * Create a new event instance.
      *
-     * @param Accident $accident The updated accident model
-     * @param mixed $newMedia The specific new media item that was added
+     * @param  Accident  $accident  The updated accident model
+     * @param  mixed  $newMedia  The specific new media item that was added
      */
     public function __construct(Accident $accident, $newMedia = null)
     {
@@ -61,7 +62,7 @@ class AccidentUpdated implements ShouldBroadcastNow
             'longitude' => $this->accident->longitude,
             'occurredAt' => $this->accident->occurred_at,
             'updatedAt' => $this->accident->updated_at,
-            'media' => $this->accident->media->map(fn($media) => $media->original_path)->toArray(),
+            'media' => $this->accident->media->map(fn ($media) => $media->original_path)->toArray(),
             'newMediaUrl' => $this->newMedia ? $this->newMedia->original_path : null,
         ];
     }
