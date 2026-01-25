@@ -146,18 +146,18 @@ class YoloAccidentService
 
         return [
             'success' => true,
-            'false_alarm' => true,
-            'false_alarm_id' => $falseAlarm->id,
+            'falseAlarm' => true,
+            'falseAlarmId' => $falseAlarm->id,
             'message' => 'Detection verified as false alarm by AI - Image not stored',
             'reasoning' => $aiAnalysis['reasoning'] ?? 'Not a real emergency',
-            'device_name' => $cctvDevice->device_name,
+            'deviceName' => $cctvDevice->device_name,
             'location' => $cctvDevice->location->location_name,
-            'processing_time_ms' => $processingTimeMs,
+            'processingTimeMs' => $processingTimeMs,
         ];
     }
 
     /**
-     * Process valid emergency - upload image, create records, and broadcast.
+     * Process valid emergency - upload image, create/update records, and broadcast.
      *
      * @param  UploadedFile  $file  The snapshot image file
      * @param  array  $aiAnalysis  The AI analysis result
@@ -190,26 +190,21 @@ class YoloAccidentService
 
             Log::info('YOLO Service: Image uploaded successfully', ['url' => $publicUrl]);
 
-            // Extract location from device
-            $latitude = $cctvDevice->location->latitude;
-            $longitude = $cctvDevice->location->longitude;
+            // Check for existing active accident of the same type on this device (Deduplication)
+            $accidentType = $aiAnalysis['accident_type'] ?? 'Accident';
+            $existingAccident = $this->findActiveAccident($cctvDevice->id, $accidentType);
 
-            // Create accident record with AI-generated data
-            $accident = Accident::create([
-                'cctv_device_id' => $cctvDevice->id,
-                'title' => $aiAnalysis['title'] ?? 'Insidente na Natukoy',
-                'description' => $aiAnalysis['description'] ?? 'Awtomatikong natukoy ng AI system',
-                'latitude' => $latitude,
-                'longitude' => $longitude,
-                'occurred_at' => $detectedAt ?? now(),
-                'accident_type' => $aiAnalysis['accident_type'] ?? 'Accident',
-                'status' => 'Pending',
-                'severity' => $aiAnalysis['severity'] ?? 'Medium',
-            ]);
+            if ($existingAccident) {
+                Log::info('YOLO Service: Active accident found. Updating existing record.', ['accident_id' => $existingAccident->id]);
+                $accident = $this->updateExistingAccident($existingAccident, $aiAnalysis, $detectedAt);
+                $isNew = false;
+            } else {
+                Log::info('YOLO Service: No active accident found. Creating new record.');
+                $accident = $this->createNewAccident($cctvDevice, $aiAnalysis, $detectedAt);
+                $isNew = true;
+            }
 
-            Log::info('YOLO Service: Accident record created', ['accident_id' => $accident->id]);
-
-            // Create incident media record with full AI metadata
+            // Create incident media record
             $incidentMedia = IncidentMedia::create([
                 'source_type' => Accident::class,
                 'source_id' => $accident->id,
@@ -234,52 +229,110 @@ class YoloAccidentService
                 'captured_at' => $detectedAt ?? now(),
             ]);
 
-            Log::info('YOLO Service: Incident media created', ['media_id' => $incidentMedia->id]);
-
             DB::commit();
 
-            // Broadcast the event to all connected clients
-            broadcast(new AccidentDetected($accident));
+            // Broadcast the appropriate event
+            if ($isNew) {
+                broadcast(new \App\Events\AccidentDetected($accident));
+            } else {
+                broadcast(new \App\Events\AccidentUpdated($accident, $incidentMedia));
+            }
 
             $processingTimeMs = round($processingTime * 1000, 2);
 
-            Log::info('YOLO Service: Emergency verified and broadcasted', [
-                'accident_id' => $accident->id,
-                'accident_type' => $accident->accident_type,
-                'severity' => $accident->severity,
-                'confidence' => $aiAnalysis['confidence'] ?? null,
-                'processing_time_ms' => $processingTimeMs,
-            ]);
-
             return [
                 'success' => true,
-                'false_alarm' => false,
-                'accident_id' => $accident->id,
-                'media_id' => $incidentMedia->id,
-                'accident_type' => $accident->accident_type,
+                'falseAlarm' => false,
+                'isNew' => $isNew,
+                'accidentId' => $accident->id,
+                'mediaId' => $incidentMedia->id,
+                'accidentType' => $accident->accident_type,
                 'severity' => $accident->severity,
                 'title' => $accident->title,
                 'description' => $accident->description,
                 'latitude' => $accident->latitude,
                 'longitude' => $accident->longitude,
-                'location_name' => $cctvDevice->location->location_name,
+                'locationName' => $cctvDevice->location->location_name,
                 'barangay' => $cctvDevice->location->barangay,
-                'occurred_at' => $accident->occurred_at,
+                'occurredAt' => $accident->occurred_at,
                 'confidence' => $aiAnalysis['confidence'] ?? null,
-                'detected_objects' => $aiAnalysis['detected_objects'] ?? [],
-                'processing_time_ms' => $processingTimeMs,
-                'image_url' => $publicUrl,
+                'detectedObjects' => $aiAnalysis['detected_objects'] ?? [],
+                'processingTimeMs' => $processingTimeMs,
+                'imageUrl' => $publicUrl,
             ];
 
         } catch (\Exception $e) {
             DB::rollBack();
-
-            Log::error('YOLO Service: Error processing valid emergency', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
+            Log::error('YOLO Service: Error processing emergency', ['error' => $e->getMessage()]);
             throw $e;
         }
+    }
+
+    /**
+     * Find an active accident on a specific device with matching type.
+     */
+    protected function findActiveAccident(int $deviceId, string $type): ?Accident
+    {
+        return Accident::where('cctv_device_id', $deviceId)
+            ->where('accident_type', $type)
+            ->whereIn('status', ['Pending', 'In Progress'])
+            ->latest()
+            ->first();
+    }
+
+    /**
+     * Create a new accident record.
+     */
+    protected function createNewAccident(cctvDevices $device, array $aiAnalysis, ?string $detectedAt): Accident
+    {
+        return Accident::create([
+            'cctv_device_id' => $device->id,
+            'title' => $aiAnalysis['title'] ?? 'Insidente na Natukoy',
+            'description' => $aiAnalysis['description'] ?? 'Awtomatikong natukoy ng AI system',
+            'latitude' => $device->location->latitude,
+            'longitude' => $device->location->longitude,
+            'occurred_at' => $detectedAt ?? now(),
+            'accident_type' => $aiAnalysis['accident_type'] ?? 'Accident',
+            'status' => 'Pending',
+            'severity' => ucfirst(strtolower($aiAnalysis['severity'] ?? 'Medium')),
+        ]);
+    }
+
+    /**
+     * Update an existing accident with new AI data if it improves quality or urgency.
+     */
+    protected function updateExistingAccident(Accident $accident, array $aiAnalysis, ?string $detectedAt): Accident
+    {
+        $updates = [
+            'occurred_at' => $detectedAt ?? now(),
+        ];
+
+        // Normalize new severity
+        $newSeverityLabel = ucfirst(strtolower($aiAnalysis['severity'] ?? 'Low'));
+
+        // Severity Escalation: Only update if the new detection is more severe
+        $severityLevels = ['Low' => 1, 'Medium' => 2, 'High' => 3];
+        $currentSeverity = $severityLevels[$accident->severity] ?? 1;
+        $newSeverity = $severityLevels[$newSeverityLabel] ?? 1;
+
+        if ($newSeverity > $currentSeverity) {
+            $updates['severity'] = $newSeverityLabel;
+            Log::info("YOLO Service: Severity escalated for accident {$accident->id}", [
+                'from' => $accident->severity,
+                'to' => $newSeverityLabel,
+            ]);
+        }
+
+        // Smart Description Update: Update if new confidence is significantly higher
+        $newConfidence = $aiAnalysis['confidence'] ?? 0;
+        // We don't store confidence in Accident table yet, so we assume if it's > 85 it's worth updating title/desc
+        if ($newConfidence > 85) {
+            $updates['title'] = $aiAnalysis['title'];
+            $updates['description'] = $aiAnalysis['description'];
+        }
+
+        $accident->update($updates);
+
+        return $accident;
     }
 }
