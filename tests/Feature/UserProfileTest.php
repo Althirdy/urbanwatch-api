@@ -1,13 +1,11 @@
 <?php
 
+use App\Jobs\SendOtpJob;
 use App\Models\User;
 use App\Services\AbstractApiService;
-use App\Services\UserProfileService;
-use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
-use App\Jobs\SendOtpJob;
 
 uses(Tests\TestCase::class);
 // uses(RefreshDatabase::class); // Cannot use RefreshDatabase as no DB connection in this env usually, but let's assume standard testing practices.
@@ -23,12 +21,12 @@ test('user cannot request update if in cooldown period', function () {
         'last_sensitive_update_at' => now()->subDays(10), // 20 days left
         'phone_number' => '09170000000',
     ]);
-    
+
     $this->actingAs($user);
 
     $response = $this->postJson('/api/v1/profile/request-update-otp', [
         'type' => 'email',
-        'value' => 'new@example.com'
+        'value' => 'new@example.com',
     ]);
 
     $response->assertStatus(403)
@@ -37,12 +35,12 @@ test('user cannot request update if in cooldown period', function () {
 
 test('user can request update if cooldown passed', function () {
     Queue::fake();
-    
+
     $user = User::factory()->create([
         'last_sensitive_update_at' => now()->subDays(31),
         'phone_number' => '09170000000',
     ]);
-    
+
     $this->actingAs($user);
 
     // Mock Abstract API success
@@ -53,12 +51,12 @@ test('user can request update if cooldown passed', function () {
 
     $response = $this->postJson('/api/v1/profile/request-update-otp', [
         'type' => 'email',
-        'value' => 'new@example.com'
+        'value' => 'new@example.com',
     ]);
 
     $response->assertStatus(200)
         ->assertJsonFragment(['message' => 'OTP sent successfully.']);
-        
+
     Queue::assertPushed(SendOtpJob::class);
 });
 
@@ -73,7 +71,7 @@ test('email update requires abstract api validation', function () {
 
     $response = $this->postJson('/api/v1/profile/request-update-otp', [
         'type' => 'email',
-        'value' => 'bad@example.com'
+        'value' => 'bad@example.com',
     ]);
 
     $response->assertStatus(422)
@@ -88,7 +86,7 @@ test('otp verification updates user and sets cooldown', function () {
     $otp = '123456';
     $newValue = 'new@example.com';
     $cacheKey = "profile_update_otp_{$user->id}_email";
-    
+
     Cache::put($cacheKey, [
         'otp' => $otp,
         'new_value' => $newValue,

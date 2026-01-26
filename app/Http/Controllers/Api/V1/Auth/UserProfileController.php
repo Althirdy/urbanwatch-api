@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 class UserProfileController extends BaseApiController
 {
     protected $userProfileService;
+
     protected $fileUploadService;
 
     public function __construct(UserProfileService $userProfileService, FileUploadService $fileUploadService)
@@ -34,8 +35,8 @@ class UserProfileController extends BaseApiController
         try {
             $user = $request->user();
             $result = $this->userProfileService->requestUpdateOtp(
-                $user, 
-                $request->type, 
+                $user,
+                $request->type,
                 $request->value
             );
 
@@ -44,7 +45,8 @@ class UserProfileController extends BaseApiController
         } catch (UrbanWatchException $e) {
             return $this->sendError($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
-            Log::error('Profile Update Request Error: ' . $e->getMessage());
+            Log::error('Profile Update Request Error: '.$e->getMessage());
+
             return $this->sendError('An unexpected error occurred.', 500);
         }
     }
@@ -71,7 +73,8 @@ class UserProfileController extends BaseApiController
         } catch (UrbanWatchException $e) {
             return $this->sendError($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
-            Log::error('Profile Update Confirm Error: ' . $e->getMessage());
+            Log::error('Profile Update Confirm Error: '.$e->getMessage());
+
             return $this->sendError('An unexpected error occurred.', 500);
         }
     }
@@ -98,7 +101,8 @@ class UserProfileController extends BaseApiController
         } catch (UrbanWatchException $e) {
             return $this->sendError($e->getMessage(), 400);
         } catch (\Exception $e) {
-            Log::error('Password Update Error: ' . $e->getMessage());
+            Log::error('Password Update Error: '.$e->getMessage());
+
             return $this->sendError('An unexpected error occurred.', 500);
         }
     }
@@ -119,25 +123,25 @@ class UserProfileController extends BaseApiController
             // Upload using existing service
             $uploadResult = $this->fileUploadService->uploadSingle($file, 'avatars');
 
-            if (!$uploadResult['public_url']) {
+            if (! $uploadResult['public_url']) {
                 throw new \Exception('Failed to upload avatar.');
             }
 
             // Update user profile photo path (assuming column exists or we add it)
-            // Checking User model... standard Laravel has 'profile_photo_path' or similar. 
-            // Our User model migration doesn't explicitly show it in the list earlier, 
+            // Checking User model... standard Laravel has 'profile_photo_path' or similar.
+            // Our User model migration doesn't explicitly show it in the list earlier,
             // but usually it's there or we can use a generic 'avatar' field.
             // Let's assume we need to add 'profile_photo_path' or check if it exists.
             // For now, I'll update 'profile_photo_path' assuming Jetstream/Fortify naming,
             // or I might need to add it in the migration if missing.
-            
+
             // Wait, looking at previous file list, I didn't see a migration for avatar.
             // I should double check User model fillable/columns.
             // The User model doesn't have 'profile_photo_path' in fillable.
             // I will use 'profile_photo_path' and ensure it's in the migration.
             // Wait, I can't check database schema directly.
             // I'll assume I need to add it to the 'users' table migration I just made or a new one.
-            // Since I just made a migration and haven't "run" it (in theory), I could edit it 
+            // Since I just made a migration and haven't "run" it (in theory), I could edit it
             // OR make a new one. But the user said "manual migration", implies I can edit the file I just wrote?
             // No, better to stick to the plan. I'll just check if I can store it.
             // Actually, `User` model uses `HasProfilePhoto` trait usually if Jetstream.
@@ -149,11 +153,12 @@ class UserProfileController extends BaseApiController
             ])->save();
 
             return $this->sendResponse([
-                'avatar_url' => $uploadResult['public_url']
+                'avatar_url' => $uploadResult['public_url'],
             ], 'Avatar updated successfully.');
 
         } catch (\Exception $e) {
-            Log::error('Avatar Upload Error: ' . $e->getMessage());
+            Log::error('Avatar Upload Error: '.$e->getMessage());
+
             return $this->sendError('An unexpected error occurred during upload.', 500);
         }
     }

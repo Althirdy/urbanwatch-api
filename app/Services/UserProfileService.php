@@ -23,10 +23,9 @@ class UserProfileService
     /**
      * Request an OTP for a sensitive profile update (Email or Phone).
      *
-     * @param User $user
-     * @param string $type 'email' or 'phone'
-     * @param string $newValue The new value to be set
-     * @return array
+     * @param  string  $type  'email' or 'phone'
+     * @param  string  $newValue  The new value to be set
+     *
      * @throws UrbanWatchException
      */
     public function requestUpdateOtp(User $user, string $type, string $newValue): array
@@ -46,16 +45,16 @@ class UserProfileService
 
             // Abstract API Validation
             $emailValidation = $this->abstractApiService->validateEmail($newValue);
-            if (!$emailValidation['valid'] || !$emailValidation['deliverable'] || $emailValidation['disposable']) {
+            if (! $emailValidation['valid'] || ! $emailValidation['deliverable'] || $emailValidation['disposable']) {
                 throw new UrbanWatchException('The provided email address is invalid or disposable.', 422);
             }
-            
+
             // For email change, we still verify via SMS to the CURRENT phone number for security
-            $phoneToSendOtp = $user->phone_number; 
+            $phoneToSendOtp = $user->phone_number;
 
         } elseif ($type === 'phone') {
-             // Check uniqueness
-             if (User::where('phone_number', $newValue)->exists()) {
+            // Check uniqueness
+            if (User::where('phone_number', $newValue)->exists()) {
                 throw new UrbanWatchException('The phone number is already in use.', 422);
             }
 
@@ -68,7 +67,7 @@ class UserProfileService
         // 3. Generate and Send OTP
         $otp = (string) rand(100000, 999999);
         $cacheKey = "profile_update_otp_{$user->id}_{$type}";
-        
+
         // Store OTP with new value in cache (expires in 10 mins)
         Cache::put($cacheKey, [
             'otp' => $otp,
@@ -81,17 +80,15 @@ class UserProfileService
         return [
             'message' => 'OTP sent successfully.',
             'target_phone' => $phoneToSendOtp,
-            'expires_in' => 600
+            'expires_in' => 600,
         ];
     }
 
     /**
      * Verify OTP and update the user's contact info.
-     * 
-     * @param User $user
-     * @param string $type 'email' or 'phone'
-     * @param string $otp
-     * @return User
+     *
+     * @param  string  $type  'email' or 'phone'
+     *
      * @throws UrbanWatchException
      */
     public function verifyAndUpdateContactInfo(User $user, string $type, string $otp): User
@@ -99,7 +96,7 @@ class UserProfileService
         $cacheKey = "profile_update_otp_{$user->id}_{$type}";
         $cachedData = Cache::get($cacheKey);
 
-        if (!$cachedData || $cachedData['otp'] !== $otp) {
+        if (! $cachedData || $cachedData['otp'] !== $otp) {
             throw new UrbanWatchException('Invalid or expired OTP.', 400);
         }
 
@@ -130,7 +127,7 @@ class UserProfileService
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Profile Update Failed: " . $e->getMessage());
+            Log::error('Profile Update Failed: '.$e->getMessage());
             throw new UrbanWatchException('Failed to update profile. Please try again.', 500);
         }
     }
@@ -140,7 +137,7 @@ class UserProfileService
      */
     public function updatePassword(User $user, string $currentPassword, string $newPassword): void
     {
-        if (!Hash::check($currentPassword, $user->password)) {
+        if (! Hash::check($currentPassword, $user->password)) {
             throw new UrbanWatchException('Current password is incorrect.', 400);
         }
 
