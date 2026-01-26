@@ -104,6 +104,12 @@ class ProcessVoiceConcernJob implements ShouldQueue
                 Log::warning('ProcessVoiceConcernJob: Gemini analysis failed or returned null', [
                     'concern_id' => $concern->id,
                 ]);
+
+                // Fallback: Update with default text so UI doesn't show "Processing..." forever
+                $concern->update([
+                    'transcript_text' => 'Transcription unavailable. Please listen to the attached audio.',
+                ]);
+
                 // Fallback: Default to valid
                 $concernService->markAsValid($concern->id, []);
             }
@@ -113,6 +119,15 @@ class ProcessVoiceConcernJob implements ShouldQueue
                 'concern_id' => $this->concernId,
                 'error' => $e->getMessage(),
             ]);
+
+            // Fallback: Update with error text
+            $concern = Concern::find($this->concernId);
+            if ($concern) {
+                $concern->update([
+                    'transcript_text' => 'Transcription unavailable due to system error.',
+                ]);
+            }
+
             // Fallback: Mark as valid
             $concernService->markAsValid($this->concernId, []);
         }

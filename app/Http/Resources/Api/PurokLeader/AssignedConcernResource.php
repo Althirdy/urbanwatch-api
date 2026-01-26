@@ -53,6 +53,19 @@ class AssignedConcernResource extends JsonResource
 
             // Clustering Info
             'relatedReportsCount' => $concern->duplicates()->count(),
+            'relatedReports' => $concern->duplicates->map(function ($duplicate) {
+                return [
+                    'id' => $duplicate->id,
+                    'description' => $duplicate->description,
+                    'citizen_name' => $duplicate->citizen->name ?? 'Anonymous',
+                    'created_at' => $duplicate->created_at,
+                    'images' => $duplicate->media
+                        ->where('source_category', 'citizen_concern')
+                        ->pluck('original_path')
+                        ->values()
+                        ->toArray(),
+                ];
+            }),
 
             // Citizen Relationship
             'citizen' => [

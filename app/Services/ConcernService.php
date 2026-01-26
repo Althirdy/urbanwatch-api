@@ -58,6 +58,7 @@ class ConcernService
                 'ai_severity',
                 'ai_confidence',
                 'created_at',
+                'rejection_reason',
             ]);
 
         // Apply filters
@@ -123,6 +124,7 @@ class ConcernService
                 'ai_confidence',
                 'created_at',
                 'deleted_at',
+                'rejection_reason',
             ]);
 
         // Apply same filters
@@ -538,12 +540,6 @@ class ConcernService
             'ai_confidence' => $analysis['confidence'] ?? null,
             'ai_processed_at' => now(),
             'ai_analysis_raw' => $analysis,
-        ]);
-
-        ConcernHistory::create([
-            'concern_id' => $concern->id,
-            'status' => 'pending',
-            'remarks' => 'Concern verified by AI and submitted.',
         ]);
 
         // Broadcast success to citizen

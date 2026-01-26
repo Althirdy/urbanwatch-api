@@ -28,10 +28,10 @@ class User extends Authenticatable
         'last_name',
         'email',
         'password',
-        'phone_number',
         'assigned_brgy',
         'status',
         'false_alarm_strikes',
+        'last_sensitive_update_at',
     ];
 
     /**
