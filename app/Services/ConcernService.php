@@ -629,7 +629,7 @@ class ConcernService
         // Or using a simple bounding box for speed since 50m is very small.
         // Let's use Haversine for accuracy.
 
-        return Concern::query()
+        $potentialParents = Concern::query()
             ->select('concerns.*')
             ->selectRaw('(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance', [$concern->latitude, $concern->longitude, $concern->latitude])
             ->where('id', '!=', $concern->id) // Not itself
@@ -639,7 +639,58 @@ class ConcernService
             ->whereNotIn('status', ['resolved', 'archived']) // Active concerns only
             ->having('distance', '<', 0.05) // 50 meters
             ->orderBy('created_at', 'asc') // Link to the oldest (original) one
-            ->first();
+            ->get();
+
+        // Check for title/description similarity to avoid grouping unrelated concerns
+        foreach ($potentialParents as $parent) {
+            if ($this->areConcernsSimilar($concern, $parent)) {
+                return $parent;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if two concerns are similar based on title and description.
+     * Uses keyword matching to determine if concerns are about the same incident.
+     */
+    private function areConcernsSimilar(Concern $concern, Concern $parent): bool
+    {
+        $concernText = strtolower($concern->title . ' ' . $concern->description);
+        $parentText = strtolower($parent->title . ' ' . $parent->description);
+
+        // Extract significant words (remove common Filipino/English stop words)
+        $stopWords = ['ang', 'ng', 'sa', 'na', 'may', 'at', 'ay', 'the', 'a', 'an', 'is', 'in', 'on', 'to', 'for', 'of', 'and'];
+        
+        $concernWords = array_diff(
+            array_filter(preg_split('/\s+/', $concernText), fn($w) => strlen($w) > 2),
+            $stopWords
+        );
+        
+        $parentWords = array_diff(
+            array_filter(preg_split('/\s+/', $parentText), fn($w) => strlen($w) > 2),
+            $stopWords
+        );
+
+        // Find common significant words
+        $commonWords = array_intersect($concernWords, $parentWords);
+        
+        // Require at least 1 significant common word (excluding stop words)
+        // OR if the titles are very similar (same title)
+        if (count($commonWords) >= 1) {
+            return true;
+        }
+
+        // Check if titles are similar using Levenshtein distance
+        $titleSimilarity = 1 - (levenshtein(strtolower($concern->title), strtolower($parent->title)) / max(strlen($concern->title), strlen($parent->title), 1));
+        
+        // If titles are more than 70% similar, consider them related
+        if ($titleSimilarity >= 0.7) {
+            return true;
+        }
+
+        return false;
     }
 
     private function checkIfUserSuspended(int $userId, string $action = 'perform this action'): void
