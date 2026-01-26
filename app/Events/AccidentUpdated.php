@@ -9,18 +9,24 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class AccidentDetected implements ShouldBroadcastNow
+class AccidentUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $accident;
 
+    public $newMedia;
+
     /**
      * Create a new event instance.
+     *
+     * @param  Accident  $accident  The updated accident model
+     * @param  mixed  $newMedia  The specific new media item that was added
      */
-    public function __construct(Accident $accident)
+    public function __construct(Accident $accident, $newMedia = null)
     {
         $this->accident = $accident->load('media');
+        $this->newMedia = $newMedia;
     }
 
     /**
@@ -36,11 +42,12 @@ class AccidentDetected implements ShouldBroadcastNow
      */
     public function broadcastAs(): string
     {
-        return 'accident.detected';
+        return 'accident.updated';
     }
 
     /**
      * Get the data to broadcast.
+     * Follows camelCase naming convention.
      */
     public function broadcastWith(): array
     {
@@ -54,10 +61,9 @@ class AccidentDetected implements ShouldBroadcastNow
             'latitude' => $this->accident->latitude,
             'longitude' => $this->accident->longitude,
             'occurredAt' => $this->accident->occurred_at,
-            'createdAt' => $this->accident->created_at,
-            'media' => $this->accident->media->map(function ($media) {
-                return $media->original_path;
-            })->toArray(),
+            'updatedAt' => $this->accident->updated_at,
+            'media' => $this->accident->media->map(fn ($media) => $media->original_path)->toArray(),
+            'newMediaUrl' => $this->newMedia ? $this->newMedia->original_path : null,
         ];
     }
 }

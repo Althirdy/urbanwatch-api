@@ -76,7 +76,7 @@ class YoloAccidentController extends BaseApiController
             $result = $this->yoloService->processDetection($file, $deviceId, $detectedAt);
 
             // Format response based on result
-            if ($result['false_alarm'] ?? false) {
+            if ($result['falseAlarm'] ?? false) {
                 return $this->sendResponse(
                     $result,
                     'Detection analyzed: False alarm (no emergency action needed)',

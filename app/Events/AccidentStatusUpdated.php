@@ -68,7 +68,7 @@ class AccidentStatusUpdated implements ShouldBroadcastNow
             'severity' => $this->accident->severity,
             'status' => $this->accident->status,
             'title' => $this->accident->title,
-            'occuredAt' => $this->accident->occured_at->diffForHumans(),
+            'occurredAt' => $this->accident->occurred_at->diffForHumans(),
         ];
     }
 }

@@ -114,7 +114,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                         alt="Accident detection"
                                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                                     />
-                                    <div className="absolute top-2 right-2">
+                                    <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
                                         <Badge
                                             variant="destructive"
                                             className="px-1.5 py-0 text-[10px] font-semibold shadow-sm"
@@ -122,6 +122,15 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                             <Camera className="mr-1 h-2.5 w-2.5" />
                                             AI DETECTED
                                         </Badge>
+                                        
+                                        {report.media && report.media.length > 1 && (
+                                            <Badge
+                                                variant="secondary"
+                                                className="bg-black/50 px-1.5 py-0 text-[10px] text-white backdrop-blur-sm hover:bg-black/70"
+                                            >
+                                                +{report.media.length - 1} more
+                                            </Badge>
+                                        )}
                                     </div>
                                 </div>
                             </ImagePreview>

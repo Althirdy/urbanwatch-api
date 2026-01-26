@@ -37,6 +37,19 @@ export function useAccidentRealtime() {
                 // Refresh the page data
                 router.reload({ only: ['reports'] });
             })
+            .listen('.accident.updated', (data: AccidentData) => {
+                console.log('🔄 Accident updated!', data);
+
+                // Show toast notification for update
+                toast({
+                    title: '🔄 Accident Update',
+                    description: `New snapshot added for #${data.id}`,
+                    variant: 'default', // Less urgent than new accident
+                });
+
+                // Refresh the page data
+                router.reload({ only: ['reports'] });
+            })
             .subscribed(() => {
                 setIsConnected(true);
             })
