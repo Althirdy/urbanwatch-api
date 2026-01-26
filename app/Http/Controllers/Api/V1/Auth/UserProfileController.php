@@ -43,7 +43,7 @@ class UserProfileController extends BaseApiController
             return $this->sendResponse($result, 'OTP sent successfully.');
 
         } catch (UrbanWatchException $e) {
-            return $this->sendError($e->getMessage(), $e->getCode());
+            return $this->sendError($e->getMessage(), null, $e->getCode());
         } catch (\Exception $e) {
             Log::error('Profile Update Request Error: '.$e->getMessage());
 
@@ -71,7 +71,7 @@ class UserProfileController extends BaseApiController
             return $this->sendResponse($user, 'Profile updated successfully.');
 
         } catch (UrbanWatchException $e) {
-            return $this->sendError($e->getMessage(), $e->getCode());
+            return $this->sendError($e->getMessage(), null, $e->getCode());
         } catch (\Exception $e) {
             Log::error('Profile Update Confirm Error: '.$e->getMessage());
 

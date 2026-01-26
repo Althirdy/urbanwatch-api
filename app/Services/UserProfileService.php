@@ -32,7 +32,7 @@ class UserProfileService
     {
         // 1. Check Cooldown (30 Days)
         if ($user->last_sensitive_update_at && Carbon::parse($user->last_sensitive_update_at)->addDays(30)->isFuture()) {
-            $daysLeft = Carbon::parse($user->last_sensitive_update_at)->addDays(30)->diffInDays(now());
+            $daysLeft = (int) ceil(now()->floatDiffInDays(Carbon::parse($user->last_sensitive_update_at)->addDays(30)));
             throw new UrbanWatchException("For security, you can only update your contact information once every 30 days. Please try again in $daysLeft days.", 403);
         }
 
@@ -50,11 +50,18 @@ class UserProfileService
             }
 
             // For email change, we still verify via SMS to the CURRENT phone number for security
-            $phoneToSendOtp = $user->phone_number;
+            $phoneToSendOtp = $user->citizenDetails?->phone_number ?? $user->officialDetails?->contact_number;
+
+            if (! $phoneToSendOtp) {
+                throw new UrbanWatchException('No phone number found associated with this account.', 404);
+            }
 
         } elseif ($type === 'phone') {
-            // Check uniqueness
-            if (User::where('phone_number', $newValue)->exists()) {
+            // Check uniqueness in CitizenDetails and OfficialsDetails
+            $existsInCitizen = \App\Models\CitizenDetails::where('phone_number', $newValue)->exists();
+            $existsInOfficial = \App\Models\OfficialsDetails::where('contact_number', $newValue)->exists();
+
+            if ($existsInCitizen || $existsInOfficial) {
                 throw new UrbanWatchException('The phone number is already in use.', 422);
             }
 
@@ -108,10 +115,11 @@ class UserProfileService
                 $user->email = $newValue;
                 $user->email_verified_at = now(); // Auto-verify since we checked it
             } elseif ($type === 'phone') {
-                $user->phone_number = $newValue;
-                // Also update citizen details if exists
+                // Update citizen details if exists
                 if ($user->citizenDetails) {
                     $user->citizenDetails->update(['phone_number' => $newValue]);
+                } elseif ($user->officialDetails) {
+                    $user->officialDetails->update(['contact_number' => $newValue]);
                 }
             }
 
