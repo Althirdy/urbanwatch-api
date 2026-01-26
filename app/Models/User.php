@@ -32,6 +32,7 @@ class User extends Authenticatable
         'assigned_brgy',
         'status',
         'false_alarm_strikes',
+        'last_sensitive_update_at',
     ];
 
     /**

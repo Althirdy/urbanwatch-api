@@ -30,14 +30,22 @@ class AuthService
         $purokLeaders = User::with(['role', 'officialDetails'])
             ->where('role_id', 2)
             ->get();
+        
+        \Log::info("Purok Leader Login Attempt. Pin provided: " . $pin);
+        \Log::info("Found " . $purokLeaders->count() . " purok leaders.");
+
         $user = null;
         foreach ($purokLeaders as $leader) {
             if (Hash::check($pin, $leader->password)) {
+                \Log::info("Match found for user ID: " . $leader->id);
                 $user = $leader;
                 break;
+            } else {
+                 \Log::info("No match for user ID: " . $leader->id);
             }
         }
         if (! $user) {
+            \Log::warning("Purok leader login failed: No matching PIN found.");
             return null;
         }
 

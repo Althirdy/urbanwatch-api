@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\OtpController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
+use App\Http\Controllers\Api\V1\Auth\UserProfileController;
 use Illuminate\Support\Facades\Route;
 
 // ========OTP Routes (SMS-based)========//
@@ -36,5 +37,13 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware(['auth:sanctum', 'ability.access'])->group(function () {
     Route::prefix('auth')->group(function () {
         Route::get('user', [AuthController::class, 'user']);
+    });
+
+    // Profile Management
+    Route::prefix('profile')->group(function () {
+        Route::post('/request-update-otp', [UserProfileController::class, 'requestUpdateOtp']);
+        Route::put('/contact-info', [UserProfileController::class, 'updateContactInfo']);
+        Route::put('/password', [UserProfileController::class, 'updatePassword']);
+        Route::post('/avatar', [UserProfileController::class, 'updateAvatar']);
     });
 });
