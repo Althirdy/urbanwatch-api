@@ -89,10 +89,35 @@ class ConcernController extends BaseApiController
      */
     public function update(Request $request, string $id)
     {
-        $request->validate([
-            'status' => 'required|in:pending,ongoing,escalated,resolved,rejected',
-            'rejection_reason' => 'required_if:status,rejected|string|max:500',
+        // Log incoming request for debugging
+        Log::info('PurokLeader Concern Update Request', [
+            'concern_id' => $id,
+            'request_data' => $request->all(),
+            'status' => $request->input('status'),
+            'rejection_reason' => $request->input('rejection_reason'),
+            'has_rejection_reason' => $request->has('rejection_reason'),
         ]);
+
+        try {
+            $request->validate([
+                'status' => 'required|in:pending,ongoing,escalated,resolved,rejected',
+                'rejection_reason' => 'required_if:status,rejected|string|max:500',
+                'remarks' => 'nullable|string|max:1000',
+            ], [
+                'status.required' => 'Status is required',
+                'status.in' => 'Status must be one of: pending, ongoing, escalated, resolved, rejected',
+                'rejection_reason.required_if' => 'Rejection reason is required when status is rejected',
+                'rejection_reason.string' => 'Rejection reason must be a string',
+                'rejection_reason.max' => 'Rejection reason must not exceed 500 characters',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation failed for concern update', [
+                'concern_id' => $id,
+                'errors' => $e->errors(),
+                'request_data' => $request->all(),
+            ]);
+            throw $e;
+        }
 
         DB::beginTransaction();
         try {
