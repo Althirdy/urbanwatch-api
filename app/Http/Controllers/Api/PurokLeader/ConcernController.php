@@ -9,12 +9,20 @@ use App\Jobs\SendConcernStatusNotificationJob;
 use App\Models\Citizen\Concern;
 use App\Models\ConcernDistribution;
 use App\Models\ConcernHistory;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ConcernController extends BaseApiController
 {
+    protected NotificationService $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
+
     /**
      * Display a listing of the assigned concerns.
      */
@@ -156,7 +164,16 @@ class ConcernController extends BaseApiController
 
             DB::commit();
 
-            // Trigger event to notify citizen of status update
+            // Create in-app notification for citizen about status change
+            $this->notificationService->notifyConcernStatusChanged(
+                $concern->fresh(),
+                $previousStatus,
+                $status,
+                $purokLeader,
+                $remarks
+            );
+
+            // Trigger event to notify citizen of status update (Pusher broadcast)
             event(new ConcernStatusUpdated(
                 $concern->fresh(),
                 $distribution->fresh(),

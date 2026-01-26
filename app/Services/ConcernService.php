@@ -24,10 +24,16 @@ class ConcernService
 
     protected $textBeeService;
 
-    public function __construct(FileUploadService $fileUploadService, TextBeeService $textBeeService)
-    {
+    protected $notificationService;
+
+    public function __construct(
+        FileUploadService $fileUploadService,
+        TextBeeService $textBeeService,
+        NotificationService $notificationService
+    ) {
         $this->fileUploadService = $fileUploadService;
         $this->textBeeService = $textBeeService;
+        $this->notificationService = $notificationService;
     }
 
     /**
@@ -455,10 +461,13 @@ class ConcernService
 
             Log::info("Concern #{$concern->id} marked as duplicate of #{$parentConcern->id}");
 
-            // Notify the citizen that their concern was merged
+            // Create in-app notification for citizen about the merge
+            $this->notificationService->notifyConcernMerged($concern, $parentConcern);
+
+            // Notify the citizen that their concern was merged (Pusher broadcast)
             event(new \App\Events\ConcernMerged($concern, $parentConcern));
 
-            return; // Stop here. No notifications.
+            return; // Stop here. No further notifications.
         }
 
         // 2. Assignment Logic (If not a duplicate)
@@ -500,7 +509,10 @@ class ConcernService
         $uploadedMedia = $concern->media->pluck('original_path')->toArray();
         event(new ConcernAssigned($concern, $distribution, $uploadedMedia));
 
-        // 3. Send SMS Notification to Purok Leader
+        // 3. Create In-App Notification for Purok Leader
+        $this->notificationService->notifyConcernAssigned($concern, $distribution);
+
+        // 4. Send SMS Notification to Purok Leader
         try {
             if ($purokLeaderDetails->contact_number) {
                 $this->textBeeService->sendConcernAssignedNotification(
