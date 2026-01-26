@@ -43,6 +43,7 @@ class Notification extends Model
     public const TYPE_CONCERN_ASSIGNED = 'concern_assigned';
     public const TYPE_CONCERN_ACKNOWLEDGED = 'concern_acknowledged';
     public const TYPE_CONCERN_RESOLVED = 'concern_resolved';
+    public const TYPE_CONCERN_REJECTED = 'concern_rejected';
     public const TYPE_CONCERN_STATUS_UPDATE = 'concern_status_update';
     public const TYPE_CONCERN_MERGED = 'concern_merged';
     public const TYPE_NEW_SAFETY_POST = 'new_safety_post';

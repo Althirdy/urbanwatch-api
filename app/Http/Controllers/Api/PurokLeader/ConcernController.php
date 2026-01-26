@@ -90,7 +90,8 @@ class ConcernController extends BaseApiController
     public function update(Request $request, string $id)
     {
         $request->validate([
-            'status' => 'required|in:pending,ongoing,escalated,resolved', // Added resolved to validation
+            'status' => 'required|in:pending,ongoing,escalated,resolved,rejected',
+            'rejection_reason' => 'required_if:status,rejected|string|max:500',
         ]);
 
         DB::beginTransaction();
@@ -110,7 +111,19 @@ class ConcernController extends BaseApiController
             // 1. Update the global concern status
             $concern = Concern::find($id);
             $previousStatus = $concern->status;
-            $concern->update(['status' => $status]);
+            
+            // Handle rejection specially
+            if ($status === 'rejected') {
+                $rejectionReason = $request->input('rejection_reason', 'Rejected by Purok Leader');
+                $concern->update([
+                    'status' => $status,
+                    'is_valid' => false,
+                    'rejection_reason' => $rejectionReason,
+                ]);
+                $remarks = "Rejected by Purok Leader: {$rejectionReason}";
+            } else {
+                $concern->update(['status' => $status]);
+            }
 
             // 2. Update the specific distribution status
             // Mapping statuses if they differ, otherwise usage is direct

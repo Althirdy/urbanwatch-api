@@ -123,17 +123,25 @@ class NotificationService
             $type = match ($newStatus) {
                 'acknowledged' => Notification::TYPE_CONCERN_ACKNOWLEDGED,
                 'resolved' => Notification::TYPE_CONCERN_RESOLVED,
+                'rejected' => Notification::TYPE_CONCERN_REJECTED,
                 default => Notification::TYPE_CONCERN_STATUS_UPDATE,
             };
 
-            $statusLabel = ucfirst(str_replace('_', ' ', $newStatus));
+            // Custom title for rejection
+            if ($newStatus === 'rejected') {
+                $statusLabel = 'Rejected';
+                $message = "Your concern ({$concern->tracking_code}) has been reviewed and marked as invalid.";
+            } else {
+                $statusLabel = ucfirst(str_replace('_', ' ', $newStatus));
+                $message = "Your concern ({$concern->tracking_code}) status has been updated to {$statusLabel}.";
+            }
 
             return Notification::create([
                 'user_id' => $citizenId,
                 'user_type' => Notification::USER_TYPE_CITIZEN,
                 'type' => $type,
                 'title' => "Concern Status: {$statusLabel}",
-                'message' => "Your concern ({$concern->tracking_code}) status has been updated to {$statusLabel}.",
+                'message' => $message,
                 'data' => [
                     'concern_id' => $concern->id,
                     'tracking_code' => $concern->tracking_code,
@@ -141,6 +149,7 @@ class NotificationService
                     'new_status' => $newStatus,
                     'updated_by' => $actor->name ?? 'Official',
                     'remarks' => $remarks,
+                    'rejection_reason' => $newStatus === 'rejected' ? $remarks : null,
                 ],
             ]);
         } catch (\Exception $e) {
