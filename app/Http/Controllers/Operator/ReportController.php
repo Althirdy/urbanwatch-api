@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Operator;
 
 use App\Http\Controllers\Controller;
 use App\Models\Accident;
+use App\Models\FalseAlarm;
 use App\Models\Locations;
 use App\Models\PublicPost;
 use App\Models\Report;
@@ -17,98 +18,149 @@ class ReportController extends Controller
 {
     public function index(Request $request): Response
     {
-        // Get accidents with media and cctv device location
-        $query = Accident::with(['media', 'cctvDevice.location']);
+        $viewType = $request->input('view', 'incidents'); // 'incidents' or 'false_alarms'
 
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $searchTerm = $request->search;
-            $query->where(function ($q) use ($searchTerm) {
-                $q->where('title', 'like', "%{$searchTerm}%")
-                    ->orWhere('description', 'like', "%{$searchTerm}%")
-                    ->orWhere('accident_type', 'like', "%{$searchTerm}%");
-            });
-        }
-
-        // Filter by accident type
-        if ($request->has('report_type') && $request->report_type) {
-            $query->where('accident_type', $request->report_type);
-        }
-
-        // Filter by status
-        if ($request->has('acknowledged') && $request->acknowledged !== '') {
-            $statusFilter = $request->acknowledged === 'true' ? 'Resolved' : 'Pending';
-            $query->where('status', $statusFilter);
-        }
-
-        // Order by status (Pending first, then In Progress, then Resolved last) and then by created_at
-        $accidents = $query
-            ->orderByRaw("CASE 
-                WHEN status = 'Pending' THEN 1 
-                WHEN status = 'In Progress' THEN 2 
-                WHEN status = 'Resolved' THEN 3 
-                ELSE 4 
-            END")
-            ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->withQueryString();
-
-        // Fetch all locations for nearest neighbor search (fallback for accidents without CCTV device)
-        $locations = Locations::all(['location_name', 'latitude', 'longitude']);
-
-        // Transform accidents data to match reports structure
-        $accidents->getCollection()->transform(function ($accident) use ($locations) {
-            // First, try to get location from CCTV device (most accurate for YOLO detections)
-            $displayLocation = null;
-
-            if ($accident->cctvDevice && $accident->cctvDevice->location) {
-                $displayLocation = $accident->cctvDevice->location->location_name;
-            } else {
-                // Fallback: Find nearest location using Haversine formula
-                $nearestLocationName = null;
-                $shortestDistance = PHP_FLOAT_MAX;
-
-                foreach ($locations as $location) {
-                    $distance = $this->calculateDistance(
-                        $accident->latitude,
-                        $accident->longitude,
-                        $location->latitude,
-                        $location->longitude
-                    );
-
-                    if ($distance < $shortestDistance) {
-                        $shortestDistance = $distance;
-                        $nearestLocationName = $location->location_name;
-                    }
-                }
-
-                // Only assign location name if within a reasonable distance (1km)
-                $displayLocation = ($shortestDistance <= 1000) ? $nearestLocationName : null;
+        if ($viewType === 'false_alarms') {
+            $query = FalseAlarm::with(['cctvDevice.location']);
+            
+             // Search functionality for False Alarms
+            if ($request->has('search') && $request->search) {
+                $searchTerm = $request->search;
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->where('gemini_reasoning', 'like', "%{$searchTerm}%")
+                      ->orWhere('attempted_accident_type', 'like', "%{$searchTerm}%");
+                });
             }
 
-            return [
-                'id' => $accident->id,
-                'report_type' => ucfirst($accident->accident_type),
-                'transcript' => $accident->title,
-                'description' => $accident->description,
-                'latitude' => $accident->latitude,
-                'longtitude' => $accident->longitude,
-                'location_name' => $displayLocation,
-                'is_acknowledge' => strtolower($accident->status) !== 'pending',
-                'status' => ucfirst($accident->status),
-                'created_at' => $accident->created_at,
-                'updated_at' => $accident->updated_at,
-                'user' => null, // Accidents don't have users (YOLO detected)
-                'acknowledgedBy' => null,
-                'media' => $accident->media->map(function ($media) {
-                    return $media->original_path;
-                })->toArray(),
-            ];
-        });
+            $reports = $query->orderBy('created_at', 'desc')
+                ->paginate(10)
+                ->withQueryString();
+                
+            $reports->getCollection()->transform(function ($alarm) {
+                $displayLocation = null;
+                $latitude = null;
+                $longitude = null;
+
+                if ($alarm->cctvDevice && $alarm->cctvDevice->location) {
+                    $displayLocation = $alarm->cctvDevice->location->location_name;
+                    $latitude = $alarm->cctvDevice->location->latitude;
+                    $longitude = $alarm->cctvDevice->location->longitude;
+                }
+
+                return [
+                    'id' => $alarm->id,
+                    'report_type' => ucfirst($alarm->attempted_accident_type ?? 'Unknown'),
+                    'transcript' => 'AI: False Alarm Detected',
+                    'description' => $alarm->gemini_reasoning,
+                    'latitude' => $latitude ?? 0,
+                    'longtitude' => $longitude ?? 0,
+                    'location_name' => $displayLocation,
+                    'is_acknowledge' => true, // False alarms are auto-acknowledged/ignored
+                    'status' => 'False Alarm',
+                    'created_at' => $alarm->created_at,
+                    'updated_at' => $alarm->updated_at,
+                    'user' => null,
+                    'acknowledgedBy' => null,
+                    'media' => [], // No media for false alarms
+                ];
+            });
+        } else {
+            // Get accidents with media and cctv device location
+            $query = Accident::with(['media', 'cctvDevice.location']);
+
+            // Search functionality
+            if ($request->has('search') && $request->search) {
+                $searchTerm = $request->search;
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->where('title', 'like', "%{$searchTerm}%")
+                        ->orWhere('description', 'like', "%{$searchTerm}%")
+                        ->orWhere('accident_type', 'like', "%{$searchTerm}%");
+                });
+            }
+
+            // Filter by accident type
+            if ($request->has('report_type') && $request->report_type) {
+                $query->where('accident_type', $request->report_type);
+            }
+
+            // Filter by status
+            if ($request->has('acknowledged') && $request->acknowledged !== '') {
+                $statusFilter = $request->acknowledged === 'true' ? 'Resolved' : 'Pending';
+                $query->where('status', $statusFilter);
+            }
+
+            // Order by status (Pending first, then In Progress, then Resolved last) and then by created_at
+            $accidents = $query
+                ->orderByRaw("CASE 
+                    WHEN status = 'Pending' THEN 1 
+                    WHEN status = 'In Progress' THEN 2 
+                    WHEN status = 'Resolved' THEN 3 
+                    ELSE 4 
+                END")
+                ->orderBy('created_at', 'desc')
+                ->paginate(10)
+                ->withQueryString();
+
+            // Fetch all locations for nearest neighbor search (fallback for accidents without CCTV device)
+            $locations = Locations::all(['location_name', 'latitude', 'longitude']);
+
+            // Transform accidents data to match reports structure
+            $accidents->getCollection()->transform(function ($accident) use ($locations) {
+                // First, try to get location from CCTV device (most accurate for YOLO detections)
+                $displayLocation = null;
+
+                if ($accident->cctvDevice && $accident->cctvDevice->location) {
+                    $displayLocation = $accident->cctvDevice->location->location_name;
+                } else {
+                    // Fallback: Find nearest location using Haversine formula
+                    $nearestLocationName = null;
+                    $shortestDistance = PHP_FLOAT_MAX;
+
+                    foreach ($locations as $location) {
+                        $distance = $this->calculateDistance(
+                            $accident->latitude,
+                            $accident->longitude,
+                            $location->latitude,
+                            $location->longitude
+                        );
+
+                        if ($distance < $shortestDistance) {
+                            $shortestDistance = $distance;
+                            $nearestLocationName = $location->location_name;
+                        }
+                    }
+
+                    // Only assign location name if within a reasonable distance (1km)
+                    $displayLocation = ($shortestDistance <= 1000) ? $nearestLocationName : null;
+                }
+
+                return [
+                    'id' => $accident->id,
+                    'report_type' => ucfirst($accident->accident_type),
+                    'transcript' => $accident->title,
+                    'description' => $accident->description,
+                    'latitude' => $accident->latitude,
+                    'longtitude' => $accident->longitude,
+                    'location_name' => $displayLocation,
+                    'is_acknowledge' => strtolower($accident->status) !== 'pending',
+                    'status' => ucfirst($accident->status),
+                    'created_at' => $accident->created_at,
+                    'updated_at' => $accident->updated_at,
+                    'user' => null, // Accidents don't have users (YOLO detected)
+                    'acknowledgedBy' => null,
+                    'media' => $accident->media->map(function ($media) {
+                        return $media->original_path;
+                    })->toArray(),
+                ];
+            });
+            
+            $reports = $accidents;
+        }
 
         return Inertia::render('reports', [
-            'reports' => $accidents,
-            'filters' => $request->only(['search', 'report_type', 'acknowledged']),
+            'reports' => $reports,
+            'currentView' => $viewType,
+            'filters' => $request->only(['search', 'report_type', 'acknowledged', 'view']),
             'reportTypes' => ['Accident', 'Fire', 'Flood'], // Accident types
             'statusOptions' => ['Pending', 'Ongoing', 'Resolved', 'Archived'],
         ]);

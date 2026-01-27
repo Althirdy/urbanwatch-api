@@ -136,7 +136,14 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                             </ImagePreview>
                         ) : (
                             <div className="relative flex h-36 w-full items-center justify-center bg-muted">
-                                <Camera className="h-10 w-10 text-muted-foreground/20" />
+                                {report.status === 'False Alarm' ? (
+                                     <div className="flex flex-col items-center gap-2 text-amber-500/50">
+                                         <AlertTriangle className="h-10 w-10" />
+                                         <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">Image Discarded</span>
+                                     </div>
+                                ) : (
+                                    <Camera className="h-10 w-10 text-muted-foreground/20" />
+                                )}
                             </div>
                         )}
 
@@ -160,17 +167,21 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
 
                                                                 </Badge>
 
-                                                                <Badge 
-
-                                                                    variant={report.status === 'Resolved' ? 'default' : 'secondary'} 
-
-                                                                    className="h-4 px-1.5 text-[9px] capitalize"
-
-                                                                >
-
-                                                                    {report.status}
-
-                                                                </Badge>
+                                                                {report.status === 'False Alarm' ? (
+                                                                    <Badge 
+                                                                        variant="outline" 
+                                                                        className="h-4 px-1.5 text-[9px] capitalize border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+                                                                    >
+                                                                        False Alarm
+                                                                    </Badge>
+                                                                ) : (
+                                                                    <Badge 
+                                                                        variant={report.status === 'Resolved' ? 'default' : 'secondary'} 
+                                                                        className="h-4 px-1.5 text-[9px] capitalize"
+                                                                    >
+                                                                        {report.status}
+                                                                    </Badge>
+                                                                )}
 
                                                             </div>
 
@@ -202,7 +213,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
 
                                                                 <span className="truncate font-semibold">
 
-                                                                    {report.location_name || `${Number(report.latitute).toFixed(4)}, ${Number(report.longtitude).toFixed(4)}`}
+                                                                    {report.location_name || `${Number(report.latitude).toFixed(4)}, ${Number(report.longitude).toFixed(4)}`}
 
                                                                 </span>
 
@@ -227,7 +238,10 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                                 </CardContent>
 
                         <CardFooter className="flex flex-col gap-2 p-3 pt-1 pb-3">
-                            {!report.is_acknowledge ? (
+                            {report.status === 'False Alarm' ? (
+                                // False Alarm: No action buttons
+                                null
+                            ) : !report.is_acknowledge ? (
                                 <Button
                                     size="sm"
                                     className="h-8 w-full text-xs font-bold"
@@ -280,40 +294,42 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                     </Button>
                                 </ViewReportDetails>
 
-                                <div className="flex gap-1">
-                                    <Tooltip>
-                                        <EditReport
-                                            report={report}
-                                            reportTypes={reportTypes}
-                                        >
-                                            <TooltipTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                >
-                                                    <SquarePen className="h-4 w-4" />
-                                                </Button>
-                                            </TooltipTrigger>
-                                        </EditReport>
-                                        <TooltipContent>Edit</TooltipContent>
-                                    </Tooltip>
+                                {report.status !== 'False Alarm' && (
+                                    <div className="flex gap-1">
+                                        <Tooltip>
+                                            <EditReport
+                                                report={report}
+                                                reportTypes={reportTypes}
+                                            >
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                    >
+                                                        <SquarePen className="h-4 w-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                            </EditReport>
+                                            <TooltipContent>Edit</TooltipContent>
+                                        </Tooltip>
 
-                                    <Tooltip>
-                                        <ArchiveReport report={report}>
-                                            <TooltipTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-destructive hover:text-destructive"
-                                                >
-                                                    <Archive className="h-4 w-4" />
-                                                </Button>
-                                            </TooltipTrigger>
-                                        </ArchiveReport>
-                                        <TooltipContent>Archive</TooltipContent>
-                                    </Tooltip>
-                                </div>
+                                        <Tooltip>
+                                            <ArchiveReport report={report}>
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                                    >
+                                                        <Archive className="h-4 w-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                            </ArchiveReport>
+                                            <TooltipContent>Archive</TooltipContent>
+                                        </Tooltip>
+                                    </div>
+                                )}
                             </div>
                         </CardFooter>
                     </Card>

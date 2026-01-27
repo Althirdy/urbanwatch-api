@@ -20,7 +20,7 @@ import FalseAlarmMonitor from './reports-comp/false-alarm-monitor';
 import ReportsCard from './reports-comp/reports-card';
 import ReportActionTab from './reports-comp/reports-tab';
 
-const Reports = ({ reports, reportTypes }: ReportsProps) => {
+const Reports = ({ reports, reportTypes, currentView = 'incidents' }: ReportsProps) => {
     const [filteredReports, setFilteredReports] = useState<reports_T[]>(
         reports.data,
     );
@@ -28,6 +28,14 @@ const Reports = ({ reports, reportTypes }: ReportsProps) => {
     useEffect(() => {
         setFilteredReports(reports.data);
     }, [reports.data]);
+
+    const handleViewChange = (value: string) => {
+        router.get(
+            reportRoutes().url,
+            { view: value },
+            { preserveState: true, preserveScroll: true }
+        );
+    };
 
     // Real-time connection
     const { isConnected } = useAccidentRealtime();
@@ -55,7 +63,8 @@ const Reports = ({ reports, reportTypes }: ReportsProps) => {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <FalseAlarmMonitor />
+                        {/* Only show FalseAlarmMonitor sheet when in incidents view to avoid redundancy */}
+                        {currentView === 'incidents' && <FalseAlarmMonitor />}
                         <Badge
                             variant={isConnected ? 'outline' : 'destructive'}
                             className={`gap-1.5 px-3 py-1 ${isConnected ? 'border-green-500 text-green-600 bg-green-50 dark:bg-green-950/20' : ''}`}
@@ -82,15 +91,24 @@ const Reports = ({ reports, reportTypes }: ReportsProps) => {
 
                 {/* Main Content */}
                 <div className="space-y-6">
-                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                        <h2 className="text-lg font-semibold text-foreground">
-                            All Reports
-                        </h2>
-                        <ReportActionTab
-                            reports={reports}
-                            reportTypes={reportTypes}
-                            setFilteredReports={setFilteredReports}
-                        />
+                    <div className="flex flex-col gap-4">
+                        <Tabs value={currentView} onValueChange={handleViewChange} className="w-full">
+                            <TabsList className="grid w-full max-w-md grid-cols-2">
+                                <TabsTrigger value="incidents">Valid Incidents</TabsTrigger>
+                                <TabsTrigger value="false_alarms">False Alarms</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+
+                        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                            <h2 className="text-lg font-semibold text-foreground">
+                                {currentView === 'incidents' ? 'All Reports' : 'False Alarm Logs'}
+                            </h2>
+                            <ReportActionTab
+                                reports={reports}
+                                reportTypes={reportTypes}
+                                setFilteredReports={setFilteredReports}
+                            />
+                        </div>
                     </div>
 
                     <ReportsCard
