@@ -386,7 +386,7 @@ class ReportController extends Controller
                 // Wait, the service does: 'image_path' => $imagePath (from upload).
                 // It does NOT merge $data['image_path'].
                 // So we have to pass null as image, and then update it manually or use a specialized method.
-                // BETTER: We use the Service to create the post structure and trigger notifications, 
+                // BETTER: We use the Service to create the post structure and trigger notifications,
                 // but we might need to handle the image path separately or update the service to accept it.
                 // Let's rely on the fact that we can update the post immediately after creation if needed,
                 // OR simpler: We trust the service to create the post.
@@ -396,9 +396,9 @@ class ReportController extends Controller
                 // It takes $data['title'], $data['content'], etc.
                 // It ignores $data['image_path'].
                 // Let's use the service to create, then force update the image path if we have one.
-                
+
                 $postData = [
-                    'title' => 'PAUNAWA: ' . $accident->title,
+                    'title' => 'PAUNAWA: '.$accident->title,
                     'content' => $accident->description,
                     'category' => 'emergency',
                     'postable_id' => $accident->id,
@@ -411,7 +411,7 @@ class ReportController extends Controller
 
                 // If we have an existing image path, update it (since we didn't upload a new file)
                 if ($firstMedia) {
-                   $publicPost->update(['image_path' => $firstMedia->original_path]);
+                    $publicPost->update(['image_path' => $firstMedia->original_path]);
                 }
 
                 DB::commit();

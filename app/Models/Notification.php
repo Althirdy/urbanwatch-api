@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
-     /**
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
@@ -35,17 +35,24 @@ class Notification extends Model
     ];
 
     public const TYPE_CONCERN_ASSIGNED = 'concern_assigned';
+
     public const TYPE_CONCERN_ACKNOWLEDGED = 'concern_acknowledged';
+
     public const TYPE_CONCERN_RESOLVED = 'concern_resolved';
+
     public const TYPE_CONCERN_STATUS_UPDATE = 'concern_status_update';
+
     public const TYPE_CONCERN_MERGED = 'concern_merged';
+
     public const TYPE_NEW_SAFETY_POST = 'new_safety_post';
+
     public const TYPE_SYSTEM_ANNOUNCEMENT = 'system_announcement';
 
     /**
      * User Types
      */
     public const USER_TYPE_CITIZEN = 'citizen';
+
     public const USER_TYPE_PUROK_LEADER = 'purok_leader';
 
     /**
@@ -88,10 +95,11 @@ class Notification extends Model
         if ($this->read_at === null) {
             return $this->update(['read_at' => now()]);
         }
+
         return true;
     }
 
-     /**
+    /**
      * Check if the notification is read.
      */
     public function isRead(): bool

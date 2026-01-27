@@ -8,9 +8,7 @@ use App\Models\Notification;
 use App\Models\PublicPost;
 use App\Models\User;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class NotificationService
 {
@@ -42,6 +40,7 @@ class NotificationService
                 'concern_id' => $concern->id,
                 'purok_leader_id' => $distribution->purok_leader_id,
             ]);
+
             return null;
         }
     }
@@ -72,6 +71,7 @@ class NotificationService
                 'error' => $e->getMessage(),
                 'concern_id' => $concern->id,
             ]);
+
             return null;
         }
     }
@@ -102,6 +102,7 @@ class NotificationService
                 'error' => $e->getMessage(),
                 'concern_id' => $concern->id,
             ]);
+
             return null;
         }
     }
@@ -128,7 +129,7 @@ class NotificationService
             };
 
             $statusLabel = ucfirst(str_replace('_', ' ', $newStatus));
-            $purokFullName = $actor->officialDetails->first_name . ' ' . $actor->officialDetails->last_name;
+            $purokFullName = $actor->officialDetails->first_name.' '.$actor->officialDetails->last_name;
 
             return Notification::create([
                 'user_id' => $citizenId,
@@ -150,6 +151,7 @@ class NotificationService
                 'error' => $e->getMessage(),
                 'concern_id' => $concern->id,
             ]);
+
             return null;
         }
     }
@@ -180,6 +182,7 @@ class NotificationService
                 'error' => $e->getMessage(),
                 'concern_id' => $duplicate->id,
             ]);
+
             return null;
         }
     }
@@ -192,8 +195,8 @@ class NotificationService
     {
         try {
             $userIds = $users->pluck('id')->toArray();
-            
-            if (!empty($userIds)) {
+
+            if (! empty($userIds)) {
                 \App\Jobs\SendPublicPostNotificationsJob::dispatch($post, $userIds);
             }
 
@@ -201,8 +204,9 @@ class NotificationService
         } catch (\Exception $e) {
             Log::error('Failed to dispatch public post notifications job', [
                 'error' => $e->getMessage(),
-                'post_id' => $post->id
+                'post_id' => $post->id,
             ]);
+
             return 0;
         }
     }
@@ -238,7 +242,7 @@ class NotificationService
             ->where('user_id', $userId)
             ->first();
 
-        if (!$notification) {
+        if (! $notification) {
             return false;
         }
 

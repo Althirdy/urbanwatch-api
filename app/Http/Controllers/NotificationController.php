@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\Api\V1\NotificationResource;
 use App\Models\Notification;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use App\Services\NotificationService;
 
 class NotificationController extends BaseApiController
 {
@@ -19,6 +19,7 @@ class NotificationController extends BaseApiController
         if ($user->role_id === 2) {
             return Notification::USER_TYPE_PUROK_LEADER;
         }
+
         return Notification::USER_TYPE_CITIZEN;
     }
 
@@ -51,7 +52,8 @@ class NotificationController extends BaseApiController
 
             return $this->sendResponse($data, 'Notifications fetched successfully');
         } catch (\Exception $e) {
-            Log::error('Error fetching notifications: ' . $e->getMessage());
+            Log::error('Error fetching notifications: '.$e->getMessage());
+
             return $this->sendError('Failed to fetch notifications', 500);
         }
         //

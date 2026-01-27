@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\DB;
 
 class PublicPostService
 {
-
     public function __construct(
         protected FileUploadService $fileUploadService,
         protected NotificationService $notificationService,
@@ -150,7 +149,7 @@ class PublicPostService
     {
         // Fetch all Citizens (3) and Purok Leaders (2)
         $users = \App\Models\User::whereIn('role_id', [2, 3])->get(['id', 'role_id']);
-        
+
         if ($users->isNotEmpty()) {
             $this->notificationService->notifyNewPublicPost($post, $users);
         }
@@ -206,9 +205,9 @@ class PublicPostService
     public function publishPost(PublicPost $publicPost)
     {
         $publicPost->publish();
-        
+
         $loadedPost = $publicPost->load(['postable', 'publishedBy']);
-        
+
         $this->triggerPostNotifications($loadedPost);
 
         return $loadedPost;
@@ -338,7 +337,7 @@ class PublicPostService
             $publicPost->update([
                 'title' => str_contains($publicPost->title, '[RESOLVED]')
                     ? $publicPost->title
-                    : '[RESOLVED] ' . $publicPost->title,
+                    : '[RESOLVED] '.$publicPost->title,
             ]);
 
             DB::commit();

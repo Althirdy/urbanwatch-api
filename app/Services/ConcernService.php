@@ -13,7 +13,6 @@ use App\Models\IncidentMedia;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\UserSuspension;
-use App\Services\NotificationService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -21,8 +20,6 @@ use Illuminate\Support\Str;
 
 class ConcernService
 {
-
-
     public function __construct(
         protected FileUploadService $fileUploadService,
         protected TextBeeService $textBeeService,
@@ -301,7 +298,7 @@ class ConcernService
 
             // Prepare Title & Description
             if ($concernType === 'voice') {
-                $title = $data['title'] ?? 'Voice Concern - ' . now()->format('M d, Y H:i');
+                $title = $data['title'] ?? 'Voice Concern - '.now()->format('M d, Y H:i');
                 $description = $data['description'] ?? 'Audio recording received. Transcription pending...';
             } else {
                 $title = $data['title'];
@@ -311,7 +308,7 @@ class ConcernService
             // Generate Tracking Code
             $datePart = now()->format('Ymd');
             $randomPart = Str::upper(Str::random(4));
-            $trackingCode = 'CN-' . $datePart . '-' . $randomPart;
+            $trackingCode = 'CN-'.$datePart.'-'.$randomPart;
 
             // Create Concern
             $concern = Concern::create([
@@ -518,7 +515,7 @@ class ConcernService
                 );
             }
         } catch (\Exception $e) {
-            Log::error("Failed to send SMS for Concern #{$concern->id}: " . $e->getMessage());
+            Log::error("Failed to send SMS for Concern #{$concern->id}: ".$e->getMessage());
         }
     }
 

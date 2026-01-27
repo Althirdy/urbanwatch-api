@@ -41,7 +41,7 @@ class ConcernController extends BaseApiController
                 'purok_leader_id' => auth()->id(),
             ]);
 
-            return $this->sendError('Failed to retrieve concerns: ' . $e->getMessage());
+            return $this->sendError('Failed to retrieve concerns: '.$e->getMessage());
         }
     }
 
@@ -104,7 +104,7 @@ class ConcernController extends BaseApiController
             // 1. Update the global concern status
             $concern = Concern::find($id);
             $previousStatus = $concern->status;
-            if ($status == "rejected") {
+            if ($status == 'rejected') {
                 $rejectionReason = $request->input('rejection_reason', 'Rejected by purok leader without reason');
                 $concern->update([
                     'status' => $status,
@@ -112,7 +112,7 @@ class ConcernController extends BaseApiController
                     'rejection_reason' => $rejectionReason,
                 ]);
                 $remarks = "Rejected by Purok Leader: {$rejectionReason}";
-            }else{
+            } else {
                 $concern->update(['status' => $status]);
             }
 
@@ -210,7 +210,7 @@ class ConcernController extends BaseApiController
                 'concern_id' => $id,
             ]);
 
-            return $this->sendError('Failed to update concern status: ' . $e->getMessage());
+            return $this->sendError('Failed to update concern status: '.$e->getMessage());
         }
     }
 }
