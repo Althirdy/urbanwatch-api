@@ -21,7 +21,7 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from '@/components/ui/pagination';
-import { Archive, ExternalLink as Open, SquarePen, CheckCircle2 } from 'lucide-react';
+import { Archive, ExternalLink as Open, SquarePen, CheckCircle2,Calendar  } from 'lucide-react';
 import { useState } from 'react';
 
 import { PublicPost_T } from '@/types/public-post-types';
@@ -91,7 +91,7 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
                         key={post.id}
                         className="relative flex h-full flex-col overflow-hidden rounded-[var(--radius)] border border-sidebar-border/70 dark:border-sidebar-border"
                     >
-                        <CardHeader className="pb-2">
+                        <CardHeader className="pb-2 pt-2 px-6">
                             <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                     <CardTitle className="line-clamp-1 text-base">
@@ -134,13 +134,14 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
                                 />
                             </div>
                         )}
-                        <CardContent className="flex-1 pt-3">
+                        <CardContent className="flex-1">
                             <div className="flex flex-col gap-2">
                                 <p className="line-clamp-3 text-sm text-muted-foreground">
                                     {post.content || 'No content available'}
                                 </p>
                                 {post.published_at && (
                                     <p className="mt-auto text-xs text-muted-foreground">
+                                        <Calendar className="inline mb-0.5 mr-1 h-3 w-3" />
                                         {new Date(post.published_at).toLocaleDateString('en-US', {
                                             year: 'numeric',
                                             month: 'short',
@@ -150,7 +151,7 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
                                 )}
                             </div>
                         </CardContent>
-                        <CardFooter className="mt-auto border-t pt-3">
+                        <CardFooter className="mt-auto  ">
                             <div className="flex w-full justify-end gap-2">
                                 <Tooltip>
                                     <ViewPublicPostDetails post={post}>
