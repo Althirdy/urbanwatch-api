@@ -372,13 +372,6 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                                             {post.publishedBy?.name || 'Barangay Office'}
                                         </span>
                                     </div>
-                                    <div className="flex flex-row items-center gap-2">
-                                        <User className="h-4 w-4" />
-                                        {/* <span>
-                                        Reported by:{' '}
-                                        {post.report?.user?.name || 'Unknown'}
-                                    </span> */}
-                                    </div>
 
                                     <div className="flex flex-row items-center gap-2">
                                         <Calendar className="h-4 w-4" />

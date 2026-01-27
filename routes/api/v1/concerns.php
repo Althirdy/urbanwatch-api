@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Api\PurokLeader\ConcernController as PurokLeaderConcernController;
 use App\Http\Controllers\Api\V1\Citizen\ConcernController;
+use App\Http\Controllers\Api\V1\PurokLeader\ConcernController as PurokLeaderConcernController;
 use Illuminate\Support\Facades\Route;
 
 // Citizen Concern Management Routes

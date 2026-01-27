@@ -55,7 +55,6 @@ class UserProfileService
             if (! $phoneToSendOtp) {
                 throw new UrbanWatchException('No phone number found associated with this account.', 404);
             }
-
         } elseif ($type === 'phone') {
             // Check uniqueness in CitizenDetails and OfficialsDetails
             $existsInCitizen = \App\Models\CitizenDetails::where('phone_number', $newValue)->exists();
@@ -132,7 +131,6 @@ class UserProfileService
             Cache::forget($cacheKey);
 
             return $user;
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Profile Update Failed: '.$e->getMessage());
@@ -145,11 +143,18 @@ class UserProfileService
      */
     public function updatePassword(User $user, string $currentPassword, string $newPassword): void
     {
+        // 1. Check Cooldown (30 Days)
+        if ($user->last_sensitive_update_at && Carbon::parse($user->last_sensitive_update_at)->addDays(30)->isFuture()) {
+            $daysLeft = (int) ceil(now()->floatDiffInDays(Carbon::parse($user->last_sensitive_update_at)->addDays(30)));
+            throw new UrbanWatchException("For security, you can only update your contact information once every 30 days. Please try again in $daysLeft days.", 403);
+        }
+
         if (! Hash::check($currentPassword, $user->password)) {
             throw new UrbanWatchException('Current password is incorrect.', 400);
         }
 
         $user->password = Hash::make($newPassword);
+        $user->last_sensitive_update_at = now();
         $user->save();
     }
 }

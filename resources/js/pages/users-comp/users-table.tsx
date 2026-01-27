@@ -90,9 +90,9 @@ const UserTable = ({
 
     return (
         <div className="w-full">
-            <div className="overflow-hidden rounded-lg border bg-card dark:border-zinc-800">
+            <div className="overflow-hidden rounded-[var(--radius)] border">
                 <Table>
-                    <TableHeader className="bg-zinc-50 dark:bg-zinc-800/50">
+                    <TableHeader className="bg-muted">
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => {
@@ -152,7 +152,7 @@ const UserTable = ({
                             <TableRow>
                                 <TableCell
                                     colSpan={columns(roles, locations).length}
-                                    className="h-24 text-center"
+                                    className="h-24 text-center text-muted-foreground"
                                 >
                                     No users found.
                                 </TableCell>

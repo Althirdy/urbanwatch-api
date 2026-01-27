@@ -6,7 +6,7 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Archive, ExternalLink, Mail, MapPin, Settings, User } from 'lucide-react';
+import { Archive, ExternalLink, Mail, MapPin, SquarePen, User } from 'lucide-react';
 
 import { location_T } from '@/types/location-types';
 import { roles_T } from '@/types/role-types';
@@ -88,14 +88,14 @@ const UserCard = ({
                     key={user.id}
                     className="group relative overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700"
                 >
-                    <CardContent className="p-3">
+                    <CardContent className="p-4">
                         {/* Header Row */}
-                        <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className="flex items-start justify-between gap-2 mb-2">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800">
-                                    <User className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                    <User className=" text-zinc-600 dark:text-zinc-400" />
                                 </div>
-                                <div className="min-w-0 flex-1">
+                                <div className="min-w-0 gap-1 flex flex-col justify-between">
                                     <h3 className="truncate text-sm font-semibold leading-tight">
                                         {getFullName(user)}
                                     </h3>
@@ -105,32 +105,31 @@ const UserCard = ({
                                     </div>
                                 </div>
                             </div>
+                            <div className='flex flex-col gap-2 items-end'>
+                                
                             <Badge
+                                    variant="outline"
+                                    className={`text-[10px] font-medium px-1.5 py-0.5 ${getRoleBadgeStyles(user.role?.name)}`}
+                                >
+                                    {user.role?.name || 'N/A'}
+                                </Badge> <Badge
                                 variant="outline"
                                 className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 capitalize ${getStatusBadgeStyles(user.status)}`}
                             >
                                 {user.status || 'N/A'}
-                            </Badge>
+                            </Badge> </div>
+                           
                         </div>
 
                         {/* User Info - Compact */}
                         <div className="space-y-2 mb-3 text-xs">
                             {/* Email */}
-                            <div className="flex items-center gap-2 rounded-md bg-zinc-50 dark:bg-zinc-800/50 p-1.5">
-                                <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
+                            <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-1.5">
+                                <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
                                 <span className="truncate">{user.email}</span>
                             </div>
 
-                            {/* Role */}
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Role</span>
-                                <Badge
-                                    variant="outline"
-                                    className={`text-[10px] font-medium px-1.5 py-0.5 ${getRoleBadgeStyles(user.role?.name)}`}
-                                >
-                                    {user.role?.name || 'N/A'}
-                                </Badge>
-                            </div>
+                         
                         </div>
 
                         {/* Action Buttons - Compact */}
@@ -139,11 +138,11 @@ const UserCard = ({
                                 <ViewUser user={user}>
                                     <TooltipTrigger asChild>
                                         <Button
-                                            variant="ghost"
+                                            variant="outline"
                                             size="sm"
-                                            className="h-7 w-7 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                            className="cursor-pointer"
                                         >
-                                            <ExternalLink className="h-3.5 w-3.5" />
+                                            <ExternalLink className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
                                 </ViewUser>
@@ -156,11 +155,11 @@ const UserCard = ({
                                     <EditUser user={user} roles={roles} locations={locations}>
                                         <TooltipTrigger asChild>
                                             <Button
-                                                variant="ghost"
+                                                variant="outline"
                                                 size="sm"
-                                                className="h-7 w-7 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                                className="cursor-pointer"
                                             >
-                                                <Settings className="h-3.5 w-3.5" />
+                                                <SquarePen className="h-4 w-4" />
                                             </Button>
                                         </TooltipTrigger>
                                     </EditUser>
@@ -173,11 +172,11 @@ const UserCard = ({
                                 <ArchiveUser user={user}>
                                     <TooltipTrigger asChild>
                                         <Button
-                                            variant="ghost"
+                                            variant="outline"
                                             size="sm"
-                                            className="h-7 w-7 p-0 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                            className="cursor-pointer"
                                         >
-                                            <Archive className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
+                                            <Archive className="h-4 w-4 text-red-500 dark:text-red-400" />
                                         </Button>
                                     </TooltipTrigger>
                                 </ArchiveUser>

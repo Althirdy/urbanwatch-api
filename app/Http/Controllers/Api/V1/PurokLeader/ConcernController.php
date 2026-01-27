@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\PurokLeader;
+namespace App\Http\Controllers\Api\V1\PurokLeader;
 
 use App\Events\ConcernStatusUpdated;
 use App\Http\Controllers\Api\BaseApiController;
