@@ -13,12 +13,13 @@ import AppLayout from '@/layouts/app-layout';
 import { reports as reportRoutes } from '@/routes';
 import { BreadcrumbItem } from '@/types';
 import { ReportsProps, reports_T } from '@/types/report-types';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { WifiOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import FalseAlarmMonitor from './reports-comp/false-alarm-monitor';
 import ReportsCard from './reports-comp/reports-card';
 import ReportActionTab from './reports-comp/reports-tab';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Reports = ({ reports, reportTypes, currentView = 'incidents' }: ReportsProps) => {
     const [filteredReports, setFilteredReports] = useState<reports_T[]>(
