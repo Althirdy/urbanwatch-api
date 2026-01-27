@@ -7,18 +7,18 @@ use App\Models\Accident;
 use App\Models\PublicPost;
 use App\Models\Report;
 use App\Services\FileUploadService;
+use App\Services\NotificationService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class PublicPostService
 {
-    protected $fileUploadService;
 
-    public function __construct(FileUploadService $fileUploadService)
-    {
-        $this->fileUploadService = $fileUploadService;
-    }
+    public function __construct(
+        protected FileUploadService $fileUploadService,
+        protected NotificationService $notificationService,
+    ) {}
 
     /**
      * Get a paginated list of public posts based on filters.
@@ -129,10 +129,30 @@ class PublicPostService
             ]);
             DB::commit();
 
-            return $publicPost->load(['postable', 'publishedBy']);
+            $loadedPost = $publicPost->load(['postable', 'publishedBy']);
+
+            // Trigger notifications if published immediately
+            if ($publicPost->status === 'published' && $publicPost->published_at) {
+                $this->triggerPostNotifications($loadedPost);
+            }
+
+            return $loadedPost;
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
+        }
+    }
+
+    /**
+     * Helper to trigger notifications for a public post.
+     */
+    protected function triggerPostNotifications(PublicPost $post)
+    {
+        // Fetch all Citizens (3) and Purok Leaders (2)
+        $users = \App\Models\User::whereIn('role_id', [2, 3])->get(['id', 'role_id']);
+        
+        if ($users->isNotEmpty()) {
+            $this->notificationService->notifyNewPublicPost($post, $users);
         }
     }
 
@@ -186,8 +206,12 @@ class PublicPostService
     public function publishPost(PublicPost $publicPost)
     {
         $publicPost->publish();
+        
+        $loadedPost = $publicPost->load(['postable', 'publishedBy']);
+        
+        $this->triggerPostNotifications($loadedPost);
 
-        return $publicPost->load(['postable', 'publishedBy']);
+        return $loadedPost;
     }
 
     /**
@@ -314,7 +338,7 @@ class PublicPostService
             $publicPost->update([
                 'title' => str_contains($publicPost->title, '[RESOLVED]')
                     ? $publicPost->title
-                    : '[RESOLVED] '.$publicPost->title,
+                    : '[RESOLVED] ' . $publicPost->title,
             ]);
 
             DB::commit();

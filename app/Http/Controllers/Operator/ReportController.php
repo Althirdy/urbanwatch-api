@@ -9,6 +9,7 @@ use App\Models\Locations;
 use App\Models\PublicPost;
 use App\Models\Report;
 use App\Models\User;
+use App\Services\Operator\PublicPostService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -16,6 +17,8 @@ use Inertia\Response;
 
 class ReportController extends Controller
 {
+    public function __construct(protected PublicPostService $publicPostService) {}
+
     public function index(Request $request): Response
     {
         $viewType = $request->input('view', 'incidents'); // 'incidents' or 'false_alarms'
@@ -365,24 +368,51 @@ class ReportController extends Controller
 
                 \Log::info('Accident status updated', ['new_status' => $accident->fresh()->status]);
 
-                // Create a PublicPost for this accident
+                // Create a PublicPost for this accident using the service
                 $imagePath = null;
                 $firstMedia = $accident->media()->first();
-                if ($firstMedia) {
-                    $imagePath = $firstMedia->original_path;
-                }
+                // We'll pass the image as a file if we had it, but here we just have a path.
+                // Since the Service handles upload, but we already have the media, we might need to adjust
+                // OR we pass the path directly if we modify the Service, BUT better:
+                // We construct the data array and let the service handle the creation logic and triggering notifications.
+                // Note: The service expects an UploadedFile for 'image', but we already have a path.
+                // However, the PublicPost model uses 'image_path'.
+                // The service's createPublicPost takes $data and $image.
+                // We can cheat slightly or update the service. Let's see...
+                // The service does: $publicPost = PublicPost::create([... 'image_path' => $imagePath ...]);
+                // So if we pass null as image, image_path becomes null in the service logic.
+                // We need to bypass the service's image upload if we already have a path.
+                // BUT, createPublicPost doesn't support setting image_path directly from $data unless we modify it.
+                // Wait, the service does: 'image_path' => $imagePath (from upload).
+                // It does NOT merge $data['image_path'].
+                // So we have to pass null as image, and then update it manually or use a specialized method.
+                // BETTER: We use the Service to create the post structure and trigger notifications, 
+                // but we might need to handle the image path separately or update the service to accept it.
+                // Let's rely on the fact that we can update the post immediately after creation if needed,
+                // OR simpler: We trust the service to create the post.
+                // If we want the image, we should probably update the PublicPostService to verify if 'image_path' is in $data.
 
-                PublicPost::create([
+                // For now, let's look at PublicPostService::createPublicPost again.
+                // It takes $data['title'], $data['content'], etc.
+                // It ignores $data['image_path'].
+                // Let's use the service to create, then force update the image path if we have one.
+                
+                $postData = [
+                    'title' => 'PAUNAWA: ' . $accident->title,
+                    'content' => $accident->description,
+                    'category' => 'emergency',
                     'postable_id' => $accident->id,
                     'postable_type' => Accident::class,
-                    'title' => 'PAUNAWA: '.$accident->title,
-                    'content' => $accident->description,
-                    'image_path' => $imagePath,
-                    'category' => 'emergency',
                     'status' => 'published',
-                    'published_by' => auth()->id(),
-                    'published_at' => now(),
-                ]);
+                    // 'published_at' => now(), // Handled by service based on status='published'
+                ];
+
+                $publicPost = $this->publicPostService->createPublicPost($postData, null);
+
+                // If we have an existing image path, update it (since we didn't upload a new file)
+                if ($firstMedia) {
+                   $publicPost->update(['image_path' => $firstMedia->original_path]);
+                }
 
                 DB::commit();
 
@@ -420,17 +450,14 @@ class ReportController extends Controller
                     'status' => 'Resolved',
                 ]);
 
-                // Update the associated PublicPost if it exists
+                // Find the associated public post
                 $publicPost = PublicPost::where('postable_id', $accident->id)
                     ->where('postable_type', Accident::class)
                     ->first();
 
                 if ($publicPost) {
-                    $publicPost->update([
-                        'title' => '[RESOLVED] '.$publicPost->title,
-                        // Optional: Unpublish it or keep it visible
-                        // 'status' => 'archived',
-                    ]);
+                    // Use service to resolve/update the post
+                    $this->publicPostService->resolveAccidentPost($publicPost);
                 }
 
                 DB::commit();

@@ -13,6 +13,7 @@ use App\Models\IncidentMedia;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\UserSuspension;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -20,15 +21,13 @@ use Illuminate\Support\Str;
 
 class ConcernService
 {
-    protected $fileUploadService;
 
-    protected $textBeeService;
 
-    public function __construct(FileUploadService $fileUploadService, TextBeeService $textBeeService)
-    {
-        $this->fileUploadService = $fileUploadService;
-        $this->textBeeService = $textBeeService;
-    }
+    public function __construct(
+        protected FileUploadService $fileUploadService,
+        protected TextBeeService $textBeeService,
+        protected NotificationService $notificationService
+    ) {}
 
     /**
      * Get paginated concerns for the current user.
@@ -302,7 +301,7 @@ class ConcernService
 
             // Prepare Title & Description
             if ($concernType === 'voice') {
-                $title = $data['title'] ?? 'Voice Concern - '.now()->format('M d, Y H:i');
+                $title = $data['title'] ?? 'Voice Concern - ' . now()->format('M d, Y H:i');
                 $description = $data['description'] ?? 'Audio recording received. Transcription pending...';
             } else {
                 $title = $data['title'];
@@ -312,7 +311,7 @@ class ConcernService
             // Generate Tracking Code
             $datePart = now()->format('Ymd');
             $randomPart = Str::upper(Str::random(4));
-            $trackingCode = 'CN-'.$datePart.'-'.$randomPart;
+            $trackingCode = 'CN-' . $datePart . '-' . $randomPart;
 
             // Create Concern
             $concern = Concern::create([
@@ -453,6 +452,7 @@ class ConcernService
                 'remarks' => "Marked as duplicate of Concern #{$parentConcern->tracking_code}. Notifications silenced.",
             ]);
 
+            $this->notificationService->notifyConcernMerged($concern, $parentConcern);
             Log::info("Concern #{$concern->id} marked as duplicate of #{$parentConcern->id}");
 
             // Notify the citizen that their concern was merged
@@ -500,6 +500,8 @@ class ConcernService
         $uploadedMedia = $concern->media->pluck('original_path')->toArray();
         event(new ConcernAssigned($concern, $distribution, $uploadedMedia));
 
+        $this->notificationService->notifyConcernAssigned($concern, $distribution);
+
         // 3. Send SMS Notification to Purok Leader
         try {
             if ($purokLeaderDetails->contact_number) {
@@ -516,7 +518,7 @@ class ConcernService
                 );
             }
         } catch (\Exception $e) {
-            Log::error("Failed to send SMS for Concern #{$concern->id}: ".$e->getMessage());
+            Log::error("Failed to send SMS for Concern #{$concern->id}: " . $e->getMessage());
         }
     }
 

@@ -46,18 +46,15 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
-     * @return array<string, string>
+     * @var array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'name' => 'encrypted',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'name' => 'encrypted',
+    ];
 
     /**
      * Get the user's full name.
@@ -74,17 +71,17 @@ class User extends Authenticatable
                 // Otherwise, build name from relationships if loaded
                 if ($this->relationLoaded('officialDetails') && $this->officialDetails) {
                     return trim(
-                        ($this->officialDetails->first_name ?? '').' '.
-                        (($this->officialDetails->middle_name ?? null) ? ($this->officialDetails->middle_name.' ') : '').
-                        ($this->officialDetails->last_name ?? '')
+                        ($this->officialDetails->first_name ?? '') . ' ' .
+                            (($this->officialDetails->middle_name ?? null) ? ($this->officialDetails->middle_name . ' ') : '') .
+                            ($this->officialDetails->last_name ?? '')
                     );
                 }
 
                 if ($this->relationLoaded('citizenDetails') && $this->citizenDetails) {
                     return trim(
-                        ($this->citizenDetails->first_name ?? '').' '.
-                        (($this->citizenDetails->middle_name ?? null) ? ($this->citizenDetails->middle_name.' ') : '').
-                        ($this->citizenDetails->last_name ?? '')
+                        ($this->citizenDetails->first_name ?? '') . ' ' .
+                            (($this->citizenDetails->middle_name ?? null) ? ($this->citizenDetails->middle_name . ' ') : '') .
+                            ($this->citizenDetails->last_name ?? '')
                     );
                 }
 
@@ -100,7 +97,7 @@ class User extends Authenticatable
     protected function firstName(): Attribute
     {
         return Attribute::make(
-            set: fn (string $value) => ucwords(trim($value)),
+            set: fn(string $value) => ucwords(trim($value)),
         );
     }
 
@@ -110,7 +107,7 @@ class User extends Authenticatable
     protected function middleName(): Attribute
     {
         return Attribute::make(
-            set: fn (string $value) => ucwords(trim($value)),
+            set: fn(string $value) => ucwords(trim($value)),
         );
     }
 
@@ -120,7 +117,7 @@ class User extends Authenticatable
     protected function lastName(): Attribute
     {
         return Attribute::make(
-            set: fn (string $value) => ucwords(trim($value)),
+            set: fn(string $value) => ucwords(trim($value)),
         );
     }
 
