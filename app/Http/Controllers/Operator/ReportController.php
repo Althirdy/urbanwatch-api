@@ -22,20 +22,20 @@ class ReportController extends Controller
 
         if ($viewType === 'false_alarms') {
             $query = FalseAlarm::with(['cctvDevice.location']);
-            
-             // Search functionality for False Alarms
+
+            // Search functionality for False Alarms
             if ($request->has('search') && $request->search) {
                 $searchTerm = $request->search;
                 $query->where(function ($q) use ($searchTerm) {
                     $q->where('gemini_reasoning', 'like', "%{$searchTerm}%")
-                      ->orWhere('attempted_accident_type', 'like', "%{$searchTerm}%");
+                        ->orWhere('attempted_accident_type', 'like', "%{$searchTerm}%");
                 });
             }
 
             $reports = $query->orderBy('created_at', 'desc')
                 ->paginate(10)
                 ->withQueryString();
-                
+
             $reports->getCollection()->transform(function ($alarm) {
                 $displayLocation = null;
                 $latitude = null;
@@ -153,7 +153,7 @@ class ReportController extends Controller
                     })->toArray(),
                 ];
             });
-            
+
             $reports = $accidents;
         }
 

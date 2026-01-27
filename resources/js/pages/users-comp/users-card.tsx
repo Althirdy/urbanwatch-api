@@ -54,6 +54,7 @@ const UserCard = ({
     roles: roles_T[];
     locations: location_T[];
 }) => {
+    console.log("users in card:", users);
     // Get user's full name
     const getFullName = (user: users_T) => {
         if (user.official_details) {
