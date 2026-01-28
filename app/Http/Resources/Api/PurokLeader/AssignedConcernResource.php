@@ -33,6 +33,7 @@ class AssignedConcernResource extends JsonResource
             'distribution_status' => $this->status, // Status from concern_distribution table
             'latitude' => $concern->latitude,
             'longitude' => $concern->longitude,
+            'address' => $concern->address,
             'created_at' => $concern->created_at,
             'updated_at' => $concern->updated_at,
 

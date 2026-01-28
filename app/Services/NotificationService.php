@@ -8,6 +8,7 @@ use App\Models\Notification;
 use App\Models\PublicPost;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class NotificationService
@@ -40,7 +41,6 @@ class NotificationService
                 'concern_id' => $concern->id,
                 'purok_leader_id' => $distribution->purok_leader_id,
             ]);
-
             return null;
         }
     }
@@ -71,7 +71,6 @@ class NotificationService
                 'error' => $e->getMessage(),
                 'concern_id' => $concern->id,
             ]);
-
             return null;
         }
     }
@@ -102,7 +101,6 @@ class NotificationService
                 'error' => $e->getMessage(),
                 'concern_id' => $concern->id,
             ]);
-
             return null;
         }
     }
@@ -125,25 +123,33 @@ class NotificationService
             $type = match ($newStatus) {
                 'acknowledged' => Notification::TYPE_CONCERN_ACKNOWLEDGED,
                 'resolved' => Notification::TYPE_CONCERN_RESOLVED,
+                'rejected' => Notification::TYPE_CONCERN_REJECTED,
                 default => Notification::TYPE_CONCERN_STATUS_UPDATE,
             };
 
-            $statusLabel = ucfirst(str_replace('_', ' ', $newStatus));
-            $purokFullName = $actor->officialDetails->first_name.' '.$actor->officialDetails->last_name;
+            // Custom title for rejection
+            if ($newStatus === 'rejected') {
+                $statusLabel = 'Rejected';
+                $message = "Your concern ({$concern->tracking_code}) has been reviewed and marked as invalid.";
+            } else {
+                $statusLabel = ucfirst(str_replace('_', ' ', $newStatus));
+                $message = "Your concern ({$concern->tracking_code}) status has been updated to {$statusLabel}.";
+            }
 
             return Notification::create([
                 'user_id' => $citizenId,
                 'user_type' => Notification::USER_TYPE_CITIZEN,
                 'type' => $type,
                 'title' => "Concern Status: {$statusLabel}",
-                'message' => "Your concern ({$concern->tracking_code}) status has been updated to {$statusLabel}.",
+                'message' => $message,
                 'data' => [
                     'concern_id' => $concern->id,
                     'tracking_code' => $concern->tracking_code,
                     'previous_status' => $previousStatus,
                     'new_status' => $newStatus,
-                    'updated_by' => $purokFullName ?? 'Official',
+                    'updated_by' => $actor->name ?? 'Official',
                     'remarks' => $remarks,
+                    'rejection_reason' => $newStatus === 'rejected' ? $remarks : null,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -151,7 +157,6 @@ class NotificationService
                 'error' => $e->getMessage(),
                 'concern_id' => $concern->id,
             ]);
-
             return null;
         }
     }
@@ -182,33 +187,124 @@ class NotificationService
                 'error' => $e->getMessage(),
                 'concern_id' => $duplicate->id,
             ]);
-
             return null;
         }
     }
 
     /**
      * Create notifications for a new public safety post.
-     * Dispatches a background job to notify users.
+     * Notifies all citizens in the affected area.
      */
     public function notifyNewPublicPost(PublicPost $post, Collection $users): int
     {
-        try {
-            $userIds = $users->pluck('id')->toArray();
+        $count = 0;
 
-            if (! empty($userIds)) {
-                \App\Jobs\SendPublicPostNotificationsJob::dispatch($post, $userIds);
+        try {
+            $notifications = [];
+            $now = now();
+
+            foreach ($users as $user) {
+                $notifications[] = [
+                    'user_id' => $user->id,
+                    'user_type' => Notification::USER_TYPE_CITIZEN,
+                    'type' => Notification::TYPE_NEW_SAFETY_POST,
+                    'title' => 'Safety Alert: ' . $post->title,
+                    'message' => $post->excerpt ?? substr($post->content, 0, 100) . '...',
+                    'data' => json_encode([
+                        'post_id' => $post->id,
+                        'category' => $post->category,
+                    ]),
+                    'read_at' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
             }
 
-            return count($userIds);
+            // Bulk insert for efficiency
+            if (count($notifications) > 0) {
+                // Insert in chunks to avoid memory issues
+                foreach (array_chunk($notifications, 100) as $chunk) {
+                    DB::table('notifications')->insert($chunk);
+                    $count += count($chunk);
+                }
+            }
+
+            Log::info('Created notifications for new public post', [
+                'post_id' => $post->id,
+                'notification_count' => $count,
+            ]);
         } catch (\Exception $e) {
-            Log::error('Failed to dispatch public post notifications job', [
+            Log::error('Failed to create public post notifications', [
                 'error' => $e->getMessage(),
                 'post_id' => $post->id,
             ]);
-
-            return 0;
         }
+
+        return $count;
+    }
+
+    /**
+     * Create a system announcement notification for all users.
+     */
+    public function createSystemAnnouncement(
+        string $title,
+        string $message,
+        ?string $userType = null,
+        ?array $data = null
+    ): int {
+        $count = 0;
+
+        try {
+            $query = User::query();
+
+            // Filter by user type if specified
+            if ($userType === Notification::USER_TYPE_CITIZEN) {
+                $query->whereHas('citizenDetails');
+            } elseif ($userType === Notification::USER_TYPE_PUROK_LEADER) {
+                $query->where('role_id', 2); // Purok Leader role
+            }
+
+            $users = $query->get();
+            $notifications = [];
+            $now = now();
+
+            foreach ($users as $user) {
+                // Determine user type
+                $type = $user->role_id === 2 
+                    ? Notification::USER_TYPE_PUROK_LEADER 
+                    : Notification::USER_TYPE_CITIZEN;
+
+                $notifications[] = [
+                    'user_id' => $user->id,
+                    'user_type' => $type,
+                    'type' => Notification::TYPE_SYSTEM_ANNOUNCEMENT,
+                    'title' => $title,
+                    'message' => $message,
+                    'data' => $data ? json_encode($data) : null,
+                    'read_at' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            // Bulk insert
+            foreach (array_chunk($notifications, 100) as $chunk) {
+                DB::table('notifications')->insert($chunk);
+                $count += count($chunk);
+            }
+
+            Log::info('Created system announcement notifications', [
+                'title' => $title,
+                'notification_count' => $count,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to create system announcement notifications', [
+                'error' => $e->getMessage(),
+                'title' => $title,
+            ]);
+        }
+
+        return $count;
     }
 
     /**
@@ -242,7 +338,7 @@ class NotificationService
             ->where('user_id', $userId)
             ->first();
 
-        if (! $notification) {
+        if (!$notification) {
             return false;
         }
 
