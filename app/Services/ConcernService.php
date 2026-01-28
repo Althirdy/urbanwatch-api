@@ -663,40 +663,115 @@ class ConcernService
     /**
      * Check if two concerns are similar based on title and description.
      * Uses keyword matching to determine if concerns are about the same incident.
+     * 
+     * Enhanced logic:
+     * - Incident type words (barilan, sunog) are ignored - too common within same category
+     * - Location/subject words are used as differentiators
+     * - Requires significant overlap OR very similar titles
      */
     private function areConcernsSimilar(Concern $concern, Concern $parent): bool
     {
+        $concernTitle = strtolower($concern->title);
+        $parentTitle = strtolower($parent->title);
         $concernText = strtolower($concern->title . ' ' . $concern->description);
         $parentText = strtolower($parent->title . ' ' . $parent->description);
 
-        // Extract significant words (remove common Filipino/English stop words)
-        $stopWords = ['ang', 'ng', 'sa', 'na', 'may', 'at', 'ay', 'the', 'a', 'an', 'is', 'in', 'on', 'to', 'for', 'of', 'and'];
-        
-        $concernWords = array_diff(
-            array_filter(preg_split('/\s+/', $concernText), fn($w) => strlen($w) > 2),
-            $stopWords
-        );
-        
-        $parentWords = array_diff(
-            array_filter(preg_split('/\s+/', $parentText), fn($w) => strlen($w) > 2),
-            $stopWords
-        );
+        // Common stop words to ignore
+        $stopWords = [
+            // Filipino
+            'ang', 'ng', 'sa', 'na', 'may', 'at', 'ay', 'mga', 'ito', 'ina', 'po', 'ko', 'mo', 'siya', 'kami', 'tayo', 'dito', 'doon', 'ano', 'sino', 'paano', 'bakit',
+            // English
+            'the', 'a', 'an', 'is', 'in', 'on', 'to', 'for', 'of', 'and', 'or', 'but', 'with', 'this', 'that', 'there', 'here', 'was', 'were', 'been', 'being',
+        ];
 
-        // Find common significant words
-        $commonWords = array_intersect($concernWords, $parentWords);
-        
-        // Require at least 1 significant common word (excluding stop words)
-        // OR if the titles are very similar (same title)
-        if (count($commonWords) >= 1) {
+        // Incident type words - these are TOO COMMON within same category, should NOT be used for matching
+        // Having these in common doesn't mean it's the same incident
+        $incidentTypeWords = [
+            // Security/Crime
+            'barilan', 'shooting', 'holdap', 'robbery', 'nakawan', 'theft', 'saksakan', 'stabbing', 'away', 'riot', 'gulo', 'basag', 'vandal',
+            // Fire
+            'sunog', 'fire', 'apoy', 'usok', 'smoke', 'nasusunog', 'burning',
+            // Accident
+            'aksidente', 'accident', 'bangga', 'collision', 'nasagasaan', 'hit', 'bumagsak', 'fell', 'nadulas', 'slipped',
+            // Infrastructure
+            'sira', 'broken', 'basag', 'butas', 'hole', 'lubak', 'baha', 'flood', 'brownout', 'blackout',
+            // Health/Emergency
+            'sugatan', 'injured', 'duguan', 'bleeding', 'hinimatay', 'fainted', 'patay', 'dead', 'bangkay',
+            // Generic
+            'emergency', 'tulong', 'help', 'report', 'incident', 'concern', 'problema', 'problem',
+        ];
+
+        // Location/Subject words - these DIFFERENTIATE incidents
+        // If these are different between concerns, they're likely different incidents
+        $locationSubjectWords = [
+            // Places
+            'simbahan', 'church', 'eskwelahan', 'school', 'ospital', 'hospital', 'palengke', 'market', 'mall', 'kalsada', 'street', 'daan', 'road',
+            'bahay', 'house', 'building', 'tindahan', 'store', 'barangay', 'purok', 'sitio', 'kanto', 'corner', 'intersection', 'tulay', 'bridge',
+            'park', 'plaza', 'terminal', 'estasyon', 'station', 'gasolinahan', 'gas', 'bangko', 'bank', 'restaurant', 'kainan',
+            // Vehicles
+            'jeep', 'jeepney', 'bus', 'tricycle', 'trike', 'motor', 'motorcycle', 'kotse', 'car', 'truck', 'van', 'taxi', 'grab', 'bicycle', 'bike',
+            // Specific subjects
+            'bata', 'child', 'matanda', 'elderly', 'babae', 'woman', 'lalaki', 'man', 'grupo', 'group', 'mag-anak', 'family',
+        ];
+
+        // Extract words from both texts
+        $concernWords = array_unique(array_filter(preg_split('/[\s\-\_\,\.]+/', $concernText), fn($w) => strlen($w) > 2));
+        $parentWords = array_unique(array_filter(preg_split('/[\s\-\_\,\.]+/', $parentText), fn($w) => strlen($w) > 2));
+
+        // Remove stop words
+        $concernWords = array_values(array_diff($concernWords, $stopWords));
+        $parentWords = array_values(array_diff($parentWords, $stopWords));
+
+        // Extract location/subject words from each concern
+        $concernLocations = array_intersect($concernWords, $locationSubjectWords);
+        $parentLocations = array_intersect($parentWords, $locationSubjectWords);
+
+        // RULE 1: If both have location words but they're DIFFERENT, NOT the same incident
+        // e.g., "barilan sa simbahan" vs "barilan sa jeep" = DIFFERENT incidents
+        if (!empty($concernLocations) && !empty($parentLocations)) {
+            $commonLocations = array_intersect($concernLocations, $parentLocations);
+            if (empty($commonLocations)) {
+                // Different locations = Different incidents
+                return false;
+            }
+        }
+
+        // Remove incident type words - we don't want "barilan" matching "barilan"
+        $concernSignificant = array_values(array_diff($concernWords, $incidentTypeWords));
+        $parentSignificant = array_values(array_diff($parentWords, $incidentTypeWords));
+
+        // RULE 2: Find common SIGNIFICANT words (excluding incident types)
+        $commonSignificant = array_intersect($concernSignificant, $parentSignificant);
+
+        // Need at least 2 significant common words (not counting incident type)
+        // OR have matching location words
+        if (count($commonSignificant) >= 2) {
             return true;
         }
 
-        // Check if titles are similar using Levenshtein distance
-        $titleSimilarity = 1 - (levenshtein(strtolower($concern->title), strtolower($parent->title)) / max(strlen($concern->title), strlen($parent->title), 1));
+        // RULE 3: If they share a specific location word, consider similar
+        if (!empty($concernLocations) && !empty($parentLocations)) {
+            $commonLocations = array_intersect($concernLocations, $parentLocations);
+            if (!empty($commonLocations)) {
+                return true;
+            }
+        }
+
+        // RULE 4: Very high title similarity (85%+) - likely exact same report
+        $maxLen = max(strlen($concernTitle), strlen($parentTitle), 1);
+        $titleSimilarity = 1 - (levenshtein($concernTitle, $parentTitle) / $maxLen);
         
-        // If titles are more than 70% similar, consider them related
-        if ($titleSimilarity >= 0.7) {
+        if ($titleSimilarity >= 0.85) {
             return true;
+        }
+
+        // RULE 5: Similar Word Ratio - at least 50% of words overlap
+        $allWords = array_unique(array_merge($concernSignificant, $parentSignificant));
+        if (count($allWords) > 0) {
+            $overlapRatio = count($commonSignificant) / count($allWords);
+            if ($overlapRatio >= 0.5) {
+                return true;
+            }
         }
 
         return false;
