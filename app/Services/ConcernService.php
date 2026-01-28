@@ -533,6 +533,7 @@ class ConcernService
             'is_valid' => true,
             'status' => 'pending',
             'category' => $analysis['category'] ?? $concern->category,
+            'specific_type' => $analysis['specific_type'] ?? null,
             'severity' => $analysis['severity'] ?? $concern->severity,
             'ai_category' => $analysis['category'] ?? null,
             'ai_severity' => $analysis['severity'] ?? null,
@@ -621,7 +622,14 @@ class ConcernService
             ->selectRaw('(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance', [$concern->latitude, $concern->longitude, $concern->latitude])
             ->where('id', '!=', $concern->id) // Not itself
             ->where('is_duplicate', false) // Only link to parents
-            ->where('category', $concern->category) // Strict Category Match
+            ->where(function ($query) use ($concern) {
+                // Use specific type if available for better precision
+                if ($concern->specific_type) {
+                    $query->where('specific_type', $concern->specific_type);
+                } else {
+                    $query->where('category', $concern->category);
+                }
+            })
             ->where('created_at', '>=', now()->subHour()) // Within last 1 hour
             ->whereNotIn('status', ['resolved', 'archived']) // Active concerns only
             ->having('distance', '<', 0.05) // 50 meters
