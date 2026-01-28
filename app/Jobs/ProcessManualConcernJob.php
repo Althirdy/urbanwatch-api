@@ -10,16 +10,18 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class ProcessManualConcernJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $concernId;
+    public $tries = 3;
 
-    /**
-     * Create a new job instance.
-     */
+    public $backoff = [10, 30, 60];
+
+    public $concernId;
+
     public function __construct($concernId)
     {
         $this->concernId = $concernId;
@@ -33,7 +35,7 @@ class ProcessManualConcernJob implements ShouldQueue
         try {
             Log::info('ProcessManualConcernJob: Starting job', ['concern_id' => $this->concernId]);
 
-            $concern = Concern::find($this->concernId);
+            $concern = Concern::with('media')->find($this->concernId);
 
             if (! $concern) {
                 Log::error('ProcessManualConcernJob: Concern not found', ['concern_id' => $this->concernId]);
@@ -44,12 +46,45 @@ class ProcessManualConcernJob implements ShouldQueue
             // Combine title and description for analysis
             $textToAnalyze = trim($concern->title.' '.$concern->description);
 
-            if (! empty($textToAnalyze)) {
+            // Check for image media
+            $imageContent = null;
+            $mimeType = null;
+
+            if ($concern->media->isNotEmpty()) {
+                $imageMedia = $concern->media->where('media_type', 'image')->first();
+
+                if ($imageMedia) {
+                    $disk = config('filesystems.default', 'public');
+                    // Fallback logic for disk if needed
+                    if ($disk === 'local') {
+                        $disk = 'public';
+                    }
+
+                    // Attempt to retrieve the image
+                    $path = $imageMedia->public_id ?? $imageMedia->original_path;
+
+                    if (Storage::disk($disk)->exists($path)) {
+                        $imageContent = Storage::disk($disk)->get($path);
+                        $mimeType = $imageMedia->mime_type;
+                        Log::info('ProcessManualConcernJob: Image found and loaded for analysis', ['id' => $imageMedia->id]);
+                    } elseif (Storage::disk('public')->exists($path)) {
+                        // Try fallback to public directly
+                        $imageContent = Storage::disk('public')->get($path);
+                        $mimeType = $imageMedia->mime_type;
+                        Log::info('ProcessManualConcernJob: Image found in public disk fallback', ['id' => $imageMedia->id]);
+                    } else {
+                        Log::warning('ProcessManualConcernJob: Image file not found in storage', ['path' => $path, 'disk' => $disk]);
+                    }
+                }
+            }
+
+            if (! empty($textToAnalyze) || $imageContent) {
                 Log::info('ProcessManualConcernJob: Calling Gemini for Validation & Classification', [
                     'concern_id' => $concern->id,
+                    'has_image' => ! empty($imageContent),
                 ]);
 
-                $analysis = $geminiService->validateAndClassify($textToAnalyze);
+                $analysis = $geminiService->validateAndClassify($textToAnalyze, $imageContent, $mimeType);
 
                 Log::info('ProcessManualConcernJob: AI Result', [
                     'concern_id' => $concern->id,
@@ -74,6 +109,7 @@ class ProcessManualConcernJob implements ShouldQueue
                         'category' => $concern->category,
                         'severity' => $concern->severity,
                         'confidence' => 0,
+                        'is_fallback' => true,
                     ]);
                 }
             }
@@ -83,7 +119,29 @@ class ProcessManualConcernJob implements ShouldQueue
                 'error' => $e->getMessage(),
             ]);
             // Fallback: Mark as valid if job crashes to avoid lost reports
-            $concernService->markAsValid($this->concernId, []);
+            $concernService->markAsValid($this->concernId, [
+                'is_fallback' => true,
+                'reasoning' => 'Exception during manual processing.',
+            ]);
         }
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception)
+    {
+        Log::error('ProcessManualConcernJob: Job failed after all retries', [
+            'concern_id' => $this->concernId,
+            'error' => $exception->getMessage(),
+        ]);
+
+        // Fallback: If AI processing fails completely, mark it as valid to allow manual review
+        $concernService = app(\App\Services\ConcernService::class);
+        $concernService->markAsValid($this->concernId, [
+            'is_fallback' => true,
+            'confidence' => 0,
+            'reasoning' => 'AI processing failed after multiple attempts. Defaulted to manual review.',
+        ]);
     }
 }

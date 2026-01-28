@@ -9,7 +9,7 @@ class GeminiService
 {
     protected $apiKey;
 
-    protected $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite-001:generateContent';
+    protected $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
     protected $audioModel = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
@@ -454,14 +454,25 @@ class GeminiService
             }
 
             $responseData = $response->json();
-            $jsonString = $responseData['candidates'][0]['content']['parts'][0]['text'][0] ?? null;
+            $jsonString = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
             if (! $jsonString) {
+                Log::error('Gemini API: Unexpected response format (Validate and Classify)', ['response' => $responseData]);
+
                 return null;
             }
 
             $jsonString = preg_replace('/^```json\s*|\s*```$/', '', trim($jsonString));
             $result = json_decode($jsonString, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('Gemini API: Failed to parse JSON response (Validate and Classify)', [
+                    'error' => json_last_error_msg(),
+                    'raw' => $jsonString,
+                ]);
+
+                return null;
+            }
 
             return $result;
         } catch (\Exception $e) {

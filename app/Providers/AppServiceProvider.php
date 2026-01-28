@@ -40,7 +40,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Define Rate Limiter for Concern Submissions
         RateLimiter::for('concerns.submit', function (Request $request) {
-            return Limit::perHour(10)->by($request->user()?->id ?: $request->ip());
+            return Limit::perHour(1000)->by($request->user()?->id ?: $request->ip());
         });
     }
 }

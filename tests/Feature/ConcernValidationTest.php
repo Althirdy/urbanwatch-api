@@ -79,7 +79,7 @@ class ConcernValidationTest extends TestCase
         $this->mock(GeminiService::class, function (MockInterface $mock) {
             $mock->shouldReceive('validateAndClassify')
                 ->once()
-                ->with('Valid Concern Real fire incident')
+                ->with('Valid Concern Real fire incident', null, null)
                 ->andReturn([
                     'is_valid' => true,
                     'category' => 'safety',

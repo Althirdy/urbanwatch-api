@@ -19,6 +19,8 @@ class ConcernResource extends JsonResource
             'trackingCode' => $this->tracking_code,
             'title' => $this->title,
             'description' => $this->description, // Shortened key
+            'transcriptText' => $this->transcript_text,
+            'rejectionReason' => $this->rejection_reason,
             'status' => $this->status,
             'severity' => $this->severity,
             'category' => $this->category,

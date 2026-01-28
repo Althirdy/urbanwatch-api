@@ -425,97 +425,109 @@ class ConcernService
      */
     public function finalizeConcern(int $concernId)
     {
-        $concern = Concern::find($concernId);
+        // Use a lock to prevent race conditions during deduplication
+        // We use a broad lock per concern to ensure only one finalization happens at a time
+        // for potential duplicates. A more granular lock could be used based on coordinates.
+        $lock = Cache::lock('finalize_concern_processing', 10);
 
-        if (! $concern) {
-            Log::error("Concern #{$concernId} not found during finalization.");
-
-            return;
-        }
-
-        // 1. Deduplication Logic
-        $parentConcern = $this->findParentConcern($concern);
-
-        if ($parentConcern) {
-            // It's a duplicate
-            $concern->update([
-                'parent_concern_id' => $parentConcern->id,
-                'is_duplicate' => true,
-            ]);
-
-            ConcernHistory::create([
-                'concern_id' => $concern->id,
-                'status' => $concern->status,
-                'remarks' => "Marked as duplicate of Concern #{$parentConcern->tracking_code}. Notifications silenced.",
-            ]);
-
-            $this->notificationService->notifyConcernMerged($concern, $parentConcern);
-            Log::info("Concern #{$concern->id} marked as duplicate of #{$parentConcern->id}");
-
-            // Notify the citizen that their concern was merged
-            event(new \App\Events\ConcernMerged($concern, $parentConcern));
-
-            return; // Stop here. No notifications.
-        }
-
-        // 2. Assignment Logic (If not a duplicate)
-        // Check if already assigned to avoid double distribution
-        if ($concern->distribution) {
-            Log::info("Concern #{$concern->id} already distributed.");
-
-            return;
-        }
-
-        // Distribute to Purok Leader (Hardcoded ID=2 for now per requirements)
-        $purokLeaderId = 2;
-        $purokLeaderDetails = \App\Models\OfficialsDetails::where('user_id', $purokLeaderId)->first();
-
-        if (! $purokLeaderDetails) {
-            Log::error("Purok Leader not found for Concern #{$concern->id}");
-
-            // We might want to assign to admin or default instead, but for now just log
-            return;
-        }
-
-        $distribution = ConcernDistribution::create([
-            'concern_id' => $concern->id,
-            'purok_leader_id' => $purokLeaderId,
-            'status' => 'assigned',
-            'assigned_at' => now(),
-        ]);
-
-        $distribution->load('purokLeader.officialDetails');
-
-        // Create History Log
-        ConcernHistory::create([
-            'concern_id' => $concern->id,
-            'status' => 'pending',
-            'remarks' => 'Concern verified and assigned to Purok Leader.',
-        ]);
-
-        // Broadcast Event
-        $uploadedMedia = $concern->media->pluck('original_path')->toArray();
-        event(new ConcernAssigned($concern, $distribution, $uploadedMedia));
-
-        $this->notificationService->notifyConcernAssigned($concern, $distribution);
-
-        // 3. Send SMS Notification to Purok Leader
         try {
-            if ($purokLeaderDetails->contact_number) {
-                $this->textBeeService->sendConcernAssignedNotification(
-                    $purokLeaderDetails->contact_number,
-                    [
-                        'tracking_code' => $concern->tracking_code,
-                        'category' => $concern->category,
-                        'severity' => $concern->severity,
-                        'description' => $concern->description,
-                        'address' => $concern->address,
-                        'custom_location' => $concern->custom_location,
-                    ]
-                );
-            }
-        } catch (\Exception $e) {
-            Log::error("Failed to send SMS for Concern #{$concern->id}: ".$e->getMessage());
+            return $lock->block(5, function () use ($concernId) {
+                $concern = Concern::find($concernId);
+
+                if (! $concern) {
+                    Log::error("Concern #{$concernId} not found during finalization.");
+
+                    return;
+                }
+
+                // 1. Deduplication Logic
+                $parentConcern = $this->findParentConcern($concern);
+
+                if ($parentConcern) {
+                    // It's a duplicate
+                    $concern->update([
+                        'parent_concern_id' => $parentConcern->id,
+                        'is_duplicate' => true,
+                    ]);
+
+                    ConcernHistory::create([
+                        'concern_id' => $concern->id,
+                        'status' => $concern->status,
+                        'remarks' => "Marked as duplicate of Concern #{$parentConcern->tracking_code}. Notifications silenced.",
+                    ]);
+
+                    $this->notificationService->notifyConcernMerged($concern, $parentConcern);
+                    Log::info("Concern #{$concern->id} marked as duplicate of #{$parentConcern->id}");
+
+                    // Notify the citizen that their concern was merged
+                    event(new \App\Events\ConcernMerged($concern, $parentConcern));
+
+                    return; // Stop here. No notifications.
+                }
+
+                // 2. Assignment Logic (If not a duplicate)
+                // Check if already assigned to avoid double distribution
+                if ($concern->distribution) {
+                    Log::info("Concern #{$concern->id} already distributed.");
+
+                    return;
+                }
+
+                // Distribute to Purok Leader (Hardcoded ID=2 for now per requirements)
+                $purokLeaderId = 2;
+                $purokLeaderDetails = \App\Models\OfficialsDetails::where('user_id', $purokLeaderId)->first();
+
+                if (! $purokLeaderDetails) {
+                    Log::error("Purok Leader not found for Concern #{$concern->id}");
+
+                    // We might want to assign to admin or default instead, but for now just log
+                    return;
+                }
+
+                $distribution = ConcernDistribution::create([
+                    'concern_id' => $concern->id,
+                    'purok_leader_id' => $purokLeaderId,
+                    'status' => 'assigned',
+                    'assigned_at' => now(),
+                ]);
+
+                $distribution->load('purokLeader.officialDetails');
+
+                // Create History Log
+                ConcernHistory::create([
+                    'concern_id' => $concern->id,
+                    'status' => 'pending',
+                    'remarks' => 'Concern verified and assigned to Purok Leader.',
+                ]);
+
+                // Broadcast Event
+                $uploadedMedia = $concern->media->pluck('original_path')->toArray();
+                event(new ConcernAssigned($concern, $distribution, $uploadedMedia));
+
+                $this->notificationService->notifyConcernAssigned($concern, $distribution);
+
+                // 3. Send SMS Notification to Purok Leader
+                try {
+                    if ($purokLeaderDetails->contact_number) {
+                        $this->textBeeService->sendConcernAssignedNotification(
+                            $purokLeaderDetails->contact_number,
+                            [
+                                'tracking_code' => $concern->tracking_code,
+                                'category' => $concern->category,
+                                'severity' => $concern->severity,
+                                'description' => $concern->description,
+                                'address' => $concern->address,
+                                'custom_location' => $concern->custom_location,
+                            ]
+                        );
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Failed to send SMS for Concern #{$concern->id}: ".$e->getMessage());
+                }
+            });
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+            Log::warning("Finalization lock timed out for Concern #{$concernId}. Retrying later via job if applicable.");
+            throw $e;
         }
     }
 
@@ -529,15 +541,37 @@ class ConcernService
             return;
         }
 
+        $confidence = $analysis['confidence'] ?? 0;
+        $isFallback = $analysis['is_fallback'] ?? false;
+
+        // If AI analysis is present and NOT a system fallback, but the confidence is too low (< 0.4),
+        // treat it as invalid/spam.
+        if (! empty($analysis) && ! $isFallback && $confidence < 0.4) {
+            Log::info("Concern #{$concernId} rejected due to low AI confidence: {$confidence}");
+
+            return $this->markAsInvalid($concernId, 'Ang iyong ulat ay hindi sapat ang detalye o hindi wasto para sa aming system.', $analysis);
+        }
+
+        // Hierarchy: AI Result (if high confidence) > User Selection > Existing Value
+        $isHighConfidence = $confidence >= 0.7;
+
+        $finalCategory = ($isHighConfidence && ! empty($analysis['category']))
+            ? $analysis['category']
+            : ($concern->user_selected_category ?? $concern->category);
+
+        $finalSeverity = ($isHighConfidence && ! empty($analysis['severity']))
+            ? $analysis['severity']
+            : ($concern->user_selected_severity ?? $concern->severity);
+
         $concern->update([
             'is_valid' => true,
             'status' => 'pending',
-            'category' => $analysis['category'] ?? $concern->category,
-            'specific_type' => $analysis['specific_type'] ?? null,
-            'severity' => $analysis['severity'] ?? $concern->severity,
+            'category' => $finalCategory,
+            'severity' => $finalSeverity,
+            'specific_type' => $analysis['specific_type'] ?? $concern->specific_type,
             'ai_category' => $analysis['category'] ?? null,
             'ai_severity' => $analysis['severity'] ?? null,
-            'ai_confidence' => $analysis['confidence'] ?? null,
+            'ai_confidence' => $confidence,
             'ai_processed_at' => now(),
             'ai_analysis_raw' => $analysis,
         ]);
