@@ -38,8 +38,8 @@ class GeminiServiceResponseTest extends TestCase
             ], 200),
         ]);
 
-        $service = new GeminiService;
         config(['services.gemini.api_key' => 'test-key']);
+        $service = new GeminiService;
 
         $result = $service->validateAndClassify('Help there is a fire');
 
@@ -75,8 +75,8 @@ class GeminiServiceResponseTest extends TestCase
             ], 200),
         ]);
 
-        $service = new GeminiService;
         config(['services.gemini.api_key' => 'test-key']);
+        $service = new GeminiService;
 
         $result = $service->validateAndClassify('Help there is a fire');
 
@@ -109,8 +109,8 @@ class GeminiServiceResponseTest extends TestCase
             ], 200),
         ]);
 
-        $service = new GeminiService;
         config(['services.gemini.api_key' => 'test-key']);
+        $service = new GeminiService;
 
         $result = $service->validateAndClassify('Help there is a fire');
 
@@ -132,8 +132,8 @@ class GeminiServiceResponseTest extends TestCase
             ], 200),
         ]);
 
-        $service = new GeminiService;
         config(['services.gemini.api_key' => 'test-key']);
+        $service = new GeminiService;
 
         $result = $service->validateAndClassify('Help there is a fire');
 
