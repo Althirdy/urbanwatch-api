@@ -248,5 +248,5 @@ test('purok leader sees related reports count in api response', function () {
     $concernData = collect($data)->firstWhere('id', $parent->id);
 
     expect($concernData)->not->toBeNull()
-        ->and($concernData['relatedReportsCount'])->toBe(3);
+        ->and($concernData['duplicatesCount'])->toBe(3);
 });
