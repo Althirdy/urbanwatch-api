@@ -9,7 +9,7 @@ class GeminiService
 {
     protected $apiKey;
 
-    protected $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite-001:generateContent';
+    protected $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
     protected $audioModel = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
@@ -55,7 +55,7 @@ class GeminiService
                       "Return strictly valid JSON with keys: 'transcription_text', 'title', 'description', 'category', 'specific_type', 'severity', 'confidence', 'is_valid', 'rejection_reason'. ".
                       'Do not include markdown formatting.';
 
-            $response = Http::withHeaders([
+            $response = Http::timeout(30)->withHeaders([
                 'Content-Type' => 'application/json',
             ])->post("{$this->audioModel}?key={$this->apiKey}", [
                 'contents' => [
@@ -173,7 +173,7 @@ class GeminiService
                       '"reasoning" (brief explanation in English). '.
                       'Do not include markdown formatting.';
 
-            $response = Http::withHeaders([
+            $response = Http::timeout(30)->withHeaders([
                 'Content-Type' => 'application/json',
             ])->post("{$this->audioModel}?key={$this->apiKey}", [
                 'contents' => [
@@ -454,14 +454,25 @@ class GeminiService
             }
 
             $responseData = $response->json();
-            $jsonString = $responseData['candidates'][0]['content']['parts'][0]['text'][0] ?? null;
+            $jsonString = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
             if (! $jsonString) {
+                Log::error('Gemini API: Unexpected response format (Validate and Classify)', ['response' => $responseData]);
+
                 return null;
             }
 
             $jsonString = preg_replace('/^```json\s*|\s*```$/', '', trim($jsonString));
             $result = json_decode($jsonString, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('Gemini API: Failed to parse JSON response (Validate and Classify)', [
+                    'error' => json_last_error_msg(),
+                    'raw' => $jsonString,
+                ]);
+
+                return null;
+            }
 
             return $result;
         } catch (\Exception $e) {
@@ -577,6 +588,55 @@ class GeminiService
             Log::error('Gemini Service Exception', ['error' => $e->getMessage()]);
             // Re-throw or return a safe fallback depending on your preference
             throw $e;
+        }
+    }
+
+    /**
+     * Compare two concern descriptions/transcripts to see if they refer to the same incident.
+     */
+    public function compareConcerns(string $text1, string $text2): bool
+    {
+        try {
+            if (! $this->apiKey) {
+                return true; // Default to old behavior (merge) if AI is unavailable to prevent spam
+            }
+
+            $prompt = "You are an incident deduplication assistant. Compare the following two citizen reports and determine if they refer to the SAME specific incident/event.\n\n".
+                      "CRITERIA:\n".
+                      "- Same landmarks or specific street numbers mentioned.\n".
+                      "- Same type of incident (e.g., both are a car crash, both are a trash pile).\n".
+                      "- Significant differences (e.g., 'Bakery fire' vs 'Pharmacy fire') mean different incidents.\n\n".
+                      "Report 1: \"$text1\"\n".
+                      "Report 2: \"$text2\"\n\n".
+                      'Return strictly JSON: {"is_same_incident": boolean, "reasoning": "string"}';
+
+            $response = Http::timeout(10)->withHeaders([
+                'Content-Type' => 'application/json',
+            ])->post("{$this->baseUrl}?key={$this->apiKey}", [
+                'contents' => [['parts' => [['text' => $prompt]]]],
+                'generationConfig' => [
+                    'response_mime_type' => 'application/json',
+                    'temperature' => 0.1,
+                ],
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Gemini API Error (Comparison)', ['status' => $response->status()]);
+
+                return true;
+            }
+
+            $responseData = $response->json();
+            $jsonString = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? '{}';
+            $jsonString = preg_replace('/^```json\s*|\s*```$/', '', trim($jsonString));
+            $result = json_decode($jsonString, true);
+
+            return (bool) ($result['is_same_incident'] ?? true);
+
+        } catch (\Exception $e) {
+            Log::error('Gemini Comparison Exception', ['error' => $e->getMessage()]);
+
+            return true;
         }
     }
 }

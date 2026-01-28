@@ -6,6 +6,7 @@ use App\Models\OfficialsDetails;
 use App\Models\User;
 use App\Services\ConcernService;
 use App\Services\FileUploadService;
+use App\Services\GeminiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
@@ -38,12 +39,21 @@ beforeEach(function () {
     $this->fileUploadService = Mockery::mock(FileUploadService::class);
     $this->textBeeService = Mockery::mock(App\Services\TextBeeService::class);
     $this->notificationService = Mockery::mock(App\Services\NotificationService::class);
+    $this->geminiService = Mockery::mock(GeminiService::class);
 
-    // Allow any calls to TextBeeService (we don't strictly test SMS in clustering tests)
+    // Allow any calls to services (we don't strictly test SMS/Notifications in clustering tests)
     $this->textBeeService->shouldIgnoreMissing();
     $this->notificationService->shouldIgnoreMissing();
 
-    $this->concernService = new ConcernService($this->fileUploadService, $this->textBeeService, $this->notificationService);
+    // Default mock for Gemini comparison (Same incident by default for spatial tests)
+    $this->geminiService->shouldReceive('compareConcerns')->andReturn(true)->byDefault();
+
+    $this->concernService = new ConcernService(
+        $this->fileUploadService,
+        $this->textBeeService,
+        $this->notificationService,
+        $this->geminiService
+    );
 });
 
 test('it creates a new concern and assigns it when no parent exists', function () {
@@ -238,5 +248,5 @@ test('purok leader sees related reports count in api response', function () {
     $concernData = collect($data)->firstWhere('id', $parent->id);
 
     expect($concernData)->not->toBeNull()
-        ->and($concernData['relatedReportsCount'])->toBe(3);
+        ->and($concernData['duplicatesCount'])->toBe(3);
 });
