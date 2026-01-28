@@ -32,13 +32,21 @@ class ProcessManualConcernJob implements ShouldQueue
      */
     public function handle(GeminiService $geminiService, \App\Services\ConcernService $concernService)
     {
-        try {
-            Log::info('ProcessManualConcernJob: Starting job', ['concern_id' => $this->concernId]);
+        $concernId = $this->concernId ?? null;
 
-            $concern = Concern::with('media')->find($this->concernId);
+        if (! $concernId) {
+            Log::error('ProcessManualConcernJob: Job started with missing concernId');
+
+            return;
+        }
+
+        try {
+            Log::info('ProcessManualConcernJob: Starting job', ['concern_id' => $concernId]);
+
+            $concern = Concern::with('media')->find($concernId);
 
             if (! $concern) {
-                Log::error('ProcessManualConcernJob: Concern not found', ['concern_id' => $this->concernId]);
+                Log::error('ProcessManualConcernJob: Concern not found', ['concern_id' => $concernId]);
 
                 return;
             }
@@ -115,11 +123,11 @@ class ProcessManualConcernJob implements ShouldQueue
             }
         } catch (\Exception $e) {
             Log::error('ProcessManualConcernJob: Error', [
-                'concern_id' => $this->concernId,
+                'concern_id' => $concernId,
                 'error' => $e->getMessage(),
             ]);
             // Fallback: Mark as valid if job crashes to avoid lost reports
-            $concernService->markAsValid($this->concernId, [
+            $concernService->markAsValid($concernId, [
                 'is_fallback' => true,
                 'reasoning' => 'Exception during manual processing.',
             ]);
@@ -136,12 +144,14 @@ class ProcessManualConcernJob implements ShouldQueue
             'error' => $exception->getMessage(),
         ]);
 
-        // Fallback: If AI processing fails completely, mark it as valid to allow manual review
-        $concernService = app(\App\Services\ConcernService::class);
-        $concernService->markAsValid($this->concernId, [
-            'is_fallback' => true,
-            'confidence' => 0,
-            'reasoning' => 'AI processing failed after multiple attempts. Defaulted to manual review.',
-        ]);
+        if ($this->concernId) {
+            // Fallback: If AI processing fails completely, mark it as valid to allow manual review
+            $concernService = app(\App\Services\ConcernService::class);
+            $concernService->markAsValid($this->concernId, [
+                'is_fallback' => true,
+                'confidence' => 0,
+                'reasoning' => 'AI processing failed after multiple attempts. Defaulted to manual review.',
+            ]);
+        }
     }
 }

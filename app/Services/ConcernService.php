@@ -23,7 +23,8 @@ class ConcernService
     public function __construct(
         protected FileUploadService $fileUploadService,
         protected TextBeeService $textBeeService,
-        protected NotificationService $notificationService
+        protected NotificationService $notificationService,
+        protected GeminiService $geminiService
     ) {}
 
     /**
@@ -506,23 +507,19 @@ class ConcernService
 
                 $this->notificationService->notifyConcernAssigned($concern, $distribution);
 
-                // 3. Send SMS Notification to Purok Leader
-                try {
-                    if ($purokLeaderDetails->contact_number) {
-                        $this->textBeeService->sendConcernAssignedNotification(
-                            $purokLeaderDetails->contact_number,
-                            [
-                                'tracking_code' => $concern->tracking_code,
-                                'category' => $concern->category,
-                                'severity' => $concern->severity,
-                                'description' => $concern->description,
-                                'address' => $concern->address,
-                                'custom_location' => $concern->custom_location,
-                            ]
-                        );
-                    }
-                } catch (\Exception $e) {
-                    Log::error("Failed to send SMS for Concern #{$concern->id}: ".$e->getMessage());
+                // 3. Send SMS Notification to Purok Leader (Async)
+                if ($purokLeaderDetails->contact_number) {
+                    dispatch(new \App\Jobs\SendSmsNotificationJob(
+                        $purokLeaderDetails->contact_number,
+                        [
+                            'tracking_code' => $concern->tracking_code,
+                            'category' => $concern->category,
+                            'severity' => $concern->severity,
+                            'description' => $concern->description,
+                            'address' => $concern->address,
+                            'custom_location' => $concern->custom_location,
+                        ]
+                    ));
                 }
             });
         } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
@@ -537,7 +534,7 @@ class ConcernService
     public function markAsValid(int $concernId, array $analysis)
     {
         $concern = Concern::find($concernId);
-        if (! $concern) {
+        if (! $concern || $concern->is_valid) {
             return;
         }
 
@@ -639,19 +636,31 @@ class ConcernService
 
     /**
      * Find a matching Parent Concern within radius and time window.
+     * Implements "Smart Radius" and "High Confidence" checks.
      */
     private function findParentConcern(Concern $concern)
     {
-        $radius = 0.05; // 50 meters in kilometers (approx)
-        // For more precision 50m = 0.05km.
-        // 1 degree of latitude ~= 111km.
-        // 0.05km is approx 0.00045 degrees.
+        // 1. High Confidence Check: Only merge if the AI is reasonably sure,
+        // unless it's a fallback/manual entry where ai_confidence might be 0.
+        // We use 0.7 (70%) as the threshold for 'automatic' merging.
+        if ($concern->ai_confidence > 0 && $concern->ai_confidence < 0.7) {
+            return null;
+        }
 
-        // Using Haversine formula for strict 50m check
-        // Or using a simple bounding box for speed since 50m is very small.
-        // Let's use Haversine for accuracy.
+        // 2. Smart Radius based on category/type
+        // Pothole/Garbage/Light: 30m (0.03km) - Very localized
+        // Fire/Flood/Accident: 150m (0.15km) - High visibility/impact
+        // Default: 50m (0.05km)
+        $radius = 0.05;
+        $type = $concern->specific_type ?: $concern->category;
 
-        return Concern::query()
+        if (in_array($type, ['pothole', 'garbage', 'light', 'sewage'])) {
+            $radius = 0.03;
+        } elseif (in_array($type, ['fire', 'flood', 'accident', 'collision'])) {
+            $radius = 0.15;
+        }
+
+        $parentConcern = Concern::query()
             ->select('concerns.*')
             ->selectRaw('(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance', [$concern->latitude, $concern->longitude, $concern->latitude])
             ->where('id', '!=', $concern->id) // Not itself
@@ -665,10 +674,33 @@ class ConcernService
                 }
             })
             ->where('created_at', '>=', now()->subHour()) // Within last 1 hour
-            ->whereNotIn('status', ['resolved', 'archived']) // Active concerns only
-            ->having('distance', '<', 0.05) // 50 meters
+            // 3. Exclude Rejected, Resolved, and Archived concerns from being parents
+            ->whereNotIn('status', ['rejected', 'resolved', 'archived'])
+            ->having('distance', '<', $radius)
             ->orderBy('created_at', 'asc') // Link to the oldest (original) one
             ->first();
+
+        // 4. Gemini Cross-Check (Semantic Match)
+        // If we found a spatial candidate, verify the content matches semantically.
+        if ($parentConcern) {
+            $text1 = $concern->type === 'voice' ? $concern->transcript_text : ($concern->title.' '.$concern->description);
+            $text2 = $parentConcern->type === 'voice' ? $parentConcern->transcript_text : ($parentConcern->title.' '.$parentConcern->description);
+
+            // If both reports are very brief/empty, default to merging spatially
+            if (strlen($text1 ?? '') < 5 || strlen($text2 ?? '') < 5) {
+                return $parentConcern;
+            }
+
+            $isSame = $this->geminiService->compareConcerns($text1, $text2);
+
+            if (! $isSame) {
+                Log::info("Gemini rejected deduplication for Concern #{$concern->id} and #{$parentConcern->id} due to semantic differences.");
+
+                return null; // Don't merge if Gemini says they are different incidents
+            }
+        }
+
+        return $parentConcern;
     }
 
     private function checkIfUserSuspended(int $userId, string $action = 'perform this action'): void

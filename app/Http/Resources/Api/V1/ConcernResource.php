@@ -93,8 +93,8 @@ class ConcernResource extends JsonResource
             ])),
 
             'createdAt' => $this->created_at->diffForHumans(),
-            'duplicatesCount' => $this->duplicates_count ?? 0,
-            // 'updatedAt' => $this->updated_at->diffForHumans(),
+            'duplicatesCount' => $this->duplicates_count ?? $this->duplicates()->count() ?? 0,
+            'isDuplicate' => (bool) $this->is_duplicate,
         ];
     }
 }
