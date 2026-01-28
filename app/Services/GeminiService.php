@@ -45,13 +45,14 @@ class GeminiService
                       '- is_valid: true if it describes a real community issue.'."\n".
                       '- rejection_reason: Brief Tagalog explanation if invalid, else null.'."\n".
                       '- CATEGORIES: safety, security, infrastructure, environment, noise, other'."\n".
+                      '- SPECIFIC TYPE: One-word lowercase tag identifying the exact issue (e.g., fire, collision, theft, flood, assault, noise, garbage).'."\n".
                       '- SEVERITY LEVELS: low, medium, high'."\n".
                       "\n".
                       'EXAMPLES:'."\n".
-                      '- "May sunog" → category: safety, severity: high, is_valid: true'."\n".
-                      '- "Maraming basura" → category: environment, severity: medium, is_valid: true'."\n".
+                      '- "May sunog" → category: safety, specific_type: fire, severity: high, is_valid: true'."\n".
+                      '- "Maraming basura" → category: environment, specific_type: garbage, severity: medium, is_valid: true'."\n".
                       "\n".
-                      "Return strictly valid JSON with keys: 'transcription_text', 'title', 'description', 'category', 'severity', 'confidence', 'is_valid', 'rejection_reason'. ".
+                      "Return strictly valid JSON with keys: 'transcription_text', 'title', 'description', 'category', 'specific_type', 'severity', 'confidence', 'is_valid', 'rejection_reason'. ".
                       'Do not include markdown formatting.';
 
             $response = Http::withHeaders([
@@ -149,21 +150,24 @@ class GeminiService
                       '- noise: Loud noise (ingay), disturbances, noise pollution'."\n".
                       '- other: Anything that doesn\'t fit the above categories'."\n".
                       "\n".
+                      'SPECIFIC TYPE: One-word lowercase tag identifying the exact issue (e.g., fire, collision, theft, flood, assault, noise, garbage, pothole, light, sewage).'."\n".
+                      "\n".
                       'SEVERITY LEVELS (choose one):'."\n".
                       '- high: Immediate danger, emergency, requires urgent action'."\n".
                       '- medium: Significant issue, needs attention soon'."\n".
                       '- low: Minor issue, can be addressed in normal schedule'."\n".
                       "\n".
                       'EXAMPLES:'."\n".
-                      '- "May sunog sa bahay" → category: safety, severity: high'."\n".
-                      '- "Maraming basura sa kalsada" → category: environment, severity: medium'."\n".
-                      '- "Sira ang kalsada" → category: infrastructure, severity: medium'."\n".
-                      '- "Napakalakas ng ingay ng kapitbahay" → category: noise, severity: low'."\n".
-                      '- "May nakawan sa amin" → category: security, severity: high'."\n".
+                      '- "May sunog sa bahay" → category: safety, specific_type: fire, severity: high'."\n".
+                      '- "Maraming basura sa kalsada" → category: environment, specific_type: garbage, severity: medium'."\n".
+                      '- "Sira ang kalsada" → category: infrastructure, specific_type: pothole, severity: medium'."\n".
+                      '- "Napakalakas ng ingay ng kapitbahay" → category: noise, specific_type: noise, severity: low'."\n".
+                      '- "May nakawan sa amin" → category: security, specific_type: theft, severity: high'."\n".
                       "\n".
                       'Concern Text: '.$text."\n\n".
                       'Return strictly valid JSON with keys: '.
                       '"category" (one of: safety, security, infrastructure, environment, noise, other), '.
+                      '"specific_type" (lowercase string), '.
                       '"severity" (one of: low, medium, high), '.
                       '"confidence" (decimal 0.0 to 1.0 indicating how confident you are), '.
                       '"reasoning" (brief explanation in English). '.
@@ -405,6 +409,7 @@ class GeminiService
                       '- is_valid: false IF it is gibberish ("asdf"), irrelevant chat ("Kumain ka na?"), test spam, or personal/non-community issues.'."\n\n".
                       'CLASSIFICATION (Only if is_valid is true):'."\n".
                       '- CATEGORIES: safety, security, infrastructure, environment, noise, other'."\n".
+                      '- SPECIFIC TYPE: One-word lowercase tag identifying the exact issue (e.g., fire, collision, theft, flood, assault, noise, garbage, pothole, light, sewage).'."\n".
                       '- SEVERITY: low, medium, high'."\n\n".
                       'INPUT TEXT: '.$text."\n\n".
                       'Return strictly valid JSON:'."\n".
@@ -412,6 +417,7 @@ class GeminiService
                       '  "is_valid": boolean,'."\n".
                       '  "rejection_reason": "Brief Tagalog explanation if invalid, else null",'."\n".
                       '  "category": "category string or null",'."\n".
+                      '  "specific_type": "specific type string or null",'."\n".
                       '  "severity": "severity string or null",'."\n".
                       '  "confidence": float (0.0-1.0),'."\n".
                       '  "reasoning": "Internal English reasoning"'."\n".
@@ -448,7 +454,7 @@ class GeminiService
             }
 
             $responseData = $response->json();
-            $jsonString = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? null;
+            $jsonString = $responseData['candidates'][0]['content']['parts'][0]['text'][0] ?? null;
 
             if (! $jsonString) {
                 return null;

@@ -134,9 +134,8 @@ export default function CreatePublicPostModal() {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="h-12 gap-2">
-                    <Plus className="h-4 w-4" />
-                    Create Post
+                <Button className="cursor-pointer px-4 py-2">
+                    <Plus /> Create Post
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

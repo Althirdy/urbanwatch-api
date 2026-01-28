@@ -53,7 +53,7 @@ function LocationCardView({
     return (
         <div className="space-y-6">
             {/* Location Cards */}
-            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-4">
                 {locations.length === 0 ? (
                     <Card className="col-span-full">
                         <CardContent className="py-12 text-center text-muted-foreground">
@@ -64,7 +64,7 @@ function LocationCardView({
                     locations.map((loc: location_T) => (
                         <Card
                             key={loc.id}
-                            className="p rounded-[var(--radius)] border bg-card"
+                    className="group relative overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700"
                         >
                             <CardHeader className="flex-row items-center">
                                 <div className="flex flex-1 items-center justify-between">
@@ -82,19 +82,14 @@ function LocationCardView({
                                             </span>
                                         </p>
                                     </div>
-                                    <Badge
-                                        variant="secondary"
-                                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${getCategoryColor(loc.location_category?.name || '')}`}
-                                    >
-                                        {loc.location_category?.name}
-                                    </Badge>
+                                    
                                 </div>
                             </CardHeader>
                             <CardContent className="text-sm">
-                                <span className="text-muted-foreground">
-                                    Barangay:
+                                <span className="text-muted-foreground ">
+                                    Barangay: <span className='text-[var(--color-text-primary)] font-bold'>{loc.barangay}</span>
                                 </span>
-                                <p>{loc.barangay}</p>
+                            
                             </CardContent>
                             <CardFooter>
                                 <div className="flex w-full justify-end gap-2">

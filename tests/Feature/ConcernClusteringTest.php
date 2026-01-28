@@ -37,10 +37,13 @@ beforeEach(function () {
     // Mock the FileUploadService
     $this->fileUploadService = Mockery::mock(FileUploadService::class);
     $this->textBeeService = Mockery::mock(App\Services\TextBeeService::class);
+    $this->notificationService = Mockery::mock(App\Services\NotificationService::class);
+
     // Allow any calls to TextBeeService (we don't strictly test SMS in clustering tests)
     $this->textBeeService->shouldIgnoreMissing();
+    $this->notificationService->shouldIgnoreMissing();
 
-    $this->concernService = new ConcernService($this->fileUploadService, $this->textBeeService);
+    $this->concernService = new ConcernService($this->fileUploadService, $this->textBeeService, $this->notificationService);
 });
 
 test('it creates a new concern and assigns it when no parent exists', function () {

@@ -88,16 +88,22 @@ function ViewReportDetails({ report, children }: ViewReportDetailsProps) {
                             <Badge variant="default" className="text-xs">
                                 {report.report_type}
                             </Badge>
-                            <Badge
-                                variant={
-                                    report.status === 'Pending'
-                                        ? 'destructive'
-                                        : 'default'
-                                }
-                                className="text-xs"
-                            >
-                                {report.status.toUpperCase()}
-                            </Badge>
+                            {report.status === 'False Alarm' ? (
+                                <Badge variant="outline" className="text-xs border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+                                    FALSE ALARM
+                                </Badge>
+                            ) : (
+                                <Badge
+                                    variant={
+                                        report.status === 'Pending'
+                                            ? 'destructive'
+                                            : 'default'
+                                    }
+                                    className="text-xs"
+                                >
+                                    {report.status.toUpperCase()}
+                                </Badge>
+                            )}
                         </div>
                     </DialogDescription>
                 </DialogHeader>
@@ -156,7 +162,14 @@ function ViewReportDetails({ report, children }: ViewReportDetailsProps) {
                             ) : (
                                 <div className="relative flex aspect-video w-full items-center justify-center bg-muted">
                                     <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                                    <Camera className="relative z-10 h-16 w-16 text-muted-foreground/20" />
+                                    {report.status === 'False Alarm' ? (
+                                        <div className="relative z-10 flex flex-col items-center gap-3 text-amber-500/50">
+                                            <TriangleAlert className="h-16 w-16" />
+                                            <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground/70">Image Discarded by AI</span>
+                                        </div>
+                                    ) : (
+                                        <Camera className="relative z-10 h-16 w-16 text-muted-foreground/20" />
+                                    )}
                                 </div>
                             )}
                         </div>

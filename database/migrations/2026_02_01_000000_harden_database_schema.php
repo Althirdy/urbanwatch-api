@@ -93,6 +93,14 @@ return new class extends Migration
             $table->string('address')->change();
         });
 
+        Schema::table('officials_details', function (Blueprint $table) {
+            $table->text('first_name')->change();
+            $table->text('middle_name')->nullable()->change();
+            $table->text('last_name')->change();
+            $table->text('contact_number')->change();
+            $table->text('office_address')->change();
+        });
+
         Schema::table('users', function (Blueprint $table) {
             $table->string('name')->change();
         });

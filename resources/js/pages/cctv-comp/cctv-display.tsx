@@ -11,11 +11,17 @@ import {
     PaginationPrevious,
 } from '@/components/ui/pagination';
 import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
     Activity,
+    Archive,
     BarChart3,
     Camera,
     MapPin,
-    Settings,
+    SquarePen,
     Wifi,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -77,7 +83,7 @@ function CCTVDisplay({
             case 'inactive':
                 return <Wifi className="h-3 w-3" />;
             case 'maintenance':
-                return <Settings className="h-3 w-3" />;
+                return <SquarePen className="h-3 w-3" />;
             default:
                 return null;
         }
@@ -161,24 +167,55 @@ function CCTVDisplay({
                                 </p>
                             </div>
 
-                            {/* Action Buttons */}
-                            <div className="flex items-center justify-between pt-2">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => onViewReports?.(device)}
-                                    className="gap-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                                >
-                                    <BarChart3 className="h-4 w-4" />
-                                    Reports
-                                </Button>
-                                <div className="flex items-center gap-1">
-                                    <EditCCTVDevice
-                                        location={locations}
-                                        cctv={device}
-                                    />
-                                    <ArchiveCCTV cctv={device} />
-                                </div>
+                            {/* Action Buttons - Compact */}
+                            <div className="flex items-center justify-end gap-1.5 pt-2 border-t dark:border-zinc-800">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="cursor-pointer"
+                                            onClick={() => onViewReports?.(device)}
+                                        >
+                                            <BarChart3 className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">
+                                        <p className="text-xs">View Reports</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <EditCCTVDevice location={locations} cctv={device}>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="cursor-pointer"
+                                            >
+                                                <SquarePen className="h-4 w-4" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                    </EditCCTVDevice>
+                                    <TooltipContent side="bottom">
+                                        <p className="text-xs">Edit CCTV</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <ArchiveCCTV cctv={device}>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="cursor-pointer"
+                                            >
+                                                <Archive className="h-4 w-4 text-red-500 dark:text-red-400" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                    </ArchiveCCTV>
+                                    <TooltipContent side="bottom">
+                                        <p className="text-xs">Archive CCTV</p>
+                                    </TooltipContent>
+                                </Tooltip>
                             </div>
                         </CardContent>
                     </Card>

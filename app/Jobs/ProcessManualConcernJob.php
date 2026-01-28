@@ -54,9 +54,10 @@ class ProcessManualConcernJob implements ShouldQueue
                 Log::info('ProcessManualConcernJob: AI Result', [
                     'concern_id' => $concern->id,
                     'is_valid' => $analysis['is_valid'] ?? 'unknown',
+                    'analysis' => $analysis,
                 ]);
 
-                if ($analysis) {
+                if ($analysis && isset($analysis['is_valid'])) {
                     if ($analysis['is_valid'] === true) {
                         $concernService->markAsValid($concern->id, $analysis);
                     } else {
@@ -64,8 +65,11 @@ class ProcessManualConcernJob implements ShouldQueue
                         $concernService->markAsInvalid($concern->id, $reason, $analysis);
                     }
                 } else {
-                    // Fallback: If AI fails, default to valid for manual review
-                    Log::warning('ProcessManualConcernJob: AI failed. Defaulting to valid.', ['concern_id' => $concern->id]);
+                    // Fallback: If AI fails or returns incomplete data, default to valid for manual review
+                    Log::warning('ProcessManualConcernJob: AI failed or returned incomplete data. Defaulting to valid.', [
+                        'concern_id' => $concern->id,
+                        'analysis' => $analysis,
+                    ]);
                     $concernService->markAsValid($concern->id, [
                         'category' => $concern->category,
                         'severity' => $concern->severity,
@@ -73,7 +77,6 @@ class ProcessManualConcernJob implements ShouldQueue
                     ]);
                 }
             }
-
         } catch (\Exception $e) {
             Log::error('ProcessManualConcernJob: Error', [
                 'concern_id' => $this->concernId,
