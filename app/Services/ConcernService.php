@@ -20,15 +20,12 @@ use Illuminate\Support\Str;
 
 class ConcernService
 {
-    protected $fileUploadService;
-
-    protected $textBeeService;
-
-    public function __construct(FileUploadService $fileUploadService, TextBeeService $textBeeService)
-    {
-        $this->fileUploadService = $fileUploadService;
-        $this->textBeeService = $textBeeService;
-    }
+    public function __construct(
+        protected FileUploadService $fileUploadService,
+        protected TextBeeService $textBeeService,
+        protected NotificationService $notificationService,
+        protected GeminiService $geminiService
+    ) {}
 
     /**
      * Get paginated concerns for the current user.
@@ -58,6 +55,7 @@ class ConcernService
                 'ai_severity',
                 'ai_confidence',
                 'created_at',
+                'rejection_reason',
             ]);
 
         // Apply filters
@@ -123,6 +121,7 @@ class ConcernService
                 'ai_confidence',
                 'created_at',
                 'deleted_at',
+                'rejection_reason',
             ]);
 
         // Apply same filters
@@ -427,94 +426,105 @@ class ConcernService
      */
     public function finalizeConcern(int $concernId)
     {
-        $concern = Concern::find($concernId);
+        // Use a lock to prevent race conditions during deduplication
+        // We use a broad lock per concern to ensure only one finalization happens at a time
+        // for potential duplicates. A more granular lock could be used based on coordinates.
+        $lock = Cache::lock('finalize_concern_processing', 10);
 
-        if (! $concern) {
-            Log::error("Concern #{$concernId} not found during finalization.");
-
-            return;
-        }
-
-        // 1. Deduplication Logic
-        $parentConcern = $this->findParentConcern($concern);
-
-        if ($parentConcern) {
-            // It's a duplicate
-            $concern->update([
-                'parent_concern_id' => $parentConcern->id,
-                'is_duplicate' => true,
-            ]);
-
-            ConcernHistory::create([
-                'concern_id' => $concern->id,
-                'status' => $concern->status,
-                'remarks' => "Marked as duplicate of Concern #{$parentConcern->tracking_code}. Notifications silenced.",
-            ]);
-
-            Log::info("Concern #{$concern->id} marked as duplicate of #{$parentConcern->id}");
-
-            // Notify the citizen that their concern was merged
-            event(new \App\Events\ConcernMerged($concern, $parentConcern));
-
-            return; // Stop here. No notifications.
-        }
-
-        // 2. Assignment Logic (If not a duplicate)
-        // Check if already assigned to avoid double distribution
-        if ($concern->distribution) {
-            Log::info("Concern #{$concern->id} already distributed.");
-
-            return;
-        }
-
-        // Distribute to Purok Leader (Hardcoded ID=2 for now per requirements)
-        $purokLeaderId = 2;
-        $purokLeaderDetails = \App\Models\OfficialsDetails::where('user_id', $purokLeaderId)->first();
-
-        if (! $purokLeaderDetails) {
-            Log::error("Purok Leader not found for Concern #{$concern->id}");
-
-            // We might want to assign to admin or default instead, but for now just log
-            return;
-        }
-
-        $distribution = ConcernDistribution::create([
-            'concern_id' => $concern->id,
-            'purok_leader_id' => $purokLeaderId,
-            'status' => 'assigned',
-            'assigned_at' => now(),
-        ]);
-
-        $distribution->load('purokLeader.officialDetails');
-
-        // Create History Log
-        ConcernHistory::create([
-            'concern_id' => $concern->id,
-            'status' => 'pending',
-            'remarks' => 'Concern verified and assigned to Purok Leader.',
-        ]);
-
-        // Broadcast Event
-        $uploadedMedia = $concern->media->pluck('original_path')->toArray();
-        event(new ConcernAssigned($concern, $distribution, $uploadedMedia));
-
-        // 3. Send SMS Notification to Purok Leader
         try {
-            if ($purokLeaderDetails->contact_number) {
-                $this->textBeeService->sendConcernAssignedNotification(
-                    $purokLeaderDetails->contact_number,
-                    [
-                        'tracking_code' => $concern->tracking_code,
-                        'category' => $concern->category,
-                        'severity' => $concern->severity,
-                        'description' => $concern->description,
-                        'address' => $concern->address,
-                        'custom_location' => $concern->custom_location,
-                    ]
-                );
-            }
-        } catch (\Exception $e) {
-            Log::error("Failed to send SMS for Concern #{$concern->id}: ".$e->getMessage());
+            return $lock->block(5, function () use ($concernId) {
+                $concern = Concern::find($concernId);
+
+                if (! $concern) {
+                    Log::error("Concern #{$concernId} not found during finalization.");
+
+                    return;
+                }
+
+                // 1. Deduplication Logic
+                $parentConcern = $this->findParentConcern($concern);
+
+                if ($parentConcern) {
+                    // It's a duplicate
+                    $concern->update([
+                        'parent_concern_id' => $parentConcern->id,
+                        'is_duplicate' => true,
+                    ]);
+
+                    ConcernHistory::create([
+                        'concern_id' => $concern->id,
+                        'status' => $concern->status,
+                        'remarks' => "Marked as duplicate of Concern #{$parentConcern->tracking_code}. Notifications silenced.",
+                    ]);
+
+                    $this->notificationService->notifyConcernMerged($concern, $parentConcern);
+                    Log::info("Concern #{$concern->id} marked as duplicate of #{$parentConcern->id}");
+
+                    // Notify the citizen that their concern was merged
+                    event(new \App\Events\ConcernMerged($concern, $parentConcern));
+
+                    return; // Stop here. No notifications.
+                }
+
+                // 2. Assignment Logic (If not a duplicate)
+                // Check if already assigned to avoid double distribution
+                if ($concern->distribution) {
+                    Log::info("Concern #{$concern->id} already distributed.");
+
+                    return;
+                }
+
+                // Distribute to Purok Leader (Hardcoded ID=2 for now per requirements)
+                $purokLeaderId = 2;
+                $purokLeaderDetails = \App\Models\OfficialsDetails::where('user_id', $purokLeaderId)->first();
+
+                if (! $purokLeaderDetails) {
+                    Log::error("Purok Leader not found for Concern #{$concern->id}");
+
+                    // We might want to assign to admin or default instead, but for now just log
+                    return;
+                }
+
+                $distribution = ConcernDistribution::create([
+                    'concern_id' => $concern->id,
+                    'purok_leader_id' => $purokLeaderId,
+                    'status' => 'assigned',
+                    'assigned_at' => now(),
+                ]);
+
+                $distribution->load('purokLeader.officialDetails');
+
+                // Create History Log
+                ConcernHistory::create([
+                    'concern_id' => $concern->id,
+                    'status' => 'pending',
+                    'remarks' => 'Concern verified and assigned to Purok Leader.',
+                ]);
+
+                // Broadcast Event
+                $uploadedMedia = $concern->media->pluck('original_path')->toArray();
+                event(new ConcernAssigned($concern, $distribution, $uploadedMedia));
+
+                $this->notificationService->notifyConcernAssigned($concern, $distribution);
+
+                // 3. Send SMS Notification to Purok Leader (Async)
+                if ($purokLeaderDetails->contact_number) {
+                    dispatch(new \App\Jobs\SendSmsNotificationJob(
+                        $purokLeaderDetails->contact_number,
+                        [
+                            'tracking_code' => $concern->tracking_code,
+                            'category' => $concern->category,
+                            'severity' => $concern->severity,
+                            'description' => $concern->description,
+                            'address' => $concern->address,
+                            'custom_location' => $concern->custom_location,
+                        ]
+                    ));
+                }
+            });
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+            Log::warning("Finalization lock timed out for Concern #{$concernId}. Retrying later via job if applicable.");
+            throw $e;
         }
     }
 
@@ -524,26 +534,43 @@ class ConcernService
     public function markAsValid(int $concernId, array $analysis)
     {
         $concern = Concern::find($concernId);
-        if (! $concern) {
+        if (! $concern || $concern->is_valid) {
             return;
         }
+
+        $confidence = $analysis['confidence'] ?? 0;
+        $isFallback = $analysis['is_fallback'] ?? false;
+
+        // If AI analysis is present and NOT a system fallback, but the confidence is too low (< 0.4),
+        // treat it as invalid/spam.
+        if (! empty($analysis) && ! $isFallback && $confidence < 0.4) {
+            Log::info("Concern #{$concernId} rejected due to low AI confidence: {$confidence}");
+
+            return $this->markAsInvalid($concernId, 'Ang iyong ulat ay hindi sapat ang detalye o hindi wasto para sa aming system.', $analysis);
+        }
+
+        // Hierarchy: AI Result (if high confidence) > User Selection > Existing Value
+        $isHighConfidence = $confidence >= 0.7;
+
+        $finalCategory = ($isHighConfidence && ! empty($analysis['category']))
+            ? $analysis['category']
+            : ($concern->user_selected_category ?? $concern->category);
+
+        $finalSeverity = ($isHighConfidence && ! empty($analysis['severity']))
+            ? $analysis['severity']
+            : ($concern->user_selected_severity ?? $concern->severity);
 
         $concern->update([
             'is_valid' => true,
             'status' => 'pending',
-            'category' => $analysis['category'] ?? $concern->category,
-            'severity' => $analysis['severity'] ?? $concern->severity,
+            'category' => $finalCategory,
+            'severity' => $finalSeverity,
+            'specific_type' => $analysis['specific_type'] ?? $concern->specific_type,
             'ai_category' => $analysis['category'] ?? null,
             'ai_severity' => $analysis['severity'] ?? null,
-            'ai_confidence' => $analysis['confidence'] ?? null,
+            'ai_confidence' => $confidence,
             'ai_processed_at' => now(),
             'ai_analysis_raw' => $analysis,
-        ]);
-
-        ConcernHistory::create([
-            'concern_id' => $concern->id,
-            'status' => 'pending',
-            'remarks' => 'Concern verified by AI and submitted.',
         ]);
 
         // Broadcast success to citizen
@@ -609,29 +636,71 @@ class ConcernService
 
     /**
      * Find a matching Parent Concern within radius and time window.
+     * Implements "Smart Radius" and "High Confidence" checks.
      */
     private function findParentConcern(Concern $concern)
     {
-        $radius = 0.05; // 50 meters in kilometers (approx)
-        // For more precision 50m = 0.05km.
-        // 1 degree of latitude ~= 111km.
-        // 0.05km is approx 0.00045 degrees.
+        // 1. High Confidence Check: Only merge if the AI is reasonably sure,
+        // unless it's a fallback/manual entry where ai_confidence might be 0.
+        // We use 0.7 (70%) as the threshold for 'automatic' merging.
+        if ($concern->ai_confidence > 0 && $concern->ai_confidence < 0.7) {
+            return null;
+        }
 
-        // Using Haversine formula for strict 50m check
-        // Or using a simple bounding box for speed since 50m is very small.
-        // Let's use Haversine for accuracy.
+        // 2. Smart Radius based on category/type
+        // Pothole/Garbage/Light: 30m (0.03km) - Very localized
+        // Fire/Flood/Accident: 150m (0.15km) - High visibility/impact
+        // Default: 50m (0.05km)
+        $radius = 0.05;
+        $type = $concern->specific_type ?: $concern->category;
 
-        return Concern::query()
+        if (in_array($type, ['pothole', 'garbage', 'light', 'sewage'])) {
+            $radius = 0.03;
+        } elseif (in_array($type, ['fire', 'flood', 'accident', 'collision'])) {
+            $radius = 0.15;
+        }
+
+        $parentConcern = Concern::query()
             ->select('concerns.*')
             ->selectRaw('(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance', [$concern->latitude, $concern->longitude, $concern->latitude])
             ->where('id', '!=', $concern->id) // Not itself
             ->where('is_duplicate', false) // Only link to parents
-            ->where('category', $concern->category) // Strict Category Match
+            ->where(function ($query) use ($concern) {
+                // Use specific type if available for better precision
+                if ($concern->specific_type) {
+                    $query->where('specific_type', $concern->specific_type);
+                } else {
+                    $query->where('category', $concern->category);
+                }
+            })
             ->where('created_at', '>=', now()->subHour()) // Within last 1 hour
-            ->whereNotIn('status', ['resolved', 'archived']) // Active concerns only
-            ->having('distance', '<', 0.05) // 50 meters
+            // 3. Exclude Rejected, Resolved, and Archived concerns from being parents
+            ->whereNotIn('status', ['rejected', 'resolved', 'archived'])
+            ->having('distance', '<', $radius)
             ->orderBy('created_at', 'asc') // Link to the oldest (original) one
             ->first();
+
+        // 4. Gemini Cross-Check (Semantic Match)
+        // If we found a spatial candidate, verify the content matches semantically.
+        if ($parentConcern) {
+            $text1 = $concern->type === 'voice' ? $concern->transcript_text : ($concern->title.' '.$concern->description);
+            $text2 = $parentConcern->type === 'voice' ? $parentConcern->transcript_text : ($parentConcern->title.' '.$parentConcern->description);
+
+            // If both reports are very brief/empty, default to merging spatially
+            if (strlen($text1 ?? '') < 5 || strlen($text2 ?? '') < 5) {
+                return $parentConcern;
+            }
+
+            $isSame = $this->geminiService->compareConcerns($text1, $text2);
+
+            if (! $isSame) {
+                Log::info("Gemini rejected deduplication for Concern #{$concern->id} and #{$parentConcern->id} due to semantic differences.");
+
+                return null; // Don't merge if Gemini says they are different incidents
+            }
+        }
+
+        return $parentConcern;
     }
 
     private function checkIfUserSuspended(int $userId, string $action = 'perform this action'): void

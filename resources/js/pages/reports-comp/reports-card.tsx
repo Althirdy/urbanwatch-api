@@ -24,6 +24,7 @@ import {
     ExternalLink as Open,
     LocateFixed,
     SquarePen,
+    AlertTriangle,
 } from 'lucide-react';
 
 import { reports_T } from '@/types/report-types';
@@ -114,111 +115,98 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                         alt="Accident detection"
                                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                                     />
-                                    <div className="absolute top-2 right-2">
+                                    <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
                                         <Badge
                                             variant="destructive"
-                                            className="px-1.5 py-0 text-[10px] font-semibold shadow-sm"
+                                            className="px-1.5 py-0 text-xs font-semibold shadow-sm"
                                         >
                                             <Camera className="mr-1 h-2.5 w-2.5" />
                                             AI DETECTED
                                         </Badge>
+
+                                        {report.media && report.media.length > 1 && (
+                                            <Badge
+                                                variant="secondary"
+                                                className="bg-black/50 px-1.5 py-0 text-xs text-white backdrop-blur-sm hover:bg-black/70"
+                                            >
+                                                +{report.media.length - 1} more
+                                            </Badge>
+                                        )}
                                     </div>
                                 </div>
                             </ImagePreview>
                         ) : (
                             <div className="relative flex h-36 w-full items-center justify-center bg-muted">
-                                <Camera className="h-10 w-10 text-muted-foreground/20" />
+                                {report.status === 'False Alarm' ? (
+                                    <div className="flex flex-col items-center gap-2 text-amber-500/50">
+                                        <AlertTriangle className="h-10 w-10" />
+                                        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/50">Image Discarded</span>
+                                    </div>
+                                ) : (
+                                    <Camera className="h-10 w-10 text-muted-foreground/20" />
+                                )}
                             </div>
                         )}
+                        <CardHeader className="px-3">
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="space-y-1">
+                                    <CardTitle className="line-clamp-1 text-base font-extrabold leading-tight tracking-tight text-foreground">
+                                        {report.transcript || `${report.report_type} Incident`}
+                                    </CardTitle>
+                                    <div className="flex items-center gap-2">
 
-                                                <CardHeader className="p-3 pb-1">
+                                        <Badge variant="outline" className="h-4 px-1 text-xs font-medium text-muted-foreground">
 
-                                                    <div className="flex items-start justify-between gap-2">
+                                            #{report.id}
 
-                                                        <div className="space-y-1">
+                                        </Badge>
 
-                                                            <CardTitle className="line-clamp-1 text-base font-extrabold leading-tight tracking-tight text-foreground">
-
-                                                                {report.transcript || `${report.report_type} Incident`}
-
-                                                            </CardTitle>
-
-                                                            <div className="flex items-center gap-2">
-
-                                                                <Badge variant="outline" className="h-4 px-1 text-[9px] font-medium text-muted-foreground">
-
-                                                                    #{report.id}
-
-                                                                </Badge>
-
-                                                                <Badge 
-
-                                                                    variant={report.status === 'Resolved' ? 'default' : 'secondary'} 
-
-                                                                    className="h-4 px-1.5 text-[9px] capitalize"
-
-                                                                >
-
-                                                                    {report.status}
-
-                                                                </Badge>
-
-                                                            </div>
-
-                                                        </div>
-
-                                                    </div>
-
-                                                </CardHeader>
-
-                        
-
-                                                <CardContent className="flex-1 p-3 pt-1 pb-1">
-
-                                                    <div className="flex flex-col gap-2">
-
-                                                        <p className="line-clamp-2 text-xs font-medium leading-relaxed text-muted-foreground/90">
-
-                                                            {report.description}
-
-                                                        </p>
-
-                        
-
-                                                        <div className="flex flex-col gap-1 rounded-md bg-muted/50 p-2 text-xs">
-
-                                                            <div className="flex items-center gap-2 text-foreground/80">
-
-                                                                <LocateFixed className="h-3.5 w-3.5 shrink-0 text-primary" />
-
-                                                                <span className="truncate font-semibold">
-
-                                                                    {report.location_name || `${Number(report.latitute).toFixed(4)}, ${Number(report.longtitude).toFixed(4)}`}
-
-                                                                </span>
-
-                                                            </div>
-
-                                                            <div className="flex items-center gap-2 text-muted-foreground">
-
-                                                                <Clock className="h-3.5 w-3.5 shrink-0" />
-
-                                                                <span>
-
-                                                                    {formatRelativeTime(report.created_at)}
-
-                                                                </span>
-
-                                                            </div>
-
-                                                        </div>
-
-                                                    </div>
-
-                                                </CardContent>
+                                        {report.status === 'False Alarm' ? (
+                                            <Badge
+                                                variant="outline"
+                                                className="h-4 px-1.5 text-xs capitalize border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+                                            >
+                                                False Alarm
+                                            </Badge>
+                                        ) : (
+                                            <Badge
+                                                variant={report.status === 'Resolved' ? 'default' : 'secondary'}
+                                                className="h-4 px-1.5 text-xs capitalize"
+                                            >
+                                                {report.status}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="flex-1 px-3">
+                            <div className="flex flex-col gap-2">
+                                <p className="line-clamp-2 text-xs font-medium leading-relaxed text-muted-foreground/90">
+                                    {report.description}
+                                </p>
+                                <div className="flex flex-col gap-1 rounded-md bg-muted/50 p-2 text-xs">
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                        <LocateFixed className="h-3.5 w-3.5 shrink-0 " />
+                                        <span className="truncate ">
+                                            {report.location_name || `${Number(report.latitude).toFixed(4)}, ${Number(report.longitude).toFixed(4)}`}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                        <Clock className="h-3.5 w-3.5 shrink-0" />
+                                        <span>
+                                            {formatRelativeTime(report.created_at)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
 
                         <CardFooter className="flex flex-col gap-2 p-3 pt-1 pb-3">
-                            {!report.is_acknowledge ? (
+                            {report.status === 'False Alarm' ? (
+                                // False Alarm: No action buttons
+                                null
+                            ) : !report.is_acknowledge ? (
                                 <Button
                                     size="sm"
                                     className="h-8 w-full text-xs font-bold"
@@ -271,40 +259,42 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                     </Button>
                                 </ViewReportDetails>
 
-                                <div className="flex gap-1">
-                                    <Tooltip>
-                                        <EditReport
-                                            report={report}
-                                            reportTypes={reportTypes}
-                                        >
-                                            <TooltipTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                >
-                                                    <SquarePen className="h-4 w-4" />
-                                                </Button>
-                                            </TooltipTrigger>
-                                        </EditReport>
-                                        <TooltipContent>Edit</TooltipContent>
-                                    </Tooltip>
+                                {report.status !== 'False Alarm' && (
+                                    <div className="flex gap-1">
+                                        <Tooltip>
+                                            <EditReport
+                                                report={report}
+                                                reportTypes={reportTypes}
+                                            >
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                    >
+                                                        <SquarePen className="h-4 w-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                            </EditReport>
+                                            <TooltipContent>Edit</TooltipContent>
+                                        </Tooltip>
 
-                                    <Tooltip>
-                                        <ArchiveReport report={report}>
-                                            <TooltipTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-destructive hover:text-destructive"
-                                                >
-                                                    <Archive className="h-4 w-4" />
-                                                </Button>
-                                            </TooltipTrigger>
-                                        </ArchiveReport>
-                                        <TooltipContent>Archive</TooltipContent>
-                                    </Tooltip>
-                                </div>
+                                        <Tooltip>
+                                            <ArchiveReport report={report}>
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                                    >
+                                                        <Archive className="h-4 w-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                            </ArchiveReport>
+                                            <TooltipContent>Archive</TooltipContent>
+                                        </Tooltip>
+                                    </div>
+                                )}
                             </div>
                         </CardFooter>
                     </Card>
@@ -313,6 +303,6 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
         </div>
     );
 };
-            
+
 
 export default ReportsCard;

@@ -4,7 +4,7 @@ import { locations } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { location_T } from '@/types/location-types';
 import { Head } from '@inertiajs/react';
-import { List, Table } from 'lucide-react';
+import { LayoutGrid, Table } from 'lucide-react';
 import { useState } from 'react';
 import LocationCardView from './locations-comp/locations-card';
 import CreateLocation from './locations-comp/locations-create';
@@ -28,42 +28,48 @@ export default function Locations({
     const [filteredLocations, setFilteredLocations] = useState<location_T[]>(
         locations || [],
     );
+        const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
+
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Locations" />
             <div className="space-y-4 p-4">
-                <CreateLocation packages={packages} />
 
-                <Tabs defaultValue="table" className="w-full space-y-2">
-                    <div className="flex flex-row gap-4">
-                        <LocationActionTab
-                            locations={locations!}
-                            setFilteredLocations={setFilteredLocations}
-                        />
-                        <TabsList className="h-12 w-24">
+                <div className="flex items-center justify-between gap-4">
+                <CreateLocation packages={packages} />
+                    
+                    {/* View Toggle */}
+                    <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'card')}>
+                        <TabsList className="h-9 p-1">
                             <TabsTrigger
                                 value="table"
-                                className="cursor-pointer"
+                                className="h-7 px-3 text-xs data-[state=active]:bg-background"
                             >
-                                <List className="h-8 w-8" />
+                                <Table className="h-3.5 w-3.5 mr-1.5" />
+                                Table
                             </TabsTrigger>
                             <TabsTrigger
                                 value="card"
-                                className="cursor-pointer"
+                                className="h-7 px-3 text-xs data-[state=active]:bg-background"
                             >
-                                <Table className="h-4 w-4" />
+                                <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
+                                Cards
                             </TabsTrigger>
                         </TabsList>
-                    </div>
+                    </Tabs>
+                </div>
+                <LocationActionTab
+                    locations={locations}
+                    setFilteredLocations={setFilteredLocations}
+                />
 
-                    <TabsContent value="table" className="w-full">
-                        <LocationsTable locations={filteredLocations} />
-                    </TabsContent>
-                    <TabsContent value="card" className="w-full">
-                        <LocationCardView locations={filteredLocations} />
-                    </TabsContent>
-                </Tabs>
+                {viewMode === 'table' ? (
+                    <LocationsTable locations={filteredLocations} />
+                ) : (
+                    <LocationCardView locations={filteredLocations} />
+                )}
+                
             </div>
         </AppLayout>
     );

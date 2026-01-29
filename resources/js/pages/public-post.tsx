@@ -4,11 +4,11 @@ import { publicPosts } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { PublicPost_T } from '@/types/public-post-types';
 import { Head } from '@inertiajs/react';
-import { List, Table } from 'lucide-react';
+import { LayoutGrid, Table } from 'lucide-react';
 import { useState } from 'react';
 
 import PublicPostCard from './public-post-comp/public-post-card';
-import CreatePublicPost from './public-post-comp/public-post-create';
+import CreatePublicPost from './public-post-comp/create-public-post-modal';
 import PublicPostTab from './public-post-comp/public-post-tab';
 import PublicPostsTable from './public-post-comp/public-post-table';
 
@@ -32,41 +32,52 @@ interface PublicPostPageProps {
 export default function PublicPost({ data }: PublicPostPageProps) {
     const posts = data?.data || [];
     const [filteredPosts, setFilteredPosts] = useState<PublicPost_T[]>(posts);
+    const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Public Posts" />
             <div className="space-y-4 p-4">
-                {/* <CreatePublicPost /> */}
-                <Tabs defaultValue="table" className="w-full space-y-2">
-                    <div className="flex flex-row items-center gap-4">
-                        <PublicPostTab
-                            posts={posts}
-                            setFilteredPosts={setFilteredPosts}
-                        />
-                        <TabsList className="h-12 w-24">
+                <div className="flex items-center justify-between gap-4">
+                    <CreatePublicPost />
+
+                    {/* View Toggle */}
+
+                    <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'card')}>
+                        <TabsList className="h-9 p-1">
                             <TabsTrigger
                                 value="table"
-                                className="cursor-pointer"
+                                className="h-7 px-3 text-xs data-[state=active]:bg-background"
                             >
-                                <List className="h-8 w-8" />
+                                <Table className="h-3.5 w-3.5 mr-1.5" />
+                                Table
                             </TabsTrigger>
                             <TabsTrigger
                                 value="card"
-                                className="cursor-pointer"
+                                className="h-7 px-3 text-xs data-[state=active]:bg-background"
                             >
-                                <Table className="h-4 w-4" />
+                                <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
+                                Cards
                             </TabsTrigger>
                         </TabsList>
-                    </div>
+                    </Tabs>
 
-                    <TabsContent value="table" className="w-full">
-                        <PublicPostsTable posts={filteredPosts} />
-                    </TabsContent>
-                    <TabsContent value="card" className="w-full">
-                        <PublicPostCard posts={filteredPosts} />
-                    </TabsContent>
-                </Tabs>
+                </div>
+
+
+                <PublicPostTab
+                    posts={posts}
+                    setFilteredPosts={setFilteredPosts}
+                />
+
+                
+
+                {viewMode === 'table' ? (
+                    <PublicPostsTable posts={filteredPosts} />
+                ) : (
+                    <PublicPostCard posts={filteredPosts} />
+
+                )}
             </div>
         </AppLayout>
     );

@@ -28,10 +28,11 @@ class User extends Authenticatable
         'last_name',
         'email',
         'password',
-        'phone_number',
         'assigned_brgy',
         'status',
         'false_alarm_strikes',
+        'last_sensitive_update_at',
+        'profile_photo_path',
     ];
 
     /**
@@ -45,18 +46,15 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
-     * @return array<string, string>
+     * @var array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'name' => 'encrypted',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'name' => 'encrypted',
+    ];
 
     /**
      * Get the user's full name.
@@ -74,16 +72,16 @@ class User extends Authenticatable
                 if ($this->relationLoaded('officialDetails') && $this->officialDetails) {
                     return trim(
                         ($this->officialDetails->first_name ?? '').' '.
-                        (($this->officialDetails->middle_name ?? null) ? ($this->officialDetails->middle_name.' ') : '').
-                        ($this->officialDetails->last_name ?? '')
+                            (($this->officialDetails->middle_name ?? null) ? ($this->officialDetails->middle_name.' ') : '').
+                            ($this->officialDetails->last_name ?? '')
                     );
                 }
 
                 if ($this->relationLoaded('citizenDetails') && $this->citizenDetails) {
                     return trim(
                         ($this->citizenDetails->first_name ?? '').' '.
-                        (($this->citizenDetails->middle_name ?? null) ? ($this->citizenDetails->middle_name.' ') : '').
-                        ($this->citizenDetails->last_name ?? '')
+                            (($this->citizenDetails->middle_name ?? null) ? ($this->citizenDetails->middle_name.' ') : '').
+                            ($this->citizenDetails->last_name ?? '')
                     );
                 }
 

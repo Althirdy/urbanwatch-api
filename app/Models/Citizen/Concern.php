@@ -21,6 +21,7 @@ class Concern extends Model
         'type',
         'description',
         'category',
+        'specific_type',
         'status',
         'transcript_text',
         'longitude',

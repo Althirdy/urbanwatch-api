@@ -153,7 +153,7 @@ const UserActionTab = ({
     }, [users.data, roleFilter, statusFilter, barangayFilter, searchQuery]);
 
     return (
-        <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 dark:border-zinc-800">
+        <div className="flex flex-col gap-3 rounded-[var(--radius)] border bg-card p-3 dark:border-zinc-800">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 {/* Search Input */}
                 <div className="relative flex-1">

@@ -16,11 +16,12 @@ class ProcessVoiceConcernJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    protected $concernId;
+    public $tries = 3;
 
-    /**
-     * Create a new job instance.
-     */
+    public $backoff = [10, 30, 60];
+
+    public $concernId;
+
     public function __construct($concernId)
     {
         $this->concernId = $concernId;
@@ -31,13 +32,21 @@ class ProcessVoiceConcernJob implements ShouldQueue
      */
     public function handle(GeminiService $geminiService, \App\Services\ConcernService $concernService)
     {
+        $concernId = $this->concernId ?? null;
+
+        if (! $concernId) {
+            Log::error('ProcessVoiceConcernJob: Job started with missing concernId');
+
+            return;
+        }
+
         try {
             $concern = Concern::with(['media' => function ($query) {
                 $query->where('media_type', 'audio')->orderBy('created_at', 'desc');
-            }])->find($this->concernId);
+            }])->find($concernId);
 
             if (! $concern) {
-                Log::error('ProcessVoiceConcernJob: Concern not found', ['concern_id' => $this->concernId]);
+                Log::error('ProcessVoiceConcernJob: Concern not found', ['concern_id' => $concernId]);
 
                 return;
             }
@@ -104,17 +113,61 @@ class ProcessVoiceConcernJob implements ShouldQueue
                 Log::warning('ProcessVoiceConcernJob: Gemini analysis failed or returned null', [
                     'concern_id' => $concern->id,
                 ]);
+
+                // Fallback: Update with default text so UI doesn't show "Processing..." forever
+                $concern->update([
+                    'transcript_text' => 'Transcription unavailable. Please listen to the attached audio.',
+                ]);
+
                 // Fallback: Default to valid
-                $concernService->markAsValid($concern->id, []);
+                $concernService->markAsValid($concern->id, [
+                    'is_fallback' => true,
+                    'reasoning' => 'Gemini analysis failed or returned null.',
+                ]);
             }
 
         } catch (\Exception $e) {
             Log::error('ProcessVoiceConcernJob: Error processing voice concern', [
-                'concern_id' => $this->concernId,
+                'concern_id' => $concernId,
                 'error' => $e->getMessage(),
             ]);
+
+            // Fallback: Update with error text
+            $concern = Concern::find($concernId);
+            if ($concern) {
+                $concern->update([
+                    'transcript_text' => 'Transcription unavailable due to system error.',
+                ]);
+            }
+
             // Fallback: Mark as valid
-            $concernService->markAsValid($this->concernId, []);
+            $concernService->markAsValid($concernId, [
+                'is_fallback' => true,
+                'reasoning' => 'Exception during voice processing.',
+            ]);
+        }
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception)
+    {
+        $concernId = $this->concernId ?? null;
+
+        Log::error('ProcessVoiceConcernJob: Job failed after all retries', [
+            'concern_id' => $concernId,
+            'error' => $exception->getMessage(),
+        ]);
+
+        if ($concernId) {
+            // Fallback: Mark as valid
+            $concernService = app(\App\Services\ConcernService::class);
+            $concernService->markAsValid($concernId, [
+                'is_fallback' => true,
+                'confidence' => 0,
+                'reasoning' => 'Voice analysis failed after multiple attempts. Defaulted to manual review.',
+            ]);
         }
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\PurokLeader;
+namespace App\Http\Controllers\Api\V1\PurokLeader;
 
 use App\Events\ConcernStatusUpdated;
 use App\Http\Controllers\Api\BaseApiController;
@@ -9,12 +9,15 @@ use App\Jobs\SendConcernStatusNotificationJob;
 use App\Models\Citizen\Concern;
 use App\Models\ConcernDistribution;
 use App\Models\ConcernHistory;
+use App\Services\NotificationService as ServicesNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ConcernController extends BaseApiController
 {
+    public function __construct(protected ServicesNotificationService $notificationService) {}
+
     /**
      * Display a listing of the assigned concerns.
      */
@@ -32,7 +35,6 @@ class ConcernController extends BaseApiController
             return $this->sendResponse([
                 'concerns' => AssignedConcernResource::collection($distributions),
             ], 'Assigned concerns retrieved successfully');
-
         } catch (\Exception $e) {
             Log::error('Error retrieving assigned concerns', [
                 'error' => $e->getMessage(),
@@ -65,7 +67,6 @@ class ConcernController extends BaseApiController
             return $this->sendResponse([
                 'concern' => new AssignedConcernResource($distribution),
             ], 'Concern details retrieved successfully');
-
         } catch (\Exception $e) {
             Log::error('Error showing concern', [
                 'error' => $e->getMessage(),
@@ -82,7 +83,8 @@ class ConcernController extends BaseApiController
     public function update(Request $request, string $id)
     {
         $request->validate([
-            'status' => 'required|in:pending,ongoing,escalated,resolved', // Added resolved to validation
+            'status' => 'required|in:pending,ongoing,escalated,resolved,rejected', // Added resolved to validation
+            'rejection_reason' => 'required_if:status,escalated|string|max:1000',
         ]);
 
         DB::beginTransaction();
@@ -102,7 +104,17 @@ class ConcernController extends BaseApiController
             // 1. Update the global concern status
             $concern = Concern::find($id);
             $previousStatus = $concern->status;
-            $concern->update(['status' => $status]);
+            if ($status == 'rejected') {
+                $rejectionReason = $request->input('rejection_reason', 'Rejected by purok leader without reason');
+                $concern->update([
+                    'status' => $status,
+                    'is_valid' => false,
+                    'rejection_reason' => $rejectionReason,
+                ]);
+                $remarks = "Rejected by Purok Leader: {$rejectionReason}";
+            } else {
+                $concern->update(['status' => $status]);
+            }
 
             // 2. Update the specific distribution status
             // Mapping statuses if they differ, otherwise usage is direct
@@ -156,6 +168,17 @@ class ConcernController extends BaseApiController
 
             DB::commit();
 
+            // Notify relevant parties about the status change
+            $this->notificationService->notifyConcernStatusChanged(
+                $concern->fresh(),
+                $previousStatus,
+                $status,
+                $purokLeader,
+                $remarks
+            );
+
+            Log::info($purokLeader);
+
             // Trigger event to notify citizen of status update
             event(new ConcernStatusUpdated(
                 $concern->fresh(),
@@ -180,7 +203,6 @@ class ConcernController extends BaseApiController
                 'previous_status' => $previousStatus,
                 'new_status' => $status,
             ], 'Concern status updated successfully');
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error updating concern status', [

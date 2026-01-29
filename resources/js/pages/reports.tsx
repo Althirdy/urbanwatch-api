@@ -13,14 +13,14 @@ import AppLayout from '@/layouts/app-layout';
 import { reports as reportRoutes } from '@/routes';
 import { BreadcrumbItem } from '@/types';
 import { ReportsProps, reports_T } from '@/types/report-types';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { WifiOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import FalseAlarmMonitor from './reports-comp/false-alarm-monitor';
 import ReportsCard from './reports-comp/reports-card';
 import ReportActionTab from './reports-comp/reports-tab';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const Reports = ({ reports, reportTypes }: ReportsProps) => {
+const Reports = ({ reports, reportTypes, currentView = 'incidents' }: ReportsProps) => {
     const [filteredReports, setFilteredReports] = useState<reports_T[]>(
         reports.data,
     );
@@ -28,6 +28,14 @@ const Reports = ({ reports, reportTypes }: ReportsProps) => {
     useEffect(() => {
         setFilteredReports(reports.data);
     }, [reports.data]);
+
+    const handleViewChange = (value: string) => {
+        router.get(
+            reportRoutes().url,
+            { view: value },
+            { preserveState: true, preserveScroll: true }
+        );
+    };
 
     // Real-time connection
     const { isConnected } = useAccidentRealtime();
@@ -42,7 +50,7 @@ const Reports = ({ reports, reportTypes }: ReportsProps) => {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Incident Monitoring" />
-            <div className="mx-auto max-w-[1600px] space-y-8 p-6">
+            <div className="mx-auto w-full space-y-2 p-6">
                 {/* Header Section */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -54,11 +62,11 @@ const Reports = ({ reports, reportTypes }: ReportsProps) => {
                             reports.
                         </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <FalseAlarmMonitor />
+                    <div className="flex items-center gap-2 h-full">
+                        {/* Only show FalseAlarmMonitor sheet when in incidents view to avoid redundancy */}
                         <Badge
                             variant={isConnected ? 'outline' : 'destructive'}
-                            className={`gap-1.5 px-3 py-1 ${isConnected ? 'border-green-500 text-green-600 bg-green-50 dark:bg-green-950/20' : ''}`}
+                            className={`gap-1.5 px-3 py-1.5 text-sm ${isConnected ? 'border-green-500 text-green-600 bg-green-50 dark:bg-green-950/20' : ''}`}
                         >
                             {isConnected ? (
                                 <>
@@ -81,16 +89,25 @@ const Reports = ({ reports, reportTypes }: ReportsProps) => {
                 </div>
 
                 {/* Main Content */}
-                <div className="space-y-6">
-                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                        <h2 className="text-lg font-semibold text-foreground">
-                            All Reports
-                        </h2>
-                        <ReportActionTab
-                            reports={reports}
-                            reportTypes={reportTypes}
-                            setFilteredReports={setFilteredReports}
-                        />
+                <div className="space-y-2">
+                    <div className="flex flex-col gap-4">
+                        <Tabs value={currentView} onValueChange={handleViewChange} className="w-full">
+                            <TabsList className="grid w-full max-w-md grid-cols-2">
+                                <TabsTrigger value="incidents">Valid Incidents</TabsTrigger>
+                                <TabsTrigger value="false_alarms">False Alarms</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+
+                        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                            <h2 className="text-lg font-semibold text-foreground">
+                                {currentView === 'incidents' ? 'All Reports' : 'False Alarm Logs'}
+                            </h2>
+                            <ReportActionTab
+                                reports={reports}
+                                reportTypes={reportTypes}
+                                setFilteredReports={setFilteredReports}
+                            />
+                        </div>
                     </div>
 
                     <ReportsCard
@@ -126,7 +143,7 @@ const Reports = ({ reports, reportTypes }: ReportsProps) => {
                                                 link.url !== null &&
                                                 index !== 0 &&
                                                 index !==
-                                                    reports.links.length - 1
+                                                reports.links.length - 1
                                             ) {
                                                 return (
                                                     <PaginationItem key={index}>

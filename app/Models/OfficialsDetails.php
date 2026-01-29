@@ -21,6 +21,19 @@ class OfficialsDetails extends Model
         'longitude',
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'first_name' => 'encrypted',
+        'middle_name' => 'encrypted',
+        'last_name' => 'encrypted',
+        'contact_number' => 'encrypted',
+        'office_address' => 'encrypted',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

@@ -19,6 +19,8 @@ class ConcernResource extends JsonResource
             'trackingCode' => $this->tracking_code,
             'title' => $this->title,
             'description' => $this->description, // Shortened key
+            'transcriptText' => $this->transcript_text,
+            'rejectionReason' => $this->rejection_reason,
             'status' => $this->status,
             'severity' => $this->severity,
             'category' => $this->category,
@@ -91,8 +93,8 @@ class ConcernResource extends JsonResource
             ])),
 
             'createdAt' => $this->created_at->diffForHumans(),
-            'duplicatesCount' => $this->duplicates_count ?? 0,
-            // 'updatedAt' => $this->updated_at->diffForHumans(),
+            'duplicatesCount' => $this->duplicates_count ?? $this->duplicates()->count() ?? 0,
+            'isDuplicate' => (bool) $this->is_duplicate,
         ];
     }
 }

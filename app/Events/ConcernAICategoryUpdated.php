@@ -66,13 +66,17 @@ class ConcernAICategoryUpdated implements ShouldBroadcast
             'severity' => $this->concern->severity,
             'ai_category' => $this->concern->ai_category,
             'ai_severity' => $this->concern->ai_severity,
-            'ai_confidence' => $this->concern->ai_confidence,
+            'status' => $this->concern->status,
         ]);
 
         $payload = [
             'id' => $this->concern->id,
+            'title' => $this->concern->title,
+            'description' => $this->concern->description,
             'category' => $this->concern->category,
             'severity' => $this->concern->severity,
+            'status' => $this->concern->status,
+            'transcript_text' => $this->concern->transcript_text,
             'ai_category' => $this->concern->ai_category,
             'ai_severity' => $this->concern->ai_severity,
             'ai_confidence' => $this->concern->ai_confidence,

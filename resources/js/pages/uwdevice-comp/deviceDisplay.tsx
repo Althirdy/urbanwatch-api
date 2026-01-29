@@ -22,7 +22,7 @@ import {
     Filter,
     MapPin,
     Search,
-    Settings,
+    SquarePen,
     Wifi,
     X,
 } from 'lucide-react';
@@ -142,7 +142,7 @@ function UWDeviceDisplay({
             case 'inactive':
                 return <Wifi className="h-3 w-3" />;
             case 'maintenance':
-                return <Settings className="h-3 w-3" />;
+                return <SquarePen className="h-3 w-3" />;
             default:
                 return null;
         }
@@ -242,21 +242,19 @@ function UWDeviceDisplay({
                 {filteredDevices.map((device) => (
                     <Card
                         key={device.id}
-                        className="group relative overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700"
+                        className="group relative py-0 overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700"
                     >
-                        <CardContent className="p-3">
+                        <CardContent className="p-6">
                             {/* Header Row */}
                             <div className="flex items-start justify-between gap-2 mb-3">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800">
-                                        <Cpu className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <h3 className="truncate text-sm font-semibold leading-tight">
+                                   
+                                    <div className="min-w-0 flex flex-col gap-1">
+                                        <h3 className="truncate font-semibold leading-tight">
                                             {device.device_name}
                                         </h3>
-                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                            <MapPin className="h-3 w-3 shrink-0" />
+                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                            <MapPin className="h-4 w-4 shrink-0" />
                                             <span className="truncate">
                                                 {device.location?.barangay ||
                                                     (device.custom_address
@@ -268,7 +266,7 @@ function UWDeviceDisplay({
                                 </div>
                                 <Badge
                                     variant="outline"
-                                    className={`shrink-0 gap-1 text-[10px] font-medium px-1.5 py-0.5 capitalize ${getStatusStyles(device.status)}`}
+                                    className={`shrink-0 gap-1 text-xs font-medium px-1.5 py-0.5 capitalize ${getStatusStyles(device.status)}`}
                                 >
                                     {getStatusIcon(device.status)}
                                     {device.status}
@@ -276,8 +274,8 @@ function UWDeviceDisplay({
                             </div>
 
                             {/* Location Details - Compact */}
-                            <div className="mb-3 text-xs">
-                                <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Location</p>
+                            <div className="mb-3 text-xs p-1.5  ">
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Location</p>
                                 {device.location ? (
                                     <p className="font-medium truncate">
                                         {device.location.location_name}
@@ -290,14 +288,14 @@ function UWDeviceDisplay({
                                             </p>
                                             <Badge
                                                 variant="outline"
-                                                className="shrink-0 border-blue-200 bg-blue-50 text-[9px] text-blue-700 px-1 py-0 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                                                className="shrink-0 border-blue-200 bg-blue-50 text-xs text-blue-700 px-1 py-0 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
                                             >
                                                 Custom
                                             </Badge>
                                         </div>
                                         {device.custom_latitude &&
                                             device.custom_longitude && (
-                                                <p className="text-muted-foreground text-[10px]">
+                                                <p className="text-muted-foreground text-xs">
                                                     {Number(device.custom_latitude).toFixed(4)},{' '}
                                                     {Number(device.custom_longitude).toFixed(4)}
                                                 </p>
@@ -316,11 +314,11 @@ function UWDeviceDisplay({
                                     <ViewUWDevice device={device}>
                                         <TooltipTrigger asChild>
                                             <Button
-                                                variant="ghost"
+                                                variant="outline"
                                                 size="sm"
-                                                className="h-7 w-7 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                                className="cursor-pointer"
                                             >
-                                                <ExternalLink className="h-3.5 w-3.5" />
+                                                <ExternalLink className="h-4 w-4" />
                                             </Button>
                                         </TooltipTrigger>
                                     </ViewUWDevice>
@@ -336,11 +334,11 @@ function UWDeviceDisplay({
                                     >
                                         <TooltipTrigger asChild>
                                             <Button
-                                                variant="ghost"
+                                                variant="outline"
                                                 size="sm"
-                                                className="h-7 w-7 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                                className="cursor-pointer"
                                             >
-                                                <Settings className="h-3.5 w-3.5" />
+                                                <SquarePen className="h-4 w-4" />
                                             </Button>
                                         </TooltipTrigger>
                                     </EditUWDevice>
@@ -352,11 +350,11 @@ function UWDeviceDisplay({
                                     <ArchiveUWDevice device={device}>
                                         <TooltipTrigger asChild>
                                             <Button
-                                                variant="ghost"
+                                                variant="outline"
                                                 size="sm"
-                                                className="h-7 w-7 p-0 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                                className="cursor-pointer"
                                             >
-                                                <Archive className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
+                                                <Archive className="h-4 w-4 text-red-500 dark:text-red-400" />
                                             </Button>
                                         </TooltipTrigger>
                                     </ArchiveUWDevice>

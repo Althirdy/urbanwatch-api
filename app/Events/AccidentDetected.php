@@ -48,13 +48,13 @@ class AccidentDetected implements ShouldBroadcastNow
             'id' => $this->accident->id,
             'title' => $this->accident->title,
             'description' => $this->accident->description,
-            'accident_type' => $this->accident->accident_type,
+            'accidentType' => $this->accident->accident_type,
             'severity' => $this->accident->severity,
             'status' => $this->accident->status,
             'latitude' => $this->accident->latitude,
             'longitude' => $this->accident->longitude,
-            'occurred_at' => $this->accident->occurred_at,
-            'created_at' => $this->accident->created_at,
+            'occurredAt' => $this->accident->occurred_at,
+            'createdAt' => $this->accident->created_at,
             'media' => $this->accident->media->map(function ($media) {
                 return $media->original_path;
             })->toArray(),

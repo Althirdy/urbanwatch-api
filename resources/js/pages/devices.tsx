@@ -13,6 +13,7 @@ import CCTVDisplay from './cctv-comp/cctv-view';
 import AddCCTVDevice from './cctv-comp/cctv-create';
 import AddUWDevice from './uwdevice-comp/createDevice';
 import UWDeviceDisplay from './uwdevice-comp/deviceDisplay';
+import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -37,32 +38,62 @@ export default function Devices({
     locations,
     cctvDevices,
 }: DevicesPageProps) {
+    const [viewMode, setViewMode] = useState<'cctv' | 'uwDevice'>('cctv');
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Devices" />
-            <div className="p-4">
-                <Tabs defaultValue="cctv">
-                    <TabsList>
-                        <TabsTrigger value="cctv">CCTV</TabsTrigger>
-                        <TabsTrigger value="uwDevice">UW Device</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="cctv" className="space-y-4">
+
+            <div className="space-y-4 p-4">
+                <div className="flex items-center  gap-4">
+                    {viewMode === 'cctv' ? (
                         <AddCCTVDevice location={locations} />
-                        <CCTVDisplay devices={devices} locations={locations} />
-                    </TabsContent>
-                    <TabsContent value="uwDevice" className="space-y-4">
+
+                    ) : (
                         <AddUWDevice
                             location={locations}
                             cctvDevices={cctvDevices}
                         />
-                        <UWDeviceDisplay
-                            devices={uwDevices}
-                            locations={locations}
-                            cctvDevices={cctvDevices}
-                        />
-                    </TabsContent>
-                </Tabs>
+
+                    )}
+
+                    {/* View Toggle */}
+                    <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cctv' | 'uwDevice')}>
+                        <TabsList className="h-9 p-1">
+                            <TabsTrigger
+                                value="cctv"
+                                className="h-7 px-3 text- data-[state=active]:bg-background"
+                            >
+                                CCTV
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="uwDevice"
+                                className="h-7 px-3 text-xs data-[state=active]:bg-background"
+                            >
+                                UW Device
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
+
+
+
+                {/* Content */}
+                {viewMode === 'cctv' ? (
+
+                    <CCTVDisplay devices={devices} locations={locations} />
+
+                ) : (
+
+                    <UWDeviceDisplay
+                        devices={uwDevices}
+                        locations={locations}
+                        cctvDevices={cctvDevices}
+                    />
+                )}
             </div>
+
+
         </AppLayout>
     );
 }

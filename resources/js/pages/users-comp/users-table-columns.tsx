@@ -30,6 +30,16 @@ const roleColors: Record<string, string> = {
     Admin: 'bg-red-500',
 };
 
+const getFullName = (user: users_T) => {
+    if (user.official_details) {
+        return `${user.official_details.first_name} ${user.official_details.middle_name || ''} ${user.official_details.last_name}`.trim();
+    }
+    if (user.citizen_details) {
+        return `${user.citizen_details.first_name} ${user.citizen_details.middle_name || ''} ${user.citizen_details.last_name}`.trim();
+    }
+    return user.name;
+};
+
 export const columns = (
     roles: roles_T[],
     locations: location_T[],
@@ -68,7 +78,7 @@ export const columns = (
                 </Button>
             );
         },
-        cell: ({ row }) => <div>{row.getValue('name')}</div>,
+        cell: ({ row }) => <div>{getFullName(row.original)}</div>,
     },
     {
         accessorKey: 'role.name',

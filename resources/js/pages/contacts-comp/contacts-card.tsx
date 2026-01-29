@@ -7,7 +7,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Contact } from '@/types/contacts-types';
-import { ExternalLink, MapPin, Phone, Settings, Trash2, Users } from 'lucide-react';
+import { ExternalLink, MapPin, Phone, SquarePen, Trash2,  } from 'lucide-react';
 
 import DeleteContacts from './contacts-delete';
 import EditContacts from './contacts-edit';
@@ -54,67 +54,64 @@ const ContactCard = ({ contacts }: { contacts: Contact[] }) => {
             {contacts.map((contact) => (
                 <Card
                     key={contact.id}
-                    className="group relative overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700"
+                    className="group relative py-0 overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700"
                 >
-                    <CardContent className="p-3">
+                    <CardContent className="p-6">
                         {/* Header Row */}
                         <div className="flex items-start justify-between gap-2 mb-3">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800">
-                                    <Users className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <h3 className="truncate text-sm font-semibold leading-tight">
+
+                                <div className="min-w-0 flex flex-col gap-1">
+                                    <h3 className="truncate font-semibold leading-tight">
                                         {contact.branch_unit_name}
                                     </h3>
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <MapPin className="h-3 w-3 shrink-0" />
+                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                        <MapPin className="h-4 w-4 shrink-0" />
                                         <span className="truncate">{contact.location}</span>
                                     </div>
                                 </div>
                             </div>
-                            <Badge
-                                variant="outline"
-                                className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 ${getStatusStyles(contact.active)}`}
-                            >
-                                {contact.active ? 'Active' : 'Inactive'}
-                            </Badge>
+                            <div className='flex flex-col items-end gap-2'>
+                                <Badge
+                                    variant="outline"
+                                    className={`shrink-0 text-xs font-medium px-1.5 py-0.5 ${getStatusStyles(contact.active)}`}
+                                >
+                                    {contact.active ? 'Active' : 'Inactive'}
+                                </Badge>
+                                <Badge
+                                    variant="outline"
+                                    className={`text-xs font-medium px-1.5 py-0.5 ${getResponderTypeStyles(contact.responder_type)}`}
+                                >
+                                    {contact.responder_type}
+                                </Badge>
+                            </div>
+
                         </div>
 
                         {/* Contact Info - Compact */}
-                        <div className="space-y-2 mb-3 text-xs">
+                        <div className="space-y-2 mb-3">
                             {/* Contact Person */}
                             {contact.contact_person && (
-                                <div className="rounded-md bg-zinc-50 dark:bg-zinc-800/50 p-1.5">
-                                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Contact Person</p>
-                                    <p className="font-medium truncate">{contact.contact_person}</p>
+                                <div className=" bg-zinc-50 dark:bg-zinc-800/50 p-1.5">
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Contact Person</p>
+                                    <p className="font-medium text-xs truncate">{contact.contact_person}</p>
                                 </div>
                             )}
 
                             {/* Phone Numbers */}
-                            <div className="rounded-md bg-zinc-50 dark:bg-zinc-800/50 p-1.5">
-                                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Primary</p>
+                            <div className=" bg-zinc-50 dark:bg-zinc-800/50 p-1.5">
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Primary</p>
                                 <div className="flex items-center gap-1.5">
                                     <Phone className="h-3 w-3 text-muted-foreground" />
-                                    <span className="font-medium">{contact.primary_mobile}</span>
+                                    <span className="font-medium text-xs">{contact.primary_mobile}</span>
                                 </div>
                                 {contact.backup_mobile && (
-                                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    <p className="text-xs text-muted-foreground mt-0.5">
                                         Backup: {contact.backup_mobile}
                                     </p>
                                 )}
                             </div>
 
-                            {/* Responder Type */}
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Type</span>
-                                <Badge
-                                    variant="outline"
-                                    className={`text-[10px] font-medium px-1.5 py-0.5 ${getResponderTypeStyles(contact.responder_type)}`}
-                                >
-                                    {contact.responder_type}
-                                </Badge>
-                            </div>
                         </div>
 
                         {/* Action Buttons - Compact */}
@@ -123,11 +120,11 @@ const ContactCard = ({ contacts }: { contacts: Contact[] }) => {
                                 <ViewContacts contact={contact}>
                                     <TooltipTrigger asChild>
                                         <Button
-                                            variant="ghost"
+                                            variant="outline"
                                             size="sm"
-                                            className="h-7 w-7 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                            className="cursor-pointer"
                                         >
-                                            <ExternalLink className="h-3.5 w-3.5" />
+                                            <ExternalLink className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
                                 </ViewContacts>
@@ -139,11 +136,11 @@ const ContactCard = ({ contacts }: { contacts: Contact[] }) => {
                                 <EditContacts contact={contact}>
                                     <TooltipTrigger asChild>
                                         <Button
-                                            variant="ghost"
+                                            variant="outline"
                                             size="sm"
-                                            className="h-7 w-7 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                            className="cursor-pointer"
                                         >
-                                            <Settings className="h-3.5 w-3.5" />
+                                            <SquarePen className="h-4 w-4" />
                                         </Button>
                                     </TooltipTrigger>
                                 </EditContacts>
@@ -155,11 +152,11 @@ const ContactCard = ({ contacts }: { contacts: Contact[] }) => {
                                 <DeleteContacts contact={contact}>
                                     <TooltipTrigger asChild>
                                         <Button
-                                            variant="ghost"
+                                            variant="outline"
                                             size="sm"
-                                            className="h-7 w-7 p-0 hover:bg-red-50 dark:hover:bg-red-950/30"
+                                            className="cursor-pointer"
                                         >
-                                            <Trash2 className="h-3.5 w-3.5 text-red-500 dark:text-red-400" />
+                                            <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
                                         </Button>
                                     </TooltipTrigger>
                                 </DeleteContacts>

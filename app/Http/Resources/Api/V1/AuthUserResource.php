@@ -43,6 +43,7 @@ class AuthUserResource extends JsonResource
 
             return [
                 'id' => $this->id,
+                'profilePhotoPath' => $this->profile_photo_path,
                 'firstName' => $citizenDetails->first_name,
                 'lastName' => $citizenDetails->last_name,
                 'middleName' => $citizenDetails->middle_name,
@@ -55,7 +56,6 @@ class AuthUserResource extends JsonResource
                 'city' => $citizenDetails->city,
                 'province' => $citizenDetails->province,
                 'postalCode' => $citizenDetails->postal_code,
-                'zipCode' => $citizenDetails->postal_code,
                 'isVerified' => $citizenDetails->is_verified,
             ];
         }
