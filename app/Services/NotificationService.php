@@ -217,9 +217,14 @@ class NotificationService
             $now = now();
 
             foreach ($users as $user) {
+                // Determine user type based on role (Role 2 = Purok Leader)
+                $userType = $user->role_id === 2
+                    ? Notification::USER_TYPE_PUROK_LEADER
+                    : Notification::USER_TYPE_CITIZEN;
+
                 $notifications[] = [
                     'user_id' => $user->id,
-                    'user_type' => Notification::USER_TYPE_CITIZEN,
+                    'user_type' => $userType,
                     'type' => Notification::TYPE_NEW_SAFETY_POST,
                     'title' => 'Safety Alert: ' . $post->title,
                     'message' => $post->excerpt ?? substr($post->content, 0, 100) . '...',
