@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendSystemAnnouncementJob;
 use App\Models\Citizen\Concern;
 use App\Models\ConcernDistribution;
 use App\Models\Notification;
@@ -21,7 +22,12 @@ class NotificationService
         try {
             $purokLeaderId = $distribution->purok_leader_id;
 
-            return Notification::create([
+            Log::info('Creating notification for concern assignment', [
+                'concern_id' => $concern->id,
+                'purok_leader_id' => $purokLeaderId,
+            ]);
+
+            $notification = Notification::create([
                 'user_id' => $purokLeaderId,
                 'user_type' => Notification::USER_TYPE_PUROK_LEADER,
                 'type' => Notification::TYPE_CONCERN_ASSIGNED,
@@ -35,9 +41,16 @@ class NotificationService
                     'address' => $concern->address,
                 ],
             ]);
+
+            Log::info('Notification created successfully', [
+                'notification_id' => $notification->id,
+            ]);
+
+            return $notification;
         } catch (\Exception $e) {
             Log::error('Failed to create concern_assigned notification', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
                 'concern_id' => $concern->id,
                 'purok_leader_id' => $distribution->purok_leader_id,
             ]);
@@ -245,66 +258,28 @@ class NotificationService
 
     /**
      * Create a system announcement notification for all users.
+     * Dispatches a queued job to handle bulk notifications asynchronously.
+     *
+     * @param string $title The announcement title
+     * @param string $message The announcement message
+     * @param string|null $userType Filter by user type (citizen/purok_leader) or null for all
+     * @param array|null $data Additional data to include
+     * @return void
      */
     public function createSystemAnnouncement(
         string $title,
         string $message,
         ?string $userType = null,
         ?array $data = null
-    ): int {
-        $count = 0;
+    ): void {
+        // Dispatch job to process notifications asynchronously
+        // This prevents blocking the HTTP request when notifying 1000+ users
+        SendSystemAnnouncementJob::dispatch($title, $message, $userType, $data);
 
-        try {
-            $query = User::query();
-
-            // Filter by user type if specified
-            if ($userType === Notification::USER_TYPE_CITIZEN) {
-                $query->whereHas('citizenDetails');
-            } elseif ($userType === Notification::USER_TYPE_PUROK_LEADER) {
-                $query->where('role_id', 2); // Purok Leader role
-            }
-
-            $users = $query->get();
-            $notifications = [];
-            $now = now();
-
-            foreach ($users as $user) {
-                // Determine user type
-                $type = $user->role_id === 2 
-                    ? Notification::USER_TYPE_PUROK_LEADER 
-                    : Notification::USER_TYPE_CITIZEN;
-
-                $notifications[] = [
-                    'user_id' => $user->id,
-                    'user_type' => $type,
-                    'type' => Notification::TYPE_SYSTEM_ANNOUNCEMENT,
-                    'title' => $title,
-                    'message' => $message,
-                    'data' => $data ? json_encode($data) : null,
-                    'read_at' => null,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
-            }
-
-            // Bulk insert
-            foreach (array_chunk($notifications, 100) as $chunk) {
-                DB::table('notifications')->insert($chunk);
-                $count += count($chunk);
-            }
-
-            Log::info('Created system announcement notifications', [
-                'title' => $title,
-                'notification_count' => $count,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Failed to create system announcement notifications', [
-                'error' => $e->getMessage(),
-                'title' => $title,
-            ]);
-        }
-
-        return $count;
+        Log::info('System announcement job dispatched', [
+            'title' => $title,
+            'user_type' => $userType ?? 'all',
+        ]);
     }
 
     /**
