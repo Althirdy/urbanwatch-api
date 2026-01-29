@@ -21,6 +21,10 @@ Route::prefix('v1')->group(function () {
 
     // YOLO detection routes
     require __DIR__.'/api/v1/yolo.php';
+
+    // IoT Box routes
+    require __DIR__.'/api/v1/iot-box.php';
+
     // Public Post routes
     Route::get('/mobile/public-posts', [App\Http\Controllers\Operator\PublicPostController::class, 'getMobilePublicPosts'])
         ->middleware('auth:sanctum');

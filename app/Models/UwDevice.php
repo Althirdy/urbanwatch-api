@@ -12,9 +12,9 @@ class UwDevice extends Model
     protected $table = 'uw_devices';
 
     protected $fillable = [
+        'device_id',
         'device_name',
         'location_id',
-        'cctv_id',
         'status',
         'custom_address',
         'custom_latitude',
@@ -22,6 +22,7 @@ class UwDevice extends Model
     ];
 
     protected $casts = [
+        'device_id' => 'integer',
         'custom_latitude' => 'decimal:7',
         'custom_longitude' => 'decimal:7',
     ];
@@ -44,11 +45,11 @@ class UwDevice extends Model
     }
 
     /**
-     * Get the CCTV device associated with this UW device.
+     * Get the anomaly logs for this IoT box.
      */
-    public function cctvDevice()
+    public function anomalyLogs()
     {
-        return $this->belongsTo(cctvDevices::class, 'cctv_id');
+        return $this->hasMany(AnomalyLog::class, 'iot_box_id');
     }
 
     /**
