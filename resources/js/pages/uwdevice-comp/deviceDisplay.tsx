@@ -122,6 +122,8 @@ function UWDeviceDisplay({
 
     // Get status badge styles
     const getStatusStyles = (status: string) => {
+        if (!status) return 'bg-zinc-500/15 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 border-zinc-500/30';
+
         switch (status.toUpperCase()) {
             case 'ACTIVE':
                 return 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-500/30';
@@ -136,6 +138,8 @@ function UWDeviceDisplay({
 
     // Get status icon
     const getStatusIcon = (status: string) => {
+        if (!status) return null;
+
         switch (status.toLowerCase()) {
             case 'active':
                 return <Activity className="h-3 w-3" />;
@@ -248,11 +252,18 @@ function UWDeviceDisplay({
                             {/* Header Row */}
                             <div className="flex items-start justify-between gap-2 mb-3">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                                   
+
                                     <div className="min-w-0 flex flex-col gap-1">
-                                        <h3 className="truncate font-semibold leading-tight">
-                                            {device.device_name}
-                                        </h3>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="truncate font-semibold leading-tight">
+                                                {device.device_name}
+                                            </h3>
+                                            {/* Online/Offline indicator */}
+                                            <div
+                                                className={`h-2 w-2 rounded-full shrink-0 ${device.is_online ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                                                title={device.is_online ? 'Online' : 'Offline'}
+                                            />
+                                        </div>
                                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                             <MapPin className="h-4 w-4 shrink-0" />
                                             <span className="truncate">
@@ -306,6 +317,21 @@ function UWDeviceDisplay({
                                         No location assigned
                                     </p>
                                 )}
+                            </div>
+
+                            {/* Anomaly Count Metric */}
+                            <div className="mb-4">
+                                <div className="flex items-center justify-between rounded-md bg-zinc-50 p-2 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                                            <Activity className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                        </div>
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-tight">Anomalies Detected</span>
+                                    </div>
+                                    <span className="text-sm font-bold text-foreground">
+                                        {device.anomaly_count || 0}
+                                    </span>
+                                </div>
                             </div>
 
                             {/* Action Buttons - Compact */}

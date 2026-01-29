@@ -28,6 +28,8 @@ function ViewUWDevice({
 
     // Get status badge variant - matching CCTV pattern
     const getStatusStyles = (status: string) => {
+        if (!status) return 'bg-gray-100 rounded-full dark:bg-zinc-600';
+
         switch (status.toLocaleUpperCase()) {
             case 'ACTIVE':
                 return 'bg-green-700 rounded-full  dark:bg-green-800 dark:';
@@ -60,17 +62,17 @@ function ViewUWDevice({
                     </DialogTitle>
                     <DialogDescription className="flex flex-row items-center gap-2">
                         <Badge
-                                    className={`capitalize ${getStatusStyles(device.status)}`}
-                                >
-                                    {device.status}
-                                </Badge>
+                            className={`capitalize ${getStatusStyles(device.status)}`}
+                        >
+                            {device.status}
+                        </Badge>
                     </DialogDescription>
                 </DialogHeader>
 
                 {/* Scrollable Content */}
                 <div className="flex w-full flex-1 flex-col justify-start gap-10 overflow-y-auto px-6">
                     <div className="grid auto-rows-min gap-6">
-                        
+
                         {/* Location Assignment Section */}
                         <div className="grid gap-3">
                             <Label className="text-muted-foreground">
@@ -90,7 +92,7 @@ function ViewUWDevice({
                                                             .location_name
                                                     }
                                                 </p>
-                                               
+
                                             </div>
                                             <p className="text-sm text-muted-foreground">
                                                 {device.location?.landmark}
@@ -109,7 +111,7 @@ function ViewUWDevice({
                                     <div className="flex items-start gap-3">
                                         <MapPin className="mt-1 h-4 w-4 text-muted-foreground" />
                                         <div className="space-y-1">
-                                            
+
                                             <p className="text-sm text-muted-foreground">
                                                 {device.custom_address}
                                             </p>
@@ -157,7 +159,7 @@ function ViewUWDevice({
                                 Linked CCTV Cameras
                             </Label>
                             {device.cctv_cameras &&
-                            device.cctv_cameras.length > 0 ? (
+                                device.cctv_cameras.length > 0 ? (
                                 <div className="space-y-3">
                                     {device.cctv_cameras.map(
                                         (camera: cctv_T, index: number) => (
@@ -180,7 +182,7 @@ function ViewUWDevice({
                                                         </div>
                                                     </div>
                                                     <Badge
-                                                        className={`capitalize ${getStatusStyles(device.status)}`}
+                                                        className={`capitalize ${getStatusStyles(camera.status)}`}
                                                     >
                                                         {camera.status}
                                                     </Badge>
@@ -232,6 +234,30 @@ function ViewUWDevice({
                                     </p>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* API Credentials */}
+                        <div className="grid gap-3">
+                            <Label className="text-muted-foreground">
+                                API Token
+                            </Label>
+                            <div className="rounded-lg bg-zinc-950 p-3 font-mono text-xs text-zinc-400 border border-zinc-800">
+                                {device.api_token ? (
+                                    <div className="flex items-center justify-between">
+                                        <span className="truncate">
+                                            {device.api_token.substring(0, 15)}***************************
+                                        </span>
+                                        <Badge variant="outline" className="text-[10px] h-4 py-0 px-1 uppercase border-zinc-700 text-zinc-500">
+                                            Masked
+                                        </Badge>
+                                    </div>
+                                ) : (
+                                    <span className="text-zinc-600 italic">No token found</span>
+                                )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground italic">
+                                * Tokens are only shown in full ONCE during device registration.
+                            </p>
                         </div>
                     </div>
                 </div>

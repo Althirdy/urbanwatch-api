@@ -34,7 +34,7 @@ class DatabaseSeeder extends Seeder
             ReportSeeder::class,
             PublicPostSeeder::class,
             ContactSeeder::class,
-            UwDeviceSeeder::class,
+            // UwDeviceSeeder::class,
         ]);
 
     }

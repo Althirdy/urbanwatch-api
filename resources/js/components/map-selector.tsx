@@ -87,11 +87,11 @@ const isPointInBoundary = (lat: number, lng: number): boolean => {
     const geometry = barangay176EBoundary.features[0].geometry as GeoJSON.Polygon;
     const coords = geometry.coordinates[0];
     let inside = false;
-    
+
     for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
         const xi = coords[i][0], yi = coords[i][1];
         const xj = coords[j][0], yj = coords[j][1];
-        
+
         const intersect = ((yi > lat) !== (yj > lat))
             && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
         if (intersect) inside = !inside;
@@ -102,6 +102,10 @@ const isPointInBoundary = (lat: number, lng: number): boolean => {
 
 interface MapSelectorProps {
     onLocationSelect: (location: { lat: number; lng: number }) => void;
+    initialCoordinates?: {
+        latitude: string;
+        longitude: string;
+    };
 }
 
 function MapEvents({ onLocationSelect, setPosition }: {
@@ -111,7 +115,7 @@ function MapEvents({ onLocationSelect, setPosition }: {
     useMapEvents({
         click(e: LeafletMouseEvent) {
             const { lat, lng } = e.latlng;
-            
+
             // Check if the clicked location is within Barangay 176E boundary
             if (!isPointInBoundary(lat, lng)) {
                 toast({
@@ -121,7 +125,7 @@ function MapEvents({ onLocationSelect, setPosition }: {
                 });
                 return;
             }
-            
+
             setPosition([lat, lng]);
             onLocationSelect({ lat, lng });
         }
@@ -140,7 +144,7 @@ function DraggableMarker({ position, onLocationSelect }: {
         dragend: (e: L.DragEndEvent) => {
             const marker = e.target;
             const newPosition = marker.getLatLng();
-            
+
             // Check if the dragged position is within Barangay 176E boundary
             if (!isPointInBoundary(newPosition.lat, newPosition.lng)) {
                 toast({
@@ -152,7 +156,7 @@ function DraggableMarker({ position, onLocationSelect }: {
                 marker.setLatLng(markerPosition);
                 return;
             }
-            
+
             setMarkerPosition([newPosition.lat, newPosition.lng]);
             onLocationSelect({ lat: newPosition.lat, lng: newPosition.lng });
         }
@@ -179,8 +183,12 @@ function DraggableMarker({ position, onLocationSelect }: {
     );
 }
 
-export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
-    const [position, setPosition] = useState<[number, number] | null>(null);
+export default function MapSelector({ onLocationSelect, initialCoordinates }: MapSelectorProps) {
+    const [position, setPosition] = useState<[number, number] | null>(
+        initialCoordinates?.latitude && initialCoordinates?.longitude
+            ? [parseFloat(initialCoordinates.latitude), parseFloat(initialCoordinates.longitude)]
+            : null
+    );
     const [isClient, setIsClient] = useState(false);
 
     // Default center coordinates (Barangay 176E, Bagong Silang, Caloocan City)
@@ -228,13 +236,13 @@ export default function MapSelector({ onLocationSelect }: MapSelectorProps) {
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                
+
                 {/* Display Barangay 176E Boundary */}
-                <GeoJSON 
-                    data={barangay176EBoundary} 
+                <GeoJSON
+                    data={barangay176EBoundary}
                     style={boundaryStyle}
                 />
-                
+
                 <MapEvents
                     onLocationSelect={onLocationSelect}
                     setPosition={setPosition}

@@ -12,18 +12,26 @@ class UwDevice extends Model
     protected $table = 'uw_devices';
 
     protected $fillable = [
+        'device_id',
         'device_name',
         'location_id',
-        'cctv_id',
         'status',
+        'api_token',
+        'last_seen_at',
         'custom_address',
         'custom_latitude',
         'custom_longitude',
     ];
 
+    protected $hidden = [
+        'api_token',
+    ];
+
     protected $casts = [
+        'device_id' => 'integer',
         'custom_latitude' => 'decimal:7',
         'custom_longitude' => 'decimal:7',
+        'last_seen_at' => 'datetime',
     ];
 
     /**
@@ -33,6 +41,8 @@ class UwDevice extends Model
         'display_location',
         'latitude',
         'longitude',
+        'is_online',
+        'anomaly_count',
     ];
 
     /**
@@ -44,11 +54,11 @@ class UwDevice extends Model
     }
 
     /**
-     * Get the CCTV device associated with this UW device.
+     * Get the anomaly logs for this IoT box.
      */
-    public function cctvDevice()
+    public function anomalyLogs()
     {
-        return $this->belongsTo(cctvDevices::class, 'cctv_id');
+        return $this->hasMany(AnomalyLog::class, 'iot_box_id');
     }
 
     /**
@@ -85,5 +95,25 @@ class UwDevice extends Model
         }
 
         return $this->custom_longitude;
+    }
+
+    /**
+     * Check if the device is currently online (seen in the last 5 minutes).
+     */
+    public function getIsOnlineAttribute()
+    {
+        if (! $this->last_seen_at) {
+            return false;
+        }
+
+        return $this->last_seen_at->gt(now()->subMinutes(5));
+    }
+
+    /**
+     * Get the total anomaly count for this device.
+     */
+    public function getAnomalyCountAttribute()
+    {
+        return $this->anomalyLogs()->count();
     }
 }

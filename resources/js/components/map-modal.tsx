@@ -24,7 +24,7 @@ export function MapModal({ onLocationSelect, coordinates }: MapModalProps) {
 
     const handleLocationSelect = (location: { lat: number; lng: number }) => {
         onLocationSelect(location);
-        setOpen(false); // Close the dialog after selection
+        // Removed setOpen(false) to allow user to refine selection
     };
 
     return (
@@ -33,7 +33,7 @@ export function MapModal({ onLocationSelect, coordinates }: MapModalProps) {
                 <Button variant="outline" className="w-full">
                     <MapPin className="h-4 w-4" />
                     {coordinates.latitude && coordinates.longitude
-                        ? `${coordinates.latitude.slice(0, 8) + '...'}, ${coordinates.longitude.slice(0, 8) + '...'}`
+                        ? `${Number(coordinates.latitude).toFixed(4)}, ${Number(coordinates.longitude).toFixed(4)}`
                         : 'Select Location'}
                 </Button>
             </DialogTrigger>
@@ -41,11 +41,14 @@ export function MapModal({ onLocationSelect, coordinates }: MapModalProps) {
                 <DialogHeader>
                     <DialogTitle>Select Location</DialogTitle>
                     <DialogDescription>
-                        Click on the map to select a location
+                        Click on the map to select a location. Your selection will be saved automatically.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="h-[500px]">
-                    <MapSelector onLocationSelect={handleLocationSelect} />
+                    <MapSelector
+                        onLocationSelect={handleLocationSelect}
+                        initialCoordinates={coordinates}
+                    />
                 </div>
             </DialogContent>
         </Dialog>
