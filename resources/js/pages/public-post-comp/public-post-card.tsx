@@ -101,7 +101,7 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
                             <CardHeader className="pb-2 pt-2 px-6">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
-                                        <CardTitle className="line-clamp-1 text-base">
+                                        <CardTitle className="line-clamp-1 text-lg font-bold">
                                             {post.title || `Post #${post.id}`}
                                         </CardTitle>
                                         <CardDescription className="mt-1 flex flex-wrap gap-1">
@@ -149,7 +149,7 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
                             )}
                             <CardContent className="flex-1">
                                 <div className="flex flex-col gap-2">
-                                    <p className="line-clamp-3 text-sm text-muted-foreground">
+                                    <p className="line-clamp-4 text-base text-muted-foreground leading-relaxed">
                                         {post.content || 'No content available'}
                                     </p>
                                     {post.published_at && (

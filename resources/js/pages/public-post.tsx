@@ -44,19 +44,19 @@ export default function PublicPost({ data }: PublicPostPageProps) {
                     {/* View Toggle */}
 
                     <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'card')}>
-                        <TabsList className="h-9 p-1">
+                        <TabsList className="h-10 p-1">
                             <TabsTrigger
                                 value="table"
-                                className="h-7 px-3 text-xs data-[state=active]:bg-background"
+                                className="h-8 px-4 text-sm data-[state=active]:bg-background"
                             >
-                                <Table className="h-3.5 w-3.5 mr-1.5" />
+                                <Table className="h-4 w-4 mr-2" />
                                 Table
                             </TabsTrigger>
                             <TabsTrigger
                                 value="card"
-                                className="h-7 px-3 text-xs data-[state=active]:bg-background"
+                                className="h-8 px-4 text-sm data-[state=active]:bg-background"
                             >
-                                <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
+                                <LayoutGrid className="h-4 w-4 mr-2" />
                                 Cards
                             </TabsTrigger>
                         </TabsList>
@@ -70,7 +70,7 @@ export default function PublicPost({ data }: PublicPostPageProps) {
                     setFilteredPosts={setFilteredPosts}
                 />
 
-                
+
 
                 {viewMode === 'table' ? (
                     <PublicPostsTable posts={filteredPosts} />
