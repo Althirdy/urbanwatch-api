@@ -26,26 +26,14 @@ Route::middleware('auth')->group(function () {
 
         // Get UW Devices with relationships
         $uwDevices = UwDevice::with([
-            'location:id,location_name,landmark,barangay',
-            'cctvDevice:id,device_name,location_id',
+            'location:id,location_name,landmark,barangay,latitude,longitude',
+            'location.cctvDevices:id,device_name,location_id',
         ])->paginate(10);
 
         $uwDevices->getCollection()->transform(function ($device) {
             // Add helper properties for frontend
-            if ($device->cctvDevice) {
-                $device->cctv_cameras = [$device->cctvDevice];
-            } else {
-                $device->cctv_cameras = [];
-            }
-
-            // Add latitude/longitude helpers (from location or custom)
-            if ($device->location) {
-                $device->latitude = $device->location->latitude ?? null;
-                $device->longitude = $device->location->longitude ?? null;
-            } else {
-                $device->latitude = $device->custom_latitude;
-                $device->longitude = $device->custom_longitude;
-            }
+            // Since cctv_id was removed from uw_devices, we get cameras sharing the same location
+            $device->cctv_cameras = $device->location ? $device->location->cctvDevices : [];
 
             return $device;
         });

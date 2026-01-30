@@ -29,7 +29,6 @@ class UwDeviceSeeder extends Seeder
             [
                 'device_name' => 'UW-SENSOR-001',
                 'location_id' => $locations->first()->id ?? null,
-                'cctv_id' => $cctvDevices->first()->id ?? null,
                 'status' => 'active',
                 'custom_address' => null,
                 'custom_latitude' => null,
@@ -40,7 +39,6 @@ class UwDeviceSeeder extends Seeder
             [
                 'device_name' => 'UW-SENSOR-002',
                 'location_id' => $locations->skip(1)->first()->id ?? null,
-                'cctv_id' => $cctvDevices->skip(1)->first()->id ?? null,
                 'status' => 'active',
                 'custom_address' => null,
                 'custom_latitude' => null,

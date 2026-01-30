@@ -1,5 +1,5 @@
 import { ColumnDef } from '@tanstack/react-table';
-import { ArrowUpDown, ExternalLink, SquarePen, Trash2 } from 'lucide-react';
+import { Archive, ArrowUpDown, ExternalLink, SquarePen } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,14 +13,15 @@ import { Contact } from '@/types/contacts-types';
 import DeleteContacts from './contacts-delete';
 import EditContacts from './contacts-edit';
 import ViewContacts from './contacts-view';
+import { cn } from '@/lib/utils';
 
 const responderTypeColors: Record<string, string> = {
-    Fire: 'bg-red-600  text-foreground',
-    Emergency: 'bg-yellow-500 text-black',
-    Crime: 'bg-zinc-700  text-foreground',
-    Traffic: 'bg-orange-500 text-black',
-    Barangay: 'bg-blue-500  text-foreground',
-    Others: 'bg-gray-600  text-foreground',
+    Fire: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20',
+    Emergency: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
+    Crime: 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20',
+    Traffic: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20',
+    Barangay: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
+    Others: 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20',
 };
 
 export const columns = (): ColumnDef<Contact>[] => [
@@ -80,7 +81,8 @@ export const columns = (): ColumnDef<Contact>[] => [
 
             return (
                 <Badge
-                    className={`inline-flex items-center rounded-[var(--radius)] px-2.5 py-1 text-xs font-medium ${colorClass}`}
+                    variant="outline"
+                    className={`font-medium ${colorClass}`}
                 >
                     {responderType}
                 </Badge>
@@ -118,9 +120,13 @@ export const columns = (): ColumnDef<Contact>[] => [
             const active = row.getValue('active') as boolean;
             return (
                 <Badge
-                    className={`inline-flex items-center rounded-[var(--radius)] px-2 py-1 text-xs font-medium ${
-                        active ? 'bg-green-800' : 'bg-gray-800'
-                    }`}
+                    variant="outline"
+                    className={cn(
+                        "font-medium",
+                        active
+                            ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20"
+                            : "bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20"
+                    )}
                 >
                     {active ? 'Active' : 'Inactive'}
                 </Badge>
@@ -176,15 +182,15 @@ export const columns = (): ColumnDef<Contact>[] => [
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="cursor-pointer"
+                                    className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 group"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <Trash2 className="h-4 w-4 text-[var(--destructive)]" />
+                                    <Archive className="h-4 w-4 text-zinc-400 group-hover:text-red-500 transition-colors" />
                                 </Button>
                             </TooltipTrigger>
                         </DeleteContacts>
-                        <TooltipContent>
-                            <p>Delete Contact</p>
+                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
+                            <p>Archive Contact</p>
                         </TooltipContent>
                     </Tooltip>
                 </div>

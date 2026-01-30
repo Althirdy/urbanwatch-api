@@ -5,50 +5,38 @@ namespace App\Http\Controllers\Operator;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Operator\UWDeviceRequest;
 use App\Models\UwDevice;
+use App\Services\UwDeviceService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class UWDeviceController extends Controller
 {
+    protected $uwDeviceService;
+
+    public function __construct(UwDeviceService $uwDeviceService)
+    {
+        $this->uwDeviceService = $uwDeviceService;
+    }
+
     /**
      * Store a newly created UW device in storage.
      */
     public function store(UWDeviceRequest $request)
     {
-        // Start database transaction
-        DB::beginTransaction();
-
         try {
             $validated = $request->validated();
 
-            // Log the validated data
-            Log::info('UW Device Data to be created:', $validated);
+            // Use service to create device
+            $uwDevice = $this->uwDeviceService->createDevice($validated);
 
-            // Create the UW device
-            $uwDevice = UwDevice::create($validated);
-
-            // Log successful creation
-            Log::info('UW Device created successfully:', [
-                'id' => $uwDevice->id,
-                'device_name' => $uwDevice->device_name,
-                'location_id' => $uwDevice->location_id,
-                'cctv_id' => $uwDevice->cctv_id,
-                'status' => $uwDevice->status,
+            return redirect()->back()->with([
+                'success' => 'UW device created successfully!',
+                'api_token' => $uwDevice->api_token,
             ]);
-
-            // Commit the transaction
-            DB::commit();
-
-            return redirect()->back()->with('success', 'UW device created successfully!');
         } catch (\Exception $e) {
-            // Rollback the transaction on error
-            DB::rollBack();
-
-            // Log the error with details
             Log::error('UW Device Creation Error: '.$e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
                 'validated_data' => $validated ?? 'No validated data',
             ]);
 
@@ -63,45 +51,18 @@ class UWDeviceController extends Controller
      */
     public function update(UWDeviceRequest $request, UwDevice $uwdevice)
     {
-        // Start database transaction
-        DB::beginTransaction();
-
         try {
             $validated = $request->validated();
 
-            // Log the validated data
-            Log::info('UW Device Data to be updated:', [
-                'device_id' => $uwdevice->id,
-                'validated_data' => $validated,
-            ]);
-
-            // Update the UW device
-            $uwdevice->update($validated);
-
-            // Log successful update
-            Log::info('UW Device updated successfully:', [
-                'id' => $uwdevice->id,
-                'device_name' => $uwdevice->device_name,
-                'location_id' => $uwdevice->location_id,
-                'cctv_id' => $uwdevice->cctv_id,
-                'status' => $uwdevice->status,
-            ]);
-
-            // Commit the transaction
-            DB::commit();
+            // Use service to update device
+            $this->uwDeviceService->updateDevice($uwdevice, $validated);
 
             return redirect()->back()->with('success', 'UW device updated successfully!');
         } catch (\Exception $e) {
-            // Rollback the transaction on error
-            DB::rollBack();
-
-            // Log the error with details
             Log::error('UW Device Update Error: '.$e->getMessage(), [
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
                 'device_id' => $uwdevice->id,
-                'validated_data' => $validated ?? 'No validated data',
             ]);
 
             return redirect()->back()

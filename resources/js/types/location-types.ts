@@ -13,4 +13,5 @@ export type location_T = {
     description?: string;
     cctv_count?: number;
     cameras?: number;
+    category?: LocationCategory_T;
 };

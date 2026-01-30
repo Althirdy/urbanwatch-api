@@ -37,6 +37,10 @@ export type uwDevice_T = {
     custom_address: string | null;
     custom_latitude: number | null;
     custom_longitude: number | null;
+    api_token?: string;
+    last_seen_at?: string | null;
+    is_online?: boolean;
+    anomaly_count?: number;
     location?: location_T;
     cctv_device?: cctv_T;
     cctv_cameras?: cctv_T[]; // Array of linked CCTV cameras

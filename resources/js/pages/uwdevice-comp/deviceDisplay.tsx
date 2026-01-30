@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -122,20 +122,24 @@ function UWDeviceDisplay({
 
     // Get status badge styles
     const getStatusStyles = (status: string) => {
+        if (!status) return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
+
         switch (status.toUpperCase()) {
             case 'ACTIVE':
-                return 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-500/30';
+                return 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20';
             case 'MAINTENANCE':
-                return 'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-500/30';
+                return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
             case 'INACTIVE':
-                return 'bg-zinc-500/15 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 border-zinc-500/30';
+                return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
             default:
-                return 'bg-zinc-500/15 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 border-zinc-500/30';
+                return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
         }
     };
 
     // Get status icon
     const getStatusIcon = (status: string) => {
+        if (!status) return null;
+
         switch (status.toLowerCase()) {
             case 'active':
                 return <Activity className="h-3 w-3" />;
@@ -248,11 +252,18 @@ function UWDeviceDisplay({
                             {/* Header Row */}
                             <div className="flex items-start justify-between gap-2 mb-3">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                                   
+
                                     <div className="min-w-0 flex flex-col gap-1">
-                                        <h3 className="truncate font-semibold leading-tight">
-                                            {device.device_name}
-                                        </h3>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="truncate font-semibold leading-tight">
+                                                {device.device_name}
+                                            </h3>
+                                            {/* Online/Offline indicator */}
+                                            <div
+                                                className={`h-2 w-2 rounded-full shrink-0 ${device.is_online ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                                                title={device.is_online ? 'Online' : 'Offline'}
+                                            />
+                                        </div>
                                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                             <MapPin className="h-4 w-4 shrink-0" />
                                             <span className="truncate">
@@ -288,7 +299,7 @@ function UWDeviceDisplay({
                                             </p>
                                             <Badge
                                                 variant="outline"
-                                                className="shrink-0 border-blue-200 bg-blue-50 text-xs text-blue-700 px-1 py-0 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                                                className="shrink-0 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 text-[10px] font-medium"
                                             >
                                                 Custom
                                             </Badge>
@@ -308,22 +319,38 @@ function UWDeviceDisplay({
                                 )}
                             </div>
 
-                            {/* Action Buttons - Compact */}
-                            <div className="flex items-center justify-end gap-1.5 pt-2 border-t dark:border-zinc-800">
+                            {/* Anomaly Count Metric */}
+                            <div className="mb-4">
+                                <div className="flex items-center justify-between rounded-md bg-zinc-50 p-2 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                                            <Activity className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                        </div>
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-tight">Anomalies Detected</span>
+                                    </div>
+                                    <span className="text-sm font-bold text-foreground">
+                                        {device.anomaly_count || 0}
+                                    </span>
+                                </div>
+                            </div>
+                        </CardContent>
+                        <CardFooter >
+                            {/* Action Buttons - Premium Footer */}
+                            <div className="flex w-full justify-end gap-2 pt-2 border-t dark:border-zinc-800">
                                 <Tooltip>
                                     <ViewUWDevice device={device}>
                                         <TooltipTrigger asChild>
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="cursor-pointer"
+                                                className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                             >
-                                                <ExternalLink className="h-4 w-4" />
+                                                <ExternalLink className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                             </Button>
                                         </TooltipTrigger>
                                     </ViewUWDevice>
-                                    <TooltipContent side="bottom">
-                                        <p className="text-xs">View Device</p>
+                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                        <p>View Details</p>
                                     </TooltipContent>
                                 </Tooltip>
                                 <Tooltip>
@@ -336,14 +363,14 @@ function UWDeviceDisplay({
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="cursor-pointer"
+                                                className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                             >
-                                                <SquarePen className="h-4 w-4" />
+                                                <SquarePen className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                             </Button>
                                         </TooltipTrigger>
                                     </EditUWDevice>
-                                    <TooltipContent side="bottom">
-                                        <p className="text-xs">Edit Device</p>
+                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                        <p>Edit Device</p>
                                     </TooltipContent>
                                 </Tooltip>
                                 <Tooltip>
@@ -352,18 +379,18 @@ function UWDeviceDisplay({
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="cursor-pointer"
+                                                className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 group"
                                             >
-                                                <Archive className="h-4 w-4 text-red-500 dark:text-red-400" />
+                                                <Archive className="h-4 w-4 text-zinc-400 group-hover:text-red-500 transition-colors" />
                                             </Button>
                                         </TooltipTrigger>
                                     </ArchiveUWDevice>
-                                    <TooltipContent side="bottom">
-                                        <p className="text-xs">Archive Device</p>
+                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
+                                        <p>Archive Device</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </div>
-                        </CardContent>
+                        </CardFooter>
                     </Card>
                 ))}
             </div>

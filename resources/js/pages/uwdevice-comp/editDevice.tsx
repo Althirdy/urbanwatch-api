@@ -1,3 +1,4 @@
+import { MapModal } from '@/components/map-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,9 +22,15 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { toast } from '@/components/use-toast';
 import { router } from '@inertiajs/react';
-import { Camera, MoveLeft, Save, SquarePen } from 'lucide-react';
+import { Camera, Check, HelpCircle, MoveLeft, Save, SquarePen } from 'lucide-react';
 import React, { useState } from 'react';
 import {
     cctv_T,
@@ -34,7 +41,7 @@ import {
 interface EditUWDeviceProps {
     location: location_T[];
     device: uwDevice_T;
-    cctvDevices?: cctv_T[]; // Add cctvDevices prop
+    cctvDevices?: cctv_T[];
     children?: React.ReactNode;
 }
 
@@ -44,7 +51,6 @@ function EditUWDevice({
     cctvDevices,
     children,
 }: EditUWDeviceProps): React.JSX.Element {
-    // Dialog control state
     const [dialogOpen, setDialogOpen] = useState(false);
     const [deviceName, setDeviceName] = useState(device?.device_name || '');
     const [selectedLocation, setSelectedLocation] = useState(
@@ -52,12 +58,8 @@ function EditUWDevice({
     );
     const [selectedLocationDetails, setSelectedLocationDetails] =
         useState<location_T | null>(device?.location || null);
-    const [selectedCamera, setSelectedCamera] = useState<string>(
-        device?.cctv_id?.toString() || '',
-    );
     const [status, setStatus] = useState<string>(device?.status || 'active');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    // Custom location state
     const [useCustomLocation, setUseCustomLocation] = useState(
         !!device?.custom_address,
     );
@@ -69,30 +71,20 @@ function EditUWDevice({
         longitude: device?.custom_longitude?.toString() || '',
     });
 
-    // Get status badge variant - matching CCTV pattern
+    const [errors, setErrors] = useState({
+        deviceName: false,
+        location: false,
+    });
+    const [serverErrors, setServerErrors] = useState<{ [key: string]: string }>({});
+
     const getStatusVariant = (status: string) => {
         switch (status) {
-            case 'active':
-                return 'default';
-            case 'inactive':
-                return 'secondary';
-            case 'maintenance':
-                return 'destructive';
-            default:
-                return 'outline';
+            case 'active': return 'default';
+            case 'inactive': return 'secondary';
+            case 'maintenance': return 'destructive';
+            default: return 'outline';
         }
     };
-
-    // Mock CCTV cameras data - you can replace this with actual data
-    const mockCCTVCameras = [
-        {
-            id: 'CAM-CAL-001',
-            name: 'Monumento Circle Junction',
-            status: 'active',
-        },
-        { id: 'CAM-CAL-002', name: 'Central Plaza Camera', status: 'active' },
-        { id: 'CAM-CAL-003', name: 'Park Entrance', status: 'inactive' },
-    ];
 
     const handleLocationChange = (value: string) => {
         setSelectedLocation(value);
@@ -100,86 +92,57 @@ function EditUWDevice({
             (loc) => loc.id.toString() === value,
         );
         setSelectedLocationDetails(locationDetails || null);
-        // Clear selected camera when location changes
-        setSelectedCamera('');
     };
 
-    // Filter CCTV cameras based on selected location
+    const handleLocationSelect = (location: { lat: number; lng: number }) => {
+        setCoordinates({
+            latitude: location.lat.toString(),
+            longitude: location.lng.toString(),
+        });
+    };
+
     const getFilteredCameras = () => {
-        if (useCustomLocation) {
-            // For custom locations, show all cameras
-            return cctvDevices || [];
-        }
-        if (!selectedLocationDetails) {
-            // No location selected, show no cameras
-            return [];
-        }
-        // Filter cameras by location_id - use real CCTV data
+        if (useCustomLocation) return [];
+        if (!selectedLocationDetails) return [];
         return (cctvDevices || []).filter(
             (camera) => camera.location?.id === selectedLocationDetails.id,
         );
     };
 
-    const handleLocationSelect = (location: { lat: number; lng: number }) => {
-        const coords = {
-            latitude: location.lat.toString(),
-            longitude: location.lng.toString(),
-        };
-        setCoordinates(coords);
-    };
-
     const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setServerErrors({});
+        const newErrors = { deviceName: !deviceName.trim(), location: !useCustomLocation && !selectedLocation };
+        if (useCustomLocation && (!customAddress.trim() || !coordinates.latitude || !coordinates.longitude)) {
+            newErrors.location = true;
+        }
+        setErrors(newErrors);
+
+        if (newErrors.deviceName || newErrors.location) {
+            toast({ title: 'Validation Error', description: 'Please fix the errors in the form.', variant: 'destructive' });
+            return;
+        }
 
         setIsSubmitting(true);
-
-        // Prepare form data
         const formData = {
             device_name: deviceName,
             location_id: useCustomLocation ? null : parseInt(selectedLocation),
-            cctv_id: selectedCamera ? parseInt(selectedCamera) : null,
             status: status,
-            // Custom location fields
             custom_address: useCustomLocation ? customAddress : null,
-            custom_latitude: useCustomLocation
-                ? parseFloat(coordinates.latitude)
-                : null,
-            custom_longitude: useCustomLocation
-                ? parseFloat(coordinates.longitude)
-                : null,
+            custom_latitude: useCustomLocation ? parseFloat(coordinates.latitude) : null,
+            custom_longitude: useCustomLocation ? parseFloat(coordinates.longitude) : null,
         };
 
-        console.log('Submitting edit form data:', formData);
-
-        // Submit to backend using Inertia
         router.put(`/devices/uwdevice/${device.id}`, formData, {
             onSuccess: () => {
-                toast({
-                    title: 'Success!',
-                    description: 'UW Device updated successfully.',
-                    variant: 'default',
-                });
+                toast({ title: 'Success!', description: 'UW Device updated successfully.' });
                 setDialogOpen(false);
             },
             onError: (errors) => {
-                console.error('Update errors:', errors);
-
-                // Show more specific error message
-                const errorMessage =
-                    errors.message ||
-                    (typeof errors === 'object'
-                        ? JSON.stringify(errors)
-                        : 'Failed to update UW Device. Please try again.');
-
-                toast({
-                    title: 'Error',
-                    description: errorMessage,
-                    variant: 'destructive',
-                });
+                setServerErrors(errors);
+                toast({ title: 'Error', description: errors.device_name || 'Failed to update UW Device.', variant: 'destructive' });
             },
-            onFinish: () => {
-                setIsSubmitting(false);
-            },
+            onFinish: () => setIsSubmitting(false),
         });
     };
 
@@ -192,211 +155,170 @@ function EditUWDevice({
                     </div>
                 )}
             </DialogTrigger>
-            <DialogContent
-                className="flex max-h-[90vh] max-w-none flex-col overflow-hidden p-0 sm:max-w-2xl"
-                showCloseButton={false}
-            >
-                <form
-                    onSubmit={onSubmit}
-                    className="flex h-full flex-col overflow-hidden"
-                >
-                    {/* Fixed Header */}
-                    <DialogHeader className="flex-shrink-0 px-6 pt-6">
-                        <DialogTitle>Edit IoT Sensor</DialogTitle>
-                        <DialogDescription>
-                            Update the IoT sensor configuration and linked
-                            cameras
-                        </DialogDescription>
-                    </DialogHeader>
+            <DialogContent className="flex max-h-[90vh] max-w-none flex-col overflow-hidden p-0 sm:max-w-2xl" showCloseButton={false}>
+                <form onSubmit={onSubmit} className="flex h-full flex-col overflow-hidden">
+                    <TooltipProvider>
+                        <DialogHeader className="flex-shrink-0 px-6 pt-6">
+                            <DialogTitle>Edit IoT Sensor</DialogTitle>
+                            <DialogDescription>Update the IoT sensor configuration and linked cameras</DialogDescription>
+                        </DialogHeader>
 
-                    {/* Scrollable Content */}
-                    <div className="flex-1 overflow-y-auto px-6 py-4">
-                        <div className="space-y-6">
-                            {/* IoT Device Name */}
-                            <div className="flex flex-col gap-2">
-                                <Label htmlFor="device-name">
-                                    IoT Device Name
-                                </Label>
-                                <Input
-                                    id="device-name"
-                                    value={deviceName}
-                                    onChange={(e) =>
-                                        setDeviceName(e.target.value)
-                                    }
-                                    placeholder="Enter device name"
-                                />
-                            </div>
+                        <div className="flex-1 overflow-y-auto px-6 py-4">
+                            <div className="space-y-6">
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="edit-device-name">IoT Device Name</Label>
+                                    <Input
+                                        id="edit-device-name"
+                                        value={deviceName}
+                                        onChange={(e) => {
+                                            setDeviceName(e.target.value);
+                                            if (errors.deviceName) setErrors(prev => ({ ...prev, deviceName: false }));
+                                            if (serverErrors.device_name) setServerErrors(prev => ({ ...prev, device_name: '' }));
+                                        }}
+                                        className={errors.deviceName || serverErrors.device_name ? 'border-red-500' : ''}
+                                    />
+                                    {serverErrors.device_name && (
+                                        <span className="text-sm text-red-500">{serverErrors.device_name}</span>
+                                    )}
+                                </div>
 
-                            {/* Device Status - removed since we have Active toggle */}
+                                <div className="flex flex-col gap-4">
+                                    <div className="flex items-center justify-between">
+                                        <Label>Location Assignment</Label>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            type="button"
+                                            className="h-7 text-xs"
+                                            onClick={() => {
+                                                setUseCustomLocation(!useCustomLocation);
+                                                setSelectedLocation('');
+                                                setSelectedLocationDetails(null);
+                                            }}
+                                        >
+                                            {useCustomLocation ? 'Use Predefined Location' : 'Use Custom Location'}
+                                        </Button>
+                                    </div>
 
-                            {/* Status Selection */}
-                            <div className="flex flex-col gap-2">
-                                <Label htmlFor="status">Status</Label>
-                                <Select
-                                    value={status}
-                                    onValueChange={setStatus}
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Select Status" />
-                                    </SelectTrigger>
-                                    <SelectContent id="status">
-                                        <SelectGroup>
-                                            <SelectItem value="active">
-                                                Active
-                                            </SelectItem>
-                                            <SelectItem value="inactive">
-                                                Inactive
-                                            </SelectItem>
-                                            <SelectItem value="maintenance">
-                                                Maintenance
-                                            </SelectItem>
-                                        </SelectGroup>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Link to CCTV Camera */}
-                            <div className="space-y-3">
-                                <Label>Link to CCTV Camera</Label>
-                                <p className="text-xs text-muted-foreground">
-                                    {useCustomLocation
-                                        ? 'Custom locations can link to any available camera'
-                                        : selectedLocationDetails
-                                          ? `Only cameras at ${selectedLocationDetails.location_name} are available`
-                                          : 'Select a location first to see available cameras'}
-                                </p>
-
-                                <div className="space-y-3">
-                                    {getFilteredCameras().length > 0 ? (
-                                        <>
-                                            {/* Option for no camera */}
-                                            <div className="flex items-center justify-between rounded-lg border p-3">
-                                                <div className="flex items-center gap-3">
-                                                    <input
-                                                        type="radio"
-                                                        id="no-camera"
-                                                        name="camera-selection"
-                                                        checked={
-                                                            selectedCamera ===
-                                                            ''
-                                                        }
-                                                        onChange={() =>
-                                                            setSelectedCamera(
-                                                                '',
-                                                            )
-                                                        }
-                                                        className="h-4 w-4"
-                                                    />
-                                                    <div className="flex items-center gap-2">
-                                                        <Camera className="h-4 w-4 text-muted-foreground" />
-                                                        <div>
-                                                            <div className="text-sm font-medium">
-                                                                No Camera
-                                                            </div>
-                                                            <div className="text-xs text-muted-foreground">
-                                                                Device will
-                                                                operate
-                                                                independently
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                    {!useCustomLocation ? (
+                                        <Select value={selectedLocation} onValueChange={handleLocationChange}>
+                                            <SelectTrigger className={errors.location ? 'border-red-500' : ''}>
+                                                <SelectValue placeholder="Select Location" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectGroup>
+                                                    {location.map((loc) => (
+                                                        <SelectItem key={loc.id} value={loc.id.toString()}>
+                                                            {loc.location_name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectGroup>
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="edit-custom-address">Address</Label>
+                                                <Input
+                                                    id="edit-custom-address"
+                                                    value={customAddress}
+                                                    onChange={(e) => setCustomAddress(e.target.value)}
+                                                    placeholder="Enter full address"
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label>Latitude</Label>
+                                                    <Input value={coordinates.latitude} disabled placeholder="Select on map" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Longitude</Label>
+                                                    <Input value={coordinates.longitude} disabled placeholder="Select on map" />
                                                 </div>
                                             </div>
-
-                                            {/* Available cameras */}
-                                            {getFilteredCameras().map(
-                                                (camera) => (
-                                                    <div
-                                                        key={camera.id}
-                                                        className="flex items-center justify-between rounded-lg border p-3"
-                                                    >
-                                                        <div className="flex items-center gap-3">
-                                                            <input
-                                                                type="radio"
-                                                                id={camera.id.toString()}
-                                                                name="camera-selection"
-                                                                checked={
-                                                                    selectedCamera ===
-                                                                    camera.id.toString()
-                                                                }
-                                                                onChange={() =>
-                                                                    setSelectedCamera(
-                                                                        camera.id.toString(),
-                                                                    )
-                                                                }
-                                                                className="h-4 w-4"
-                                                            />
-                                                            <div className="flex items-center gap-2">
-                                                                <Camera className="h-4 w-4" />
-                                                                <div>
-                                                                    <div className="text-sm font-medium">
-                                                                        {
-                                                                            camera.device_name
-                                                                        }
-                                                                    </div>
-                                                                    <div className="text-xs text-muted-foreground">
-                                                                        Monumento
-                                                                        Circle •{' '}
-                                                                        {
-                                                                            camera.id
-                                                                        }
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <Badge
-                                                            variant={getStatusVariant(
-                                                                camera.status,
-                                                            )}
-                                                            className="capitalize"
-                                                        >
-                                                            {camera.status}
-                                                        </Badge>
-                                                    </div>
-                                                ),
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="py-4 text-center text-muted-foreground">
-                                            {useCustomLocation
-                                                ? 'No CCTV cameras available'
-                                                : selectedLocationDetails
-                                                  ? `No cameras found at ${selectedLocationDetails.location_name}`
-                                                  : 'Select a location to see available cameras'}
+                                            <MapModal onLocationSelect={handleLocationSelect} coordinates={coordinates} />
                                         </div>
                                     )}
                                 </div>
+
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="edit-status">Status</Label>
+                                    <Select value={status} onValueChange={setStatus}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select Status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectGroup>
+                                                <SelectItem value="active">Active</SelectItem>
+                                                <SelectItem value="inactive">Inactive</SelectItem>
+                                                <SelectItem value="maintenance">Maintenance</SelectItem>
+                                            </SelectGroup>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {!useCustomLocation && (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <Label>Linked CCTV Cameras</Label>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                                                </TooltipTrigger>
+                                                <TooltipContent side="right" className="max-w-[300px]">
+                                                    <p className="text-xs">
+                                                        These cameras are situated at the same location as the IoT sensor.
+                                                        Linking them allows for cross-referencing anomaly data with visual confirmation.
+                                                    </p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {getFilteredCameras().length > 0 ? (
+                                                getFilteredCameras().map((camera) => (
+                                                    <div key={camera.id} className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex h-5 w-5 items-center justify-center rounded bg-primary/10">
+                                                                <Check className="h-3 w-3 text-primary" />
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-sm font-medium">{camera.device_name}</div>
+                                                                <div className="text-xs text-muted-foreground">{camera.location?.location_name || 'No location'} • {camera.id}</div>
+                                                            </div>
+                                                        </div>
+                                                        <Badge variant={getStatusVariant(camera.status)} className="capitalize">{camera.status}</Badge>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="rounded-lg border-2 border-dashed p-6 text-center text-muted-foreground">
+                                                    <Camera className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                                                    <p className="text-sm">
+                                                        {selectedLocationDetails
+                                                            ? `No cameras found at ${selectedLocationDetails.location_name}`
+                                                            : 'Select a location to see linked cameras'}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                    </div>
 
-                    {/* Fixed Footer */}
-                    <DialogFooter className="flex-shrink-0 px-6 py-4">
-                        <div className="flex w-full gap-2">
-                            <DialogClose asChild>
-                                <Button
-                                    variant="outline"
-                                    type="button"
-                                    className="flex-1"
-                                >
-                                    <MoveLeft className="inline h-4 w-4" />
-                                    Close
+                        <DialogFooter className="flex-shrink-0 px-6 py-4">
+                            <div className="flex w-full gap-2">
+                                <DialogClose asChild>
+                                    <Button variant="outline" type="button" className="flex-1">
+                                        <MoveLeft className="mr-2 h-4 w-4" /> Cancel
+                                    </Button>
+                                </DialogClose>
+                                <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                                    {isSubmitting ? <Spinner className="mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
+                                    {isSubmitting ? 'Updating...' : 'Update Device'}
                                 </Button>
-                            </DialogClose>
-                            <Button
-                                type="submit"
-                                className="flex-2"
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? (
-                                    <Spinner className="inline h-4 w-4" />
-                                ) : (
-                                    <Save className="inline h-4 w-4" />
-                                )}
-                                {isSubmitting ? 'Updating...' : 'Update Device'}
-                            </Button>
-                        </div>
-                    </DialogFooter>
+                            </div>
+                        </DialogFooter>
+                    </TooltipProvider>
                 </form>
             </DialogContent>
         </Dialog>

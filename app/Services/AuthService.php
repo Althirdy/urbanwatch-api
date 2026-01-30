@@ -37,6 +37,12 @@ class AuthService
         $user = null;
         foreach ($purokLeaders as $leader) {
             if (Hash::check($pin, $leader->password)) {
+                // Check if user status is active
+                $status = $leader->officialDetails?->status ?? 'active';
+                if (strtolower($status) !== 'active') {
+                    throw new UrbanWatchException('Your account is currently inactive. Please contact your administrator.', 403);
+                }
+
                 \Log::info('Match found for user ID: '.$leader->id);
                 $user = $leader;
                 break;

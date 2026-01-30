@@ -24,6 +24,8 @@ Route::prefix('v1')->group(function () {
 
     // Notifcation routes
     require __DIR__.'/api/v1/notifications.php';
+    // IoT Box routes
+    require __DIR__.'/api/v1/iotbox.php';
 
     // Public Post routes
     Route::get('/mobile/public-posts', [App\Http\Controllers\Operator\PublicPostController::class, 'getMobilePublicPosts'])

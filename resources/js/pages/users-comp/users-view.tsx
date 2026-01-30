@@ -178,14 +178,14 @@ function ViewUser({ user, children }: ViewUserProps) {
                                     )}
                                     {suspensionData.active_suspension
                                         .expires_at && (
-                                        <>
-                                            {' '}
-                                            • Expires:{' '}
-                                            {new Date(
-                                                suspensionData.active_suspension.expires_at,
-                                            ).toLocaleDateString()}
-                                        </>
-                                    )}
+                                            <>
+                                                {' '}
+                                                • Expires:{' '}
+                                                {new Date(
+                                                    suspensionData.active_suspension.expires_at,
+                                                ).toLocaleDateString()}
+                                            </>
+                                        )}
                                 </p>
                                 {suspensionData.active_suspension.reason && (
                                     <p className="mt-1 text-sm text-muted-foreground">
@@ -215,15 +215,16 @@ function ViewUser({ user, children }: ViewUserProps) {
                                     {user.email}
                                 </p>
                             </div>
-                            <Badge
-                                className={`inline-flex h-fit items-center rounded-[var(--radius)] px-2.5 py-1 text-xs font-medium text-foreground ${
-                                    getUserStatus(user) === 'Active'
-                                        ? 'bg-green-800 dark:bg-green-900'
-                                        : 'bg-gray-800'
-                                }`}
-                            >
-                                {getUserStatus(user)}
-                            </Badge>
+                            {user.role?.name?.toLowerCase() !== 'citizen' && (
+                                <Badge
+                                    className={`inline-flex h-fit items-center rounded-[var(--radius)] px-2.5 py-1 text-xs font-medium text-foreground ${getUserStatus(user) === 'Active'
+                                            ? 'bg-green-800 dark:bg-green-900'
+                                            : 'bg-gray-800'
+                                        }`}
+                                >
+                                    {getUserStatus(user)}
+                                </Badge>
+                            )}
                         </div>
                     </div>
                     {/* Contact Information & Role */}
@@ -253,7 +254,7 @@ function ViewUser({ user, children }: ViewUserProps) {
                                     <Label htmlFor="contact">
                                         Contact Number
                                     </Label>
-                                    <div className="flex items-center gap-2">
+                                    <div className="relative flex items-center gap-2">
                                         <Input
                                             id="contact"
                                             type="tel"
@@ -263,14 +264,6 @@ function ViewUser({ user, children }: ViewUserProps) {
                                             placeholder="Enter contact number"
                                             className="border-none bg-muted select-none focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
                                         />
-                                        {phoneNumberInfo.network !==
-                                            'Unknown' && (
-                                            <Badge
-                                                className={`${networkColors[phoneNumberInfo.carrier]?.bg || networkColors[phoneNumberInfo.network]?.bg} ${networkColors[phoneNumberInfo.carrier]?.text || networkColors[phoneNumberInfo.network]?.text} ${networkColors[phoneNumberInfo.carrier]?.border || networkColors[phoneNumberInfo.network]?.border} absolute right-10 rounded-[var(--radius)] border`}
-                                            >
-                                                {phoneNumberInfo.carrier}
-                                            </Badge>
-                                        )}
                                     </div>
                                 </div>
                             </div>

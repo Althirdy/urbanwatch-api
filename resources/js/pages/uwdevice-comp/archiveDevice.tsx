@@ -36,6 +36,7 @@ function ArchiveUWDevice({
 
     // Get status icon - matching CCTV pattern
     const getStatusIcon = (status: string) => {
+        if (!status) return null;
         switch (status) {
             case 'active':
                 return <Activity className="h-3 w-3" />;
@@ -50,6 +51,7 @@ function ArchiveUWDevice({
 
     // Get status color - matching CCTV pattern
     const getStatusColor = (status: string) => {
+        if (!status) return 'bg-gray-100 rounded-[var(--radius)] dark:bg-zinc-600';
         switch (status.toLowerCase()) {
             case 'active':
                 return 'bg-green-700 rounded-[var(--radius)] dark:bg-green-800';

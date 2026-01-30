@@ -286,7 +286,7 @@ function CCTVDisplay({
                             {/* Header Row */}
                             <div className="flex items-start justify-between gap-2 mb-3">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    
+
                                     <div className="min-w-0 flex flex-col gap-1">
                                         <h3 className="truncate  font-semibold leading-tight">
                                             {device.device_name}

@@ -27,8 +27,8 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                             className="flex h-10 flex-row px-4 transition-all duration-300 active:scale-95"
                         >
                             <Link href={item.href} prefetch>
-                                {item.icon && <item.icon />}
-                                <span>{item.title}</span>
+                                {item.icon && <item.icon className="size-5" />}
+                                <span className="text-base font-medium">{item.title}</span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
