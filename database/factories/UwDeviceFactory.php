@@ -14,9 +14,9 @@ class UwDeviceFactory extends Factory
     {
         return [
             'device_id' => $this->faker->unique()->numberBetween(1000, 9999),
-            'device_name' => 'IoT Device ' . $this->faker->word,
+            'device_name' => 'IoT Device '.$this->faker->word,
             'status' => 'active',
-            'api_token' => 'uw_live_' . Str::random(40),
+            'api_token' => 'uw_live_'.Str::random(40),
             'last_seen_at' => now(),
         ];
     }

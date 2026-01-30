@@ -33,7 +33,7 @@ class IoTBoxApiTest extends TestCase
                     'status' => 'active',
                 ],
             ]);
-        
+
         $device->refresh();
         $this->assertNotNull($device->last_seen_at);
     }

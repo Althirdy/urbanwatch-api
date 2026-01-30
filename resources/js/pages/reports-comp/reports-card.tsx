@@ -202,49 +202,40 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                             </div>
                         </CardContent>
 
-                        <CardFooter className="flex flex-col gap-2 p-3 pt-1 pb-3">
-                            {report.status === 'False Alarm' ? (
-                                // False Alarm: No action buttons
-                                null
-                            ) : !report.is_acknowledge ? (
-                                <Button
-                                    size="sm"
-                                    className="h-8 w-full text-xs font-bold"
-                                    onClick={() => handleAcknowledge(report.id)}
-                                >
-                                    <Check className="mr-1.5 h-3.5 w-3.5" />
-                                    Acknowledge
-                                </Button>
-                            ) : report.status === 'Ongoing' ? (
-                                <Button
-                                    variant="default" // or a specific variant like 'destructive' if appropriate
-                                    size="sm"
-                                    className="h-8 w-full text-xs font-bold bg-green-600 hover:bg-green-700"
-                                    onClick={() => handleResolve(report.id)}
-                                >
-                                    <Check className="mr-1.5 h-3.5 w-3.5" />
-                                    Mark as Resolved
-                                </Button>
-                            ) : report.status === 'Resolved' ? (
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    disabled
-                                    className="h-8 w-full cursor-not-allowed text-xs opacity-70"
-                                >
-                                    <Check className="mr-1.5 h-3.5 w-3.5" />
-                                    Resolved
-                                </Button>
-                            ) : (
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    disabled
-                                    className="h-8 w-full cursor-not-allowed text-xs opacity-70"
-                                >
-                                    <Check className="mr-1.5 h-3.5 w-3.5" />
-                                    {report.status}
-                                </Button>
+                        <CardFooter className="flex flex-col gap-3 p-3 mt-auto border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/20">
+                            {report.status !== 'False Alarm' && (
+                                <div className="w-full">
+                                    {!report.is_acknowledge ? (
+                                        <Button
+                                            size="sm"
+                                            className="h-8 w-full text-xs font-bold shadow-sm"
+                                            onClick={() => handleAcknowledge(report.id)}
+                                        >
+                                            <Check className="mr-1.5 h-3.5 w-3.5" />
+                                            Acknowledge
+                                        </Button>
+                                    ) : report.status === 'Ongoing' ? (
+                                        <Button
+                                            variant="default"
+                                            size="sm"
+                                            className="h-8 w-full text-xs font-bold bg-emerald-600 hover:bg-emerald-700 shadow-sm"
+                                            onClick={() => handleResolve(report.id)}
+                                        >
+                                            <Check className="mr-1.5 h-3.5 w-3.5" />
+                                            Mark as Resolved
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            disabled
+                                            className="h-8 w-full cursor-not-allowed text-xs opacity-70 border-zinc-200 dark:border-zinc-800"
+                                        >
+                                            <Check className="mr-1.5 h-3.5 w-3.5" />
+                                            {report.status === 'Resolved' ? 'Resolved' : report.status}
+                                        </Button>
+                                    )}
+                                </div>
                             )}
 
                             <div className="flex w-full items-center justify-between gap-1.5">
@@ -252,15 +243,15 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="h-8 flex-1 text-xs"
+                                        className="h-8 flex-1 text-xs border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                     >
-                                        <Open className="mr-1.5 h-3.5 w-3.5" />
+                                        <Open className="mr-1.5 h-3.5 w-3.5 text-zinc-600 dark:text-zinc-400" />
                                         Details
                                     </Button>
                                 </ViewReportDetails>
 
                                 {report.status !== 'False Alarm' && (
-                                    <div className="flex gap-1">
+                                    <div className="flex gap-1.5">
                                         <Tooltip>
                                             <EditReport
                                                 report={report}
@@ -268,30 +259,34 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                             >
                                                 <TooltipTrigger asChild>
                                                     <Button
-                                                        variant="ghost"
+                                                        variant="outline"
                                                         size="icon"
-                                                        className="h-8 w-8"
+                                                        className="h-8 w-8 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                                     >
-                                                        <SquarePen className="h-4 w-4" />
+                                                        <SquarePen className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                                     </Button>
                                                 </TooltipTrigger>
                                             </EditReport>
-                                            <TooltipContent>Edit</TooltipContent>
+                                            <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                                <p>Edit Report</p>
+                                            </TooltipContent>
                                         </Tooltip>
 
                                         <Tooltip>
                                             <ArchiveReport report={report}>
                                                 <TooltipTrigger asChild>
                                                     <Button
-                                                        variant="ghost"
+                                                        variant="outline"
                                                         size="icon"
-                                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                                        className="h-8 w-8 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 group"
                                                     >
-                                                        <Archive className="h-4 w-4" />
+                                                        <Archive className="h-4 w-4 text-zinc-400 group-hover:text-red-500 transition-colors" />
                                                     </Button>
                                                 </TooltipTrigger>
                                             </ArchiveReport>
-                                            <TooltipContent>Archive</TooltipContent>
+                                            <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
+                                                <p>Archive Report</p>
+                                            </TooltipContent>
                                         </Tooltip>
                                     </div>
                                 )}

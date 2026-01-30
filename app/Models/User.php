@@ -22,7 +22,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'role_id',
-        'name', // Keep 'name' fillable, but accessor will override its display
+        'name',
         'first_name',
         'middle_name',
         'last_name',
@@ -33,6 +33,15 @@ class User extends Authenticatable
         'false_alarm_strikes',
         'last_sensitive_update_at',
         'profile_photo_path',
+    ];
+
+    /**
+     * The attributes that should be appends for serialization.
+     *
+     * @var list<string>
+     */
+    protected $appends = [
+        'status',
     ];
 
     /**
@@ -118,6 +127,25 @@ class User extends Authenticatable
     {
         return Attribute::make(
             set: fn (string $value) => ucwords(trim($value)),
+        );
+    }
+
+    /**
+     * Get the user's status.
+     */
+    protected function status(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value) {
+                if ($this->relationLoaded('officialDetails') && $this->officialDetails?->status) {
+                    return ucwords($this->officialDetails->status);
+                }
+                if ($this->relationLoaded('citizenDetails') && $this->citizenDetails?->status) {
+                    return ucwords($this->citizenDetails->status);
+                }
+
+                return $value ? ucwords($value) : 'Active';
+            },
         );
     }
 

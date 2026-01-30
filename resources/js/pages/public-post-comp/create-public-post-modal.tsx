@@ -53,7 +53,7 @@ export default function CreatePublicPostModal() {
         defaultValues: {
             title: '',
             content: '',
-            category: 'General',
+            category: 'announcement',
             status: 'published',
         },
     });
@@ -83,7 +83,7 @@ export default function CreatePublicPostModal() {
             formData.append('content', data.content);
             formData.append('category', data.category);
             formData.append('status', data.status);
-            
+
             if (data.status === 'scheduled' && data.published_at) {
                 // Format date as YYYY-MM-DD HH:mm:ss for Laravel
                 formData.append('published_at', format(data.published_at, 'yyyy-MM-dd HH:mm:ss'));
@@ -149,7 +149,7 @@ export default function CreatePublicPostModal() {
                 <div className="grid gap-6 py-4">
                     {/* Image Upload Section - Visually prominent */}
                     <div className="flex flex-col items-center justify-center gap-4">
-                        <div 
+                        <div
                             className={cn(
                                 "relative flex h-48 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50 transition-colors hover:bg-muted",
                                 preview && "border-none p-0"
@@ -158,9 +158,9 @@ export default function CreatePublicPostModal() {
                         >
                             {preview ? (
                                 <>
-                                    <img 
-                                        src={preview} 
-                                        alt="Preview" 
+                                    <img
+                                        src={preview}
+                                        alt="Preview"
                                         className="h-full w-full rounded-lg object-cover"
                                     />
                                     <Button
@@ -244,11 +244,12 @@ export default function CreatePublicPostModal() {
                                         <SelectValue placeholder="Select category" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="General">General</SelectItem>
-                                        <SelectItem value="News">News</SelectItem>
-                                        <SelectItem value="Alert">Alert</SelectItem>
-                                        <SelectItem value="Event">Event</SelectItem>
-                                        <SelectItem value="Maintenance">Maintenance</SelectItem>
+                                        <SelectItem value="announcement">Announcement</SelectItem>
+                                        <SelectItem value="emergency">Emergency</SelectItem>
+                                        <SelectItem value="news">News</SelectItem>
+                                        <SelectItem value="advisory">Advisory</SelectItem>
+                                        <SelectItem value="event">Event</SelectItem>
+                                        <SelectItem value="maintenance">Maintenance</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -321,13 +322,13 @@ export default function CreatePublicPostModal() {
                     <Button variant="outline" onClick={() => setOpen(false)}>
                         Cancel
                     </Button>
-                    <Button 
-                        onClick={form.handleSubmit(onSubmit)} 
+                    <Button
+                        onClick={form.handleSubmit(onSubmit)}
                         disabled={isLoading}
                     >
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {form.watch('status') === 'published' ? 'Publish Now' : 
-                         form.watch('status') === 'scheduled' ? 'Schedule Post' : 'Save Draft'}
+                        {form.watch('status') === 'published' ? 'Publish Now' :
+                            form.watch('status') === 'scheduled' ? 'Schedule Post' : 'Save Draft'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

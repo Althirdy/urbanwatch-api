@@ -73,7 +73,7 @@ function DeleteLocation({ location, children }: DeleteLocationProps) {
                             placeholder="Enter location name to confirm"
                             className={
                                 confirmText &&
-                                confirmText !== location.location_name
+                                    confirmText !== location.location_name
                                     ? 'border-red-500'
                                     : ''
                             }
@@ -101,7 +101,7 @@ function DeleteLocation({ location, children }: DeleteLocationProps) {
                         }
                         className="cursor-pointer bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                        {processing ? 'Deleting...' : 'Delete Location'}
+                        {processing ? 'Archiving...' : 'Archive Location'}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

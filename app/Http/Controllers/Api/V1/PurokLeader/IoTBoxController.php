@@ -4,11 +4,8 @@ namespace App\Http\Controllers\Api\V1\PurokLeader;
 
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\AnomalyLog;
-use App\Models\UwDevice;
-use App\Models\Village;
 use App\Services\FileUploadService;
 use App\Services\UwDeviceService;
-use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 class IoTBoxController extends BaseApiController
 {
     protected FileUploadService $fileUploadService;
+
     protected UwDeviceService $uwDeviceService;
 
     public function __construct(FileUploadService $fileUploadService, UwDeviceService $uwDeviceService)
@@ -55,7 +53,7 @@ class IoTBoxController extends BaseApiController
         try {
             // Authenticate IoT box via Token in Header
             $token = $request->header('X-Device-Token');
-            
+
             if (! $token) {
                 return $this->sendError('Device token is missing.', null, 401);
             }
@@ -261,6 +259,7 @@ class IoTBoxController extends BaseApiController
             if (! $exists) {
                 return $this->sendError('Device not registered', null, 404);
             }
+
             return $this->sendError('Invalid token or device inactive', null, 403);
         }
 

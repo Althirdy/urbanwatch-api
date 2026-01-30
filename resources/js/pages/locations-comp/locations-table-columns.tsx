@@ -5,11 +5,11 @@ import {
 } from '@/components/ui/tooltip';
 import { ColumnDef } from '@tanstack/react-table';
 import {
+    Archive,
     ArrowUpDown,
     Cctv,
     ExternalLink,
     SquarePen,
-    Trash2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -131,15 +131,15 @@ export const columns = (): ColumnDef<location_T>[] => [
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="cursor-pointer"
+                                    className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 group"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <Trash2 className="h-4 w-4 text-[var(--destructive)]" />
+                                    <Archive className="h-4 w-4 text-zinc-400 group-hover:text-red-500 transition-colors" />
                                 </Button>
                             </TooltipTrigger>
                         </DeleteLocation>
-                        <TooltipContent>
-                            <p>Delete Location</p>
+                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
+                            <p>Archive Location</p>
                         </TooltipContent>
                     </Tooltip>
                 </div>

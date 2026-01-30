@@ -19,6 +19,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 import { PublicPost_T } from '@/types/public-post-types';
 import { router, useForm } from '@inertiajs/react';
@@ -53,9 +55,9 @@ function formatDateTimeForInput(isoString: string): string {
 function getStatusBadge(publishedAt: string | null) {
     if (!publishedAt) {
         return (
-            <span className="inline-flex items-center rounded-[var(--radius)] bg-zinc-800 px-2.5 py-0.5 text-sm font-medium">
+            <Badge variant="outline" className="bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20">
                 Draft
-            </span>
+            </Badge>
         );
     }
 
@@ -64,16 +66,16 @@ function getStatusBadge(publishedAt: string | null) {
 
     if (publishDate > now) {
         return (
-            <span className="inline-flex items-center rounded-[var(--radius)] bg-yellow-800 px-2.5 py-0.5 text-sm font-medium">
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20">
                 Scheduled
-            </span>
+            </Badge>
         );
     }
 
     return (
-        <span className="inline-flex items-center rounded-[var(--radius)] bg-green-800 px-2.5 py-0.5 text-sm font-medium text-foreground">
+        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20">
             Published
-        </span>
+        </Badge>
     );
 }
 
@@ -83,7 +85,7 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
             published_at: post.published_at || '',
             title: post.title || '',
             content: post.content || '',
-            category: post.category || 'general',
+            category: post.category?.toLowerCase() || 'announcement',
         });
 
     const [scheduleMode, setScheduleMode] = useState(
@@ -113,8 +115,9 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
             {
                 title: data.title,
                 content: data.content,
-                category: data.category,
+                category: data.category.toLowerCase(),
                 published_at: finalPublishedAt,
+                status: publishNow ? 'published' : (scheduleMode ? 'scheduled' : (isPublished ? 'published' : 'draft')),
             },
             {
                 onSuccess: () => {
@@ -145,19 +148,19 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                                 <h3 className="text-xl font-semibold">
                                     Edit Public Post #{post.id}
                                 </h3>
-                                <p className="text-sm text-muted-foreground uppercase tracking-wider">
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">
                                     {data.category}
                                 </p>
                                 <div className="mt-1">
                                     {getStatusBadge(post.published_at)}
-                                    <span
+                                    {/* <span
                                         className={`inline-flex items-center rounded-[var(--radius)] px-2.5 py-0.5 text-sm font-medium ${reportTypeColors[
                                             post.report?.report_type || ''
                                             ] || 'bg-gray-100 text-gray-800'
                                             }`}
                                     >
                                         {post.report?.report_type}
-                                    </span>
+                                    </span> */}
                                 </div>
                             </div>
                         </div>
@@ -185,11 +188,12 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                                         <SelectValue placeholder="Select a category" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="general">General</SelectItem>
-                                        <SelectItem value="news">News</SelectItem>
+                                        <SelectItem value="announcement">Announcement</SelectItem>
                                         <SelectItem value="emergency">Emergency</SelectItem>
+                                        <SelectItem value="news">News</SelectItem>
                                         <SelectItem value="advisory">Advisory</SelectItem>
                                         <SelectItem value="event">Event</SelectItem>
+                                        <SelectItem value="maintenance">Maintenance</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -217,33 +221,33 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                                 </div>
                             </div>
 
-                                {/* Editable Content */}
-                                <div className="grid gap-3">
-                                    <Label htmlFor="content">Content</Label>
-                                    <div className="relative">
-                                        <textarea
-                                            id="content"
-                                            value={data.content}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'content',
-                                                    e.target.value,
-                                                )
-                                            }
-                                            placeholder="Enter post content"
-                                            rows={8}
-                                            className={`w-full resize-none rounded-md border px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none ${errors.content
-                                                    ? 'border-red-500 focus:ring-red-500'
-                                                    : 'border-input'
-                                                }`}
-                                        />
-                                        {errors.content && (
-                                            <span className="text-xs text-red-500">
-                                                {errors.content}
-                                            </span>
-                                        )}
-                                    </div>
+                            {/* Editable Content */}
+                            <div className="grid gap-3">
+                                <Label htmlFor="content">Content</Label>
+                                <div className="relative">
+                                    <textarea
+                                        id="content"
+                                        value={data.content}
+                                        onChange={(e) =>
+                                            setData(
+                                                'content',
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder="Enter post content"
+                                        rows={8}
+                                        className={`w-full resize-none rounded-md border px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-ring focus:outline-none ${errors.content
+                                            ? 'border-red-500 focus:ring-red-500'
+                                            : 'border-input'
+                                            }`}
+                                    />
+                                    {errors.content && (
+                                        <span className="text-xs text-red-500">
+                                            {errors.content}
+                                        </span>
+                                    )}
                                 </div>
+                            </div>
 
                             {/* Source Details (if linked) */}
                             {post.postable && (

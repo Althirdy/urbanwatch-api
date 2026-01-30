@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Models\UwDevice;
 use App\Models\AnomalyLog;
+use App\Models\UwDevice;
 use App\Services\UwDeviceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,7 +17,7 @@ class UwDeviceServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new UwDeviceService();
+        $this->service = new UwDeviceService;
     }
 
     /** @test */
@@ -84,7 +84,7 @@ class UwDeviceServiceTest extends TestCase
     public function it_correctly_counts_anomalies()
     {
         $device = UwDevice::factory()->create();
-        
+
         AnomalyLog::create([
             'iot_box_id' => $device->id,
             'device_id' => $device->device_id,

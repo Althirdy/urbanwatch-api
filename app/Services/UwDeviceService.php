@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use App\Models\UwDevice;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class UwDeviceService
 {
@@ -16,18 +16,18 @@ class UwDeviceService
     {
         return DB::transaction(function () use ($data) {
             // Generate a random 6-digit device_id if not provided
-            if (!isset($data['device_id'])) {
+            if (! isset($data['device_id'])) {
                 $data['device_id'] = $this->generateUniqueDeviceId();
             }
 
-            $data['api_token'] = 'uw_live_' . Str::random(40);
-            
+            $data['api_token'] = 'uw_live_'.Str::random(40);
+
             $device = UwDevice::create($data);
 
             Log::info('UW Device created via Service:', [
                 'id' => $device->id,
                 'device_id' => $device->device_id,
-                'name' => $device->device_name
+                'name' => $device->device_name,
             ]);
 
             return $device;
@@ -56,7 +56,7 @@ class UwDeviceService
 
             Log::info('UW Device updated via Service:', [
                 'id' => $device->id,
-                'device_id' => $device->device_id
+                'device_id' => $device->device_id,
             ]);
 
             return $success;

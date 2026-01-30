@@ -8,6 +8,7 @@ import {
     SquarePen,
 } from 'lucide-react';
 import { router } from '@inertiajs/react';
+import { Badge } from '@/components/ui/badge';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -23,20 +24,15 @@ import EditReport from './reports-edit';
 import ViewReportDetails from './reports-view';
 
 const reportTypeColors: Record<string, string> = {
-    CCTV: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
-    'Citizen Concern':
-        'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
-    Emergency:
-        'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
+    CCTV: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
+    'Citizen Concern': 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20',
+    Emergency: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20',
 };
 
 const statusColors: Record<string, string> = {
-    Ongoing:
-        'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    Pending:
-        'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-    Resolved:
-        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+    Ongoing: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
+    Pending: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20',
+    Resolved: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20',
 };
 
 export const columns = (reportTypes: string[]): ColumnDef<reports_T>[] => [
@@ -81,11 +77,12 @@ export const columns = (reportTypes: string[]): ColumnDef<reports_T>[] => [
                 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400';
 
             return (
-                <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colorClass}`}
+                <Badge
+                    variant="outline"
+                    className={`font-medium ${colorClass}`}
                 >
                     {reportType}
-                </span>
+                </Badge>
             );
         },
     },
@@ -102,7 +99,7 @@ export const columns = (reportTypes: string[]): ColumnDef<reports_T>[] => [
             return (
                 <div>
                     {Number(report.latitude).toFixed(2)},{' '}
-                    {Number(report.longtitude).toFixed(2)}
+                    {Number(report.longitude).toFixed(2)}
                 </div>
             );
         },
@@ -137,11 +134,12 @@ export const columns = (reportTypes: string[]): ColumnDef<reports_T>[] => [
                 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400';
 
             return (
-                <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colorClass}`}
+                <Badge
+                    variant="outline"
+                    className={`font-medium ${colorClass}`}
                 >
                     {status}
-                </span>
+                </Badge>
             );
         },
     },
@@ -249,14 +247,14 @@ export const columns = (reportTypes: string[]): ColumnDef<reports_T>[] => [
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="cursor-pointer"
+                                    className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 group"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <Archive className="h-4 w-4 text-[var(--destructive)]" />
+                                    <Archive className="h-4 w-4 text-zinc-400 group-hover:text-red-500 transition-colors" />
                                 </Button>
                             </TooltipTrigger>
                         </ArchiveReport>
-                        <TooltipContent>
+                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
                             <p>Archive Report</p>
                         </TooltipContent>
                     </Tooltip>

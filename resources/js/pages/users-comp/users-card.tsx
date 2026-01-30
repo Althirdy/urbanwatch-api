@@ -106,33 +106,37 @@ const UserCard = ({
                                 </div>
                             </div>
                             <div className='flex flex-col gap-2 items-end'>
-                                
-                            <Badge
+
+                                <Badge
                                     variant="outline"
                                     className={`text-[10px] font-medium px-1.5 py-0.5 ${getRoleBadgeStyles(user.role?.name)}`}
                                 >
                                     {user.role?.name || 'N/A'}
-                                </Badge> <Badge
-                                variant="outline"
-                                className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 capitalize ${getStatusBadgeStyles(user.status)}`}
-                            >
-                                {user.status || 'N/A'}
-                            </Badge> </div>
-                           
+                                </Badge>
+                                {user.role?.name?.toLowerCase() !== 'citizen' && (
+                                    <Badge
+                                        variant="outline"
+                                        className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 capitalize ${getStatusBadgeStyles(user.status)}`}
+                                    >
+                                        {user.status}
+                                    </Badge>
+                                )}
+                            </div>
+
                         </div>
 
                         {/* User Info - Compact */}
-                        <div className="space-y-2 mb-3 text-xs">
+                        <div className="space-y-2 mb-3 px-4">
                             {/* Email */}
-                            <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-1.5">
-                                <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                                <span className="truncate">{user.email}</span>
+                            <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-md border border-zinc-100 dark:border-zinc-800/80">
+                                <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                <span className="truncate text-xs text-zinc-600 dark:text-zinc-400 font-medium">
+                                    {user.email}
+                                </span>
                             </div>
-
-                         
                         </div>
 
-                        {/* Action Buttons - Compact */}
+                        {/* Action Buttons - Premium Footer */}
                         <div className="flex items-center justify-end gap-1.5 pt-2 border-t dark:border-zinc-800">
                             <Tooltip>
                                 <ViewUser user={user}>
@@ -140,55 +144,54 @@ const UserCard = ({
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="cursor-pointer"
+                                            className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                         >
-                                            <ExternalLink className="h-4 w-4" />
+                                            <ExternalLink className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                         </Button>
                                     </TooltipTrigger>
                                 </ViewUser>
-                                <TooltipContent side="bottom">
-                                    <p className="text-xs">View Details</p>
+                                <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                    <p>View Details</p>
                                 </TooltipContent>
                             </Tooltip>
-                            {user.role?.name?.toLowerCase() !== 'citizen' && (
-                                <Tooltip>
-                                    <EditUser user={user} roles={roles} locations={locations}>
-                                        <TooltipTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="cursor-pointer"
-                                            >
-                                                <SquarePen className="h-4 w-4" />
-                                            </Button>
-                                        </TooltipTrigger>
-                                    </EditUser>
-                                    <TooltipContent side="bottom">
-                                        <p className="text-xs">Edit User</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            )}
+                            <Tooltip>
+                                <EditUser user={user} roles={roles} locations={locations}>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                        >
+                                            <SquarePen className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                </EditUser>
+                                <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                    <p>Edit Account</p>
+                                </TooltipContent>
+                            </Tooltip>
                             <Tooltip>
                                 <ArchiveUser user={user}>
                                     <TooltipTrigger asChild>
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="cursor-pointer"
+                                            className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 group"
                                         >
-                                            <Archive className="h-4 w-4 text-red-500 dark:text-red-400" />
+                                            <Archive className="h-4 w-4 text-zinc-400 group-hover:text-red-500 transition-colors" />
                                         </Button>
                                     </TooltipTrigger>
                                 </ArchiveUser>
-                                <TooltipContent side="bottom">
-                                    <p className="text-xs">Archive User</p>
+                                <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
+                                    <p>Archive Account</p>
                                 </TooltipContent>
                             </Tooltip>
                         </div>
                     </CardContent>
                 </Card>
-            ))}
-        </div>
+            ))
+            }
+        </div >
     );
 };
 

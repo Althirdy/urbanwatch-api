@@ -30,6 +30,7 @@ import {
     location_T,
     paginated_T,
 } from '../../types/cctv-location-types';
+import { cn } from '@/lib/utils';
 import ArchiveCCTV from './cctv-archive';
 import EditCCTVDevice from './cctv-edit';
 
@@ -116,10 +117,15 @@ function CCTVDisplay({
                                     {/* Status Badge */}
                                     <div className="absolute top-4 right-4 z-10">
                                         <Badge
-                                            variant={getStatusVariant(
-                                                device.status,
+                                            variant="outline"
+                                            className={cn(
+                                                "gap-1 capitalize font-medium",
+                                                device.status === 'active'
+                                                    ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
+                                                    : device.status === 'maintenance'
+                                                        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
+                                                        : 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20'
                                             )}
-                                            className="gap-1 capitalize"
                                         >
                                             {getStatusIcon(device.status)}
                                             {device.status}
@@ -167,21 +173,21 @@ function CCTVDisplay({
                                 </p>
                             </div>
 
-                            {/* Action Buttons - Compact */}
-                            <div className="flex items-center justify-end gap-1.5 pt-2 border-t dark:border-zinc-800">
+                            {/* Action Buttons - Premium Footer */}
+                            <div className="flex items-center justify-end gap-1.5 p-3 mt-auto border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/20">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="cursor-pointer"
+                                            className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                             onClick={() => onViewReports?.(device)}
                                         >
-                                            <BarChart3 className="h-4 w-4" />
+                                            <BarChart3 className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="bottom">
-                                        <p className="text-xs">View Reports</p>
+                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                        <p>View Reports</p>
                                     </TooltipContent>
                                 </Tooltip>
                                 <Tooltip>
@@ -190,14 +196,14 @@ function CCTVDisplay({
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="cursor-pointer"
+                                                className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                             >
-                                                <SquarePen className="h-4 w-4" />
+                                                <SquarePen className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                             </Button>
                                         </TooltipTrigger>
                                     </EditCCTVDevice>
-                                    <TooltipContent side="bottom">
-                                        <p className="text-xs">Edit CCTV</p>
+                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                        <p>Edit CCTV</p>
                                     </TooltipContent>
                                 </Tooltip>
                                 <Tooltip>
@@ -206,14 +212,14 @@ function CCTVDisplay({
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="cursor-pointer"
+                                                className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 group"
                                             >
-                                                <Archive className="h-4 w-4 text-red-500 dark:text-red-400" />
+                                                <Archive className="h-4 w-4 text-zinc-400 group-hover:text-red-500 transition-colors" />
                                             </Button>
                                         </TooltipTrigger>
                                     </ArchiveCCTV>
-                                    <TooltipContent side="bottom">
-                                        <p className="text-xs">Archive CCTV</p>
+                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
+                                        <p>Archive CCTV</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </div>

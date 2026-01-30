@@ -8,7 +8,6 @@ use App\Models\UwDevice;
 use App\Services\UwDeviceService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class UWDeviceController extends Controller
 {
@@ -18,6 +17,7 @@ class UWDeviceController extends Controller
     {
         $this->uwDeviceService = $uwDeviceService;
     }
+
     /**
      * Store a newly created UW device in storage.
      */
@@ -31,7 +31,7 @@ class UWDeviceController extends Controller
 
             return redirect()->back()->with([
                 'success' => 'UW device created successfully!',
-                'api_token' => $uwDevice->api_token, 
+                'api_token' => $uwDevice->api_token,
             ]);
         } catch (\Exception $e) {
             Log::error('UW Device Creation Error: '.$e->getMessage(), [
