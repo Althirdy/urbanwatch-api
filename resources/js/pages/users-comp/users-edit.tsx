@@ -1,46 +1,24 @@
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import PurokSelectorMap from '@/components/purok-selector-map';
 import { location_T } from '@/types/location-types';
 import { roles_T } from '@/types/role-types';
 import { users_T } from '@/types/user-types';
 import { useForm } from '@inertiajs/react';
-import {
-    Info,
-    Mail,
-    MapPin,
-    MoveLeft,
-    Phone,
-    Save,
-    ShieldCheck,
-    SquarePen,
-    User as UserIcon
-} from 'lucide-react';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Info, Mail, MapPin, MoveLeft, Phone, Save, ShieldCheck, SquarePen, User as UserIcon } from 'lucide-react';
 import { FormEvent } from 'react';
 
 type EditUserProps = {
     user: users_T;
     roles: roles_T[];
     locations: location_T[];
+    puroks?: any[];
     children?: React.ReactNode;
 };
 
@@ -66,9 +44,10 @@ type EditUserForm = {
     assigned_brgy: string;
     latitude: string;
     longitude: string;
+    purok_id: string;
 };
 
-function EditUser({ user, roles, locations, children }: EditUserProps) {
+function EditUser({ user, roles, locations, puroks = [], children }: EditUserProps) {
     const getInitials = (user: users_T) => {
         let firstName = '';
         let lastName = '';
@@ -118,6 +97,7 @@ function EditUser({ user, roles, locations, children }: EditUserProps) {
             assigned_brgy: user.official_details?.assigned_brgy || '',
             latitude: user.official_details?.latitude || '',
             longitude: user.official_details?.longitude || '',
+            purok_id: user.official_details?.purok_id?.toString() || '',
         });
 
     const isPurokLeader = user.role?.name?.toLowerCase() === 'purok leader';
@@ -300,16 +280,45 @@ function EditUser({ user, roles, locations, children }: EditUserProps) {
                                         <Label htmlFor="location" className="text-xs text-zinc-500 ml-1 flex items-center gap-1">
                                             <MapPin className="h-3 w-3" /> Assigned Scope
                                         </Label>
-                                        <Select value={data.barangay} onValueChange={(v) => { setData('barangay', v); setData('assigned_brgy', v); }}>
-                                            <SelectTrigger className="bg-zinc-900 border-zinc-800 focus:ring-primary/50">
-                                                <SelectValue placeholder="Select location" />
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
-                                                {locations.map((l) => <SelectItem key={l.id} value={l.location_name}>{l.location_name}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
+                                        {isPurokLeader ? (
+                                            <Input
+                                                value={data.assigned_brgy || "Select from map below"}
+                                                readOnly
+                                                className="bg-zinc-800/50 border-zinc-800 text-zinc-400 italic cursor-not-allowed"
+                                            />
+                                        ) : (
+                                            <Select value={data.barangay} onValueChange={(v) => { setData('barangay', v); setData('assigned_brgy', v); }}>
+                                                <SelectTrigger className="bg-zinc-900 border-zinc-800 focus:ring-primary/50">
+                                                    <SelectValue placeholder="Select location" />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-100">
+                                                    {locations.map((l) => <SelectItem key={l.id} value={l.location_name}>{l.location_name}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
                                     </div>
                                 </div>
+
+                                {/* Map Selector for Purok Leaders Re-assignment */}
+                                {isPurokLeader && (
+                                    <div className="space-y-2 pt-2">
+                                        <Label className="text-xs text-zinc-500 ml-1">Re-assign Territory (Map)</Label>
+                                        <div className="rounded-md border border-zinc-800 p-1 bg-zinc-900/30 overflow-hidden">
+                                            <PurokSelectorMap
+                                                puroks={puroks}
+                                                selectedPurokId={data.purok_id ? parseInt(data.purok_id) : null}
+                                                onSelectPurok={(id, name) => {
+                                                    setData(prev => ({
+                                                        ...prev,
+                                                        purok_id: id.toString(),
+                                                        assigned_brgy: name,
+                                                        barangay: name // Keep both in sync for consistency
+                                                    }));
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Status Toggle */}
                                 {user.role?.name?.toLowerCase() !== 'citizen' && (

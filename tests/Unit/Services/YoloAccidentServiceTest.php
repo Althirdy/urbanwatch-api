@@ -34,10 +34,13 @@ class YoloAccidentServiceTest extends TestCase
 
         $this->geminiService = Mockery::mock(GeminiService::class);
         $this->fileUploadService = Mockery::mock(FileUploadService::class);
+        $this->routingService = Mockery::mock(\App\Services\GeographicRoutingService::class);
+        $this->routingService->shouldIgnoreMissing();
 
         $this->yoloService = new YoloAccidentService(
             $this->geminiService,
-            $this->fileUploadService
+            $this->fileUploadService,
+            $this->routingService
         );
 
         $location = Locations::create([

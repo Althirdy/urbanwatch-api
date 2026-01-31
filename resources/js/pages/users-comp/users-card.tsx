@@ -49,10 +49,12 @@ const UserCard = ({
     users,
     roles,
     locations,
+    puroks = [],
 }: {
     users: users_T[];
     roles: roles_T[];
     locations: location_T[];
+    puroks?: any[];
 }) => {
     console.log("users in card:", users);
     // Get user's full name
@@ -66,8 +68,11 @@ const UserCard = ({
         return user.name;
     };
 
-    // Get user's barangay
+    // Get user's barangay or Purok
     const getBarangay = (user: users_T) => {
+        if (user.official_details?.purok?.name) {
+            return `Purok: ${user.official_details.purok.name}`;
+        }
         return user.citizen_details?.barangay || user.official_details?.assigned_brgy || 'N/A';
     };
 
@@ -155,7 +160,7 @@ const UserCard = ({
                                 </TooltipContent>
                             </Tooltip>
                             <Tooltip>
-                                <EditUser user={user} roles={roles} locations={locations}>
+                                <EditUser user={user} roles={roles} locations={locations} puroks={puroks}>
                                     <TooltipTrigger asChild>
                                         <Button
                                             variant="outline"

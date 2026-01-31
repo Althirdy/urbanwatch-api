@@ -19,6 +19,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import PurokSelectorMap from '@/components/purok-selector-map';
 import { location_T } from '@/types/location-types';
 import { roles_T } from '@/types/role-types';
 import { useForm } from '@inertiajs/react';
@@ -39,14 +40,17 @@ type CreateUserForm = {
     office_address?: string;
     latitude?: string;
     longitude?: string;
+    purok_id?: string;
 };
 
 function CreateUsers({
     roles,
     locations,
+    puroks = [], // Default to empty array if not passed
 }: {
     roles: roles_T[];
     locations: location_T[];
+    puroks?: any[]; // Using any for now to avoid extensive type definitions, or define interface
 }) {
     const { data, setData, post, processing, errors, reset } =
         useForm<CreateUserForm>({
@@ -63,6 +67,7 @@ function CreateUsers({
             office_address: '',
             latitude: '',
             longitude: '',
+            purok_id: '',
         });
 
     const [clientErrors, setClientErrors] = useState<Partial<CreateUserForm>>(
@@ -502,34 +507,8 @@ function CreateUsers({
                                                     ...prev,
                                                     role_id: undefined,
                                                 }));
-                                                // Revalidate password when role changes
-                                                if (data.password) {
-                                                    const passwordError =
-                                                        validatePassword(
-                                                            data.password,
-                                                        );
-                                                    setClientErrors((prev) => ({
-                                                        ...prev,
-                                                        password:
-                                                            passwordError ||
-                                                            undefined,
-                                                    }));
-                                                }
-                                                if (
-                                                    data.password_confirmation
-                                                ) {
-                                                    const confirmError =
-                                                        validatePasswordConfirmation(
-                                                            data.password_confirmation,
-                                                            data.password,
-                                                        );
-                                                    setClientErrors((prev) => ({
-                                                        ...prev,
-                                                        password_confirmation:
-                                                            confirmError ||
-                                                            undefined,
-                                                    }));
-                                                }
+                                                // Reset location when role changes
+                                                setData(prev => ({ ...prev, assigned_brgy: '', purok_id: '' }));
                                             }}
                                         >
                                             <SelectTrigger
@@ -569,41 +548,52 @@ function CreateUsers({
                                     </div>
                                 </div>
                                 <div className="grid flex-1 gap-2">
-                                    <Label htmlFor="location">Location</Label>
+                                    <Label htmlFor="location">Location / Assignment</Label>
                                     <div>
-                                        <Select
-                                            value={data.assigned_brgy}
-                                            onValueChange={(value) => {
-                                                setData('assigned_brgy', value);
-                                                setClientErrors((prev) => ({
-                                                    ...prev,
-                                                    assigned_brgy: undefined,
-                                                }));
-                                            }}
-                                        >
-                                            <SelectTrigger
-                                                className={
-                                                    errors.assigned_brgy ||
-                                                    clientErrors.assigned_brgy
-                                                        ? 'border-red-500 focus:ring-red-500'
-                                                        : ''
-                                                }
+                                        {data.role_id === '2' ? (
+                                            // Purok Leader: Read-only display of selected Purok
+                                            <Input 
+                                                value={data.assigned_brgy || "Select from map below"} 
+                                                readOnly 
+                                                className="bg-muted"
+                                                placeholder="Select a territory below"
+                                            />
+                                        ) : (
+                                            // Other Roles: Standard Select
+                                            <Select
+                                                value={data.assigned_brgy}
+                                                onValueChange={(value) => {
+                                                    setData('assigned_brgy', value);
+                                                    setClientErrors((prev) => ({
+                                                        ...prev,
+                                                        assigned_brgy: undefined,
+                                                    }));
+                                                }}
                                             >
-                                                <SelectValue placeholder="Select location" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {locations.map((location) => (
-                                                    <SelectItem
-                                                        key={location.id}
-                                                        value={
-                                                            location.location_name
-                                                        }
-                                                    >
-                                                        {location.location_name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                                <SelectTrigger
+                                                    className={
+                                                        errors.assigned_brgy ||
+                                                        clientErrors.assigned_brgy
+                                                            ? 'border-red-500 focus:ring-red-500'
+                                                            : ''
+                                                    }
+                                                >
+                                                    <SelectValue placeholder="Select location" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {locations.map((location) => (
+                                                        <SelectItem
+                                                            key={location.id}
+                                                            value={
+                                                                location.location_name
+                                                            }
+                                                        >
+                                                            {location.location_name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
                                         {(errors.assigned_brgy ||
                                             clientErrors.assigned_brgy) && (
                                             <span className="mt-1 block text-xs text-red-500">
@@ -615,6 +605,33 @@ function CreateUsers({
                                 </div>
                             </div>
                         </div>
+
+                        {/* Map Selector for Purok Leaders */}
+                        {data.role_id === '2' && (
+                            <div className="grid flex-1 auto-rows-min gap-2">
+                                <Label>Select Territory (Purok)</Label>
+                                <div className="rounded-md border p-1">
+                                    <PurokSelectorMap 
+                                        puroks={puroks}
+                                        selectedPurokId={data.purok_id ? parseInt(data.purok_id) : null}
+                                        onSelectPurok={(id, name) => {
+                                            setData(prev => ({
+                                                ...prev,
+                                                purok_id: id.toString(),
+                                                assigned_brgy: name
+                                            }));
+                                            setClientErrors(prev => ({
+                                                ...prev,
+                                                assigned_brgy: undefined
+                                            }));
+                                        }}
+                                    />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Green areas are available. Gray areas are already occupied.
+                                </p>
+                            </div>
+                        )}
 
                         <div className="grid flex-1 auto-rows-min gap-2">
                             <div className="grid">

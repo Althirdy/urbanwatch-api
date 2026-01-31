@@ -44,6 +44,7 @@ const getFullName = (user: users_T) => {
 export const columns = (
     roles: roles_T[],
     locations: location_T[],
+    puroks: any[] = [],
 ): ColumnDef<users_T>[] => [
         {
             accessorKey: 'id',
@@ -104,6 +105,9 @@ export const columns = (
             header: 'Assigned Location',
             cell: ({ row }) => {
                 const user = row.original;
+                if (user.official_details?.purok?.name) {
+                    return <div>Purok: {user.official_details.purok.name}</div>;
+                }
                 return (
                     <div>
                         {user.citizen_details?.barangay ||
@@ -174,6 +178,7 @@ export const columns = (
                                     user={user}
                                     roles={roles}
                                     locations={locations}
+                                    puroks={puroks}
                                 >
                                     <TooltipTrigger asChild>
                                         <Button

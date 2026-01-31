@@ -40,10 +40,19 @@ beforeEach(function () {
     $this->textBeeService = Mockery::mock(App\Services\TextBeeService::class);
     $this->notificationService = Mockery::mock(App\Services\NotificationService::class);
     $this->geminiService = Mockery::mock(GeminiService::class);
+    $this->routingService = Mockery::mock(App\Services\GeographicRoutingService::class);
+
+    // Mock the routing result to return the seeded leader
+    $this->routingService->shouldReceive('findPurokLeader')
+        ->andReturn([
+            'purok' => (object) ['name' => 'Poblacion', 'id' => 1],
+            'leader' => OfficialsDetails::where('user_id', 2)->first(),
+        ])->byDefault();
 
     // Allow any calls to services (we don't strictly test SMS/Notifications in clustering tests)
     $this->textBeeService->shouldIgnoreMissing();
     $this->notificationService->shouldIgnoreMissing();
+    $this->routingService->shouldIgnoreMissing();
 
     // Default mock for Gemini comparison (Same incident by default for spatial tests)
     $this->geminiService->shouldReceive('compareConcerns')->andReturn(true)->byDefault();
@@ -52,7 +61,8 @@ beforeEach(function () {
         $this->fileUploadService,
         $this->textBeeService,
         $this->notificationService,
-        $this->geminiService
+        $this->geminiService,
+        $this->routingService
     );
 });
 

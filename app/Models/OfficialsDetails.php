@@ -10,6 +10,7 @@ class OfficialsDetails extends Model
 
     protected $fillable = [
         'user_id',
+        'purok_id',
         'first_name',
         'middle_name',
         'last_name',
@@ -37,5 +38,13 @@ class OfficialsDetails extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the purok territory assigned to the official.
+     */
+    public function purok()
+    {
+        return $this->belongsTo(Purok::class);
     }
 }
