@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
+    use HasFactory;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -34,25 +37,22 @@ class Notification extends Model
         'updated_at' => 'datetime',
     ];
 
+    /**
+     * Notification Types
+     */
     public const TYPE_CONCERN_ASSIGNED = 'concern_assigned';
-
     public const TYPE_CONCERN_ACKNOWLEDGED = 'concern_acknowledged';
-
     public const TYPE_CONCERN_RESOLVED = 'concern_resolved';
-
+    public const TYPE_CONCERN_REJECTED = 'concern_rejected';
     public const TYPE_CONCERN_STATUS_UPDATE = 'concern_status_update';
-
     public const TYPE_CONCERN_MERGED = 'concern_merged';
-
     public const TYPE_NEW_SAFETY_POST = 'new_safety_post';
-
     public const TYPE_SYSTEM_ANNOUNCEMENT = 'system_announcement';
 
     /**
      * User Types
      */
     public const USER_TYPE_CITIZEN = 'citizen';
-
     public const USER_TYPE_PUROK_LEADER = 'purok_leader';
 
     /**
@@ -95,7 +95,6 @@ class Notification extends Model
         if ($this->read_at === null) {
             return $this->update(['read_at' => now()]);
         }
-
         return true;
     }
 

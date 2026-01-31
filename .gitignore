@@ -27,4 +27,16 @@ yarn-error.log
 /.vscode
 /.zed
 
+<<<<<<< HEAD
+/docspublic/favicon.icoZone.Identifier
+public/favicon.svgZone.Identifier
+public/logoDark.pngZone.Identifier
+public/Uw.pngZone.Identifier
+public/favicon.icoZone.Identifier
+=======
 /docs
+public/favicon.icoZone.Identifier
+public/favicon.svgZone.Identifier
+public/logoDark.pngZone.Identifier
+public/Uw.pngZone.Identifier
+>>>>>>> origin/uw-api-notification-integration
