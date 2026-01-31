@@ -64,7 +64,7 @@ class UserController extends Controller
 
         // Fetch Puroks with geometry and status
         $puroksRaw = \App\Models\Purok::select('id', 'name', DB::raw('ST_AsGeoJSON(boundary) as geometry'))->get();
-        
+
         // Get IDs of puroks that already have an active leader
         $occupiedPurokIds = OfficialsDetails::where('status', 'active')
             ->whereNotNull('purok_id')
@@ -101,7 +101,7 @@ class UserController extends Controller
     public function store(UserRequest $request)
     {
         $validated = $request->validated();
-        
+
         // Manual capture of purok_id as it might not be in UserRequest yet
         $validated['purok_id'] = $request->input('purok_id');
 

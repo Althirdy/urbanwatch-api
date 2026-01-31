@@ -246,7 +246,7 @@ class YoloAccidentService
             // Geographic Routing & Notification
             try {
                 $routeData = $this->routingService->findPurokLeader($accident->latitude, $accident->longitude);
-                
+
                 if ($routeData && $routeData['leader']) {
                     $leaderDetails = $routeData['leader'];
                     Log::info("YOLO Service: Accident #{$accident->id} routed to Purok: {$routeData['purok']->name} (Leader ID: {$leaderDetails->user_id})");
@@ -255,7 +255,7 @@ class YoloAccidentService
                         dispatch(new \App\Jobs\SendSmsNotificationJob(
                             $leaderDetails->contact_number,
                             [
-                                'tracking_code' => 'ACC-' . $accident->id, // Pseudo-code for accidents
+                                'tracking_code' => 'ACC-'.$accident->id, // Pseudo-code for accidents
                                 'category' => $accident->accident_type,
                                 'severity' => $accident->severity,
                                 'description' => $accident->description,
@@ -268,7 +268,7 @@ class YoloAccidentService
                     Log::info("YOLO Service: Accident #{$accident->id} location not found in mapping. No automatic leader notification.");
                 }
             } catch (\Exception $e) {
-                Log::error("YOLO Service: Routing/Notification failed for Accident #{$accident->id}: " . $e->getMessage());
+                Log::error("YOLO Service: Routing/Notification failed for Accident #{$accident->id}: ".$e->getMessage());
                 // Non-blocking: Don't fail the whole process if notification fails
             }
 

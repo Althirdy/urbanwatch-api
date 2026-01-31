@@ -48,7 +48,7 @@ class PurokController extends Controller
             return "{$point[0]} {$point[1]}";
         }, $coords);
 
-        $wkt = 'POLYGON((' . implode(', ', $wktPoints) . '))';
+        $wkt = 'POLYGON(('.implode(', ', $wktPoints).'))';
 
         try {
             $purok->update([
@@ -59,7 +59,7 @@ class PurokController extends Controller
 
             return redirect()->back()->with('success', 'Purok boundary updated successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Failed to update boundary: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to update boundary: '.$e->getMessage());
         }
     }
 
@@ -80,7 +80,7 @@ class PurokController extends Controller
             return "{$point[0]} {$point[1]}";
         }, $coords);
 
-        $wkt = 'POLYGON((' . implode(', ', $wktPoints) . '))';
+        $wkt = 'POLYGON(('.implode(', ', $wktPoints).'))';
 
         Purok::create([
             'name' => $request->name,

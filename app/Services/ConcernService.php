@@ -468,40 +468,40 @@ class ConcernService
                 }
 
                 // 2. Assignment Logic (If not a duplicate)
-            // Check if already assigned to avoid double distribution
-            if ($concern->distribution) {
-                Log::info("Concern #{$concern->id} already distributed.");
+                // Check if already assigned to avoid double distribution
+                if ($concern->distribution) {
+                    Log::info("Concern #{$concern->id} already distributed.");
 
-                return;
-            }
+                    return;
+                }
 
-            // Find Purok Leader using Geographic Routing Service
-            $routeData = $this->routingService->findPurokLeader($concern->latitude, $concern->longitude);
-            $purokLeaderId = 1; // Default to Admin/Operator
-            $purokName = 'Unmapped Area';
+                // Find Purok Leader using Geographic Routing Service
+                $routeData = $this->routingService->findPurokLeader($concern->latitude, $concern->longitude);
+                $purokLeaderId = 1; // Default to Admin/Operator
+                $purokName = 'Unmapped Area';
 
-            if ($routeData && $routeData['leader']) {
-                $purokLeaderId = $routeData['leader']->user_id;
-                $purokName = $routeData['purok']->name;
-                Log::info("Concern #{$concern->id} routed to Purok: {$purokName} (Leader ID: {$purokLeaderId})");
-            } else {
-                Log::info("Concern #{$concern->id} location not found in mapping. Routing to Barangay Admin.");
-            }
+                if ($routeData && $routeData['leader']) {
+                    $purokLeaderId = $routeData['leader']->user_id;
+                    $purokName = $routeData['purok']->name;
+                    Log::info("Concern #{$concern->id} routed to Purok: {$purokName} (Leader ID: {$purokLeaderId})");
+                } else {
+                    Log::info("Concern #{$concern->id} location not found in mapping. Routing to Barangay Admin.");
+                }
 
-            $purokLeaderDetails = \App\Models\OfficialsDetails::where('user_id', $purokLeaderId)->first();
+                $purokLeaderDetails = \App\Models\OfficialsDetails::where('user_id', $purokLeaderId)->first();
 
-            if (! $purokLeaderDetails) {
-                Log::error("Target official (ID: {$purokLeaderId}) not found for Concern #{$concern->id}");
+                if (! $purokLeaderDetails) {
+                    Log::error("Target official (ID: {$purokLeaderId}) not found for Concern #{$concern->id}");
 
-                return;
-            }
+                    return;
+                }
 
-            $distribution = ConcernDistribution::create([
-                'concern_id' => $concern->id,
-                'purok_leader_id' => $purokLeaderId,
-                'status' => 'assigned',
-                'assigned_at' => now(),
-            ]);
+                $distribution = ConcernDistribution::create([
+                    'concern_id' => $concern->id,
+                    'purok_leader_id' => $purokLeaderId,
+                    'status' => 'assigned',
+                    'assigned_at' => now(),
+                ]);
 
                 $distribution->load('purokLeader.officialDetails');
 

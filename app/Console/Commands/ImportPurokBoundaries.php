@@ -47,31 +47,31 @@ class ImportPurokBoundaries extends Command
         foreach ($data['features'] as $feature) {
             $properties = $feature['properties'] ?? [];
             $name = $properties['name'] ?? 'Unnamed Purok';
-            
+
             // Special handling for the overall Barangay Boundary
             if ($name === 'Brgy 176-E Boundary') {
                 $this->info("Found 'Brgy 176-E Boundary'. Skipping Purok creation.");
-                
+
                 $geometry = $feature['geometry'] ?? [];
                 $coordinates = $geometry['coordinates'];
-                
+
                 if ($geometry['type'] === 'Polygon') {
                     $coordinates = $coordinates[0];
                 }
-                
+
                 // Format for config/geofencing.php
                 $phpArray = "[\n";
                 foreach ($coordinates as $point) {
                     $phpArray .= "        [{$point[0]}, {$point[1]}],\n";
                 }
-                $phpArray .= "    ]";
-                
-                $this->info("---------------------------------------------------");
-                $this->info("UPDATE config/geofencing.php WITH THE FOLLOWING DATA:");
-                $this->info("---------------------------------------------------");
-                $this->line("'boundary' => " . $phpArray . ",");
-                $this->info("---------------------------------------------------");
-                
+                $phpArray .= '    ]';
+
+                $this->info('---------------------------------------------------');
+                $this->info('UPDATE config/geofencing.php WITH THE FOLLOWING DATA:');
+                $this->info('---------------------------------------------------');
+                $this->line("'boundary' => ".$phpArray.',');
+                $this->info('---------------------------------------------------');
+
                 continue;
             }
 
@@ -80,6 +80,7 @@ class ImportPurokBoundaries extends Command
 
             if ($geometry['type'] !== 'LineString' && $geometry['type'] !== 'Polygon') {
                 $this->warn("Skipping feature '{$name}': Unsupported geometry type '{$geometry['type']}'.");
+
                 continue;
             }
 
@@ -105,7 +106,7 @@ class ImportPurokBoundaries extends Command
                 return "{$point[0]} {$point[1]}";
             }, $coordinates);
 
-            $wkt = 'POLYGON((' . implode(', ', $wktPoints) . '))';
+            $wkt = 'POLYGON(('.implode(', ', $wktPoints).'))';
 
             try {
                 \App\Models\Purok::updateOrCreate(
@@ -117,7 +118,7 @@ class ImportPurokBoundaries extends Command
                 );
                 $this->line("Successfully imported: {$name}");
             } catch (\Exception $e) {
-                $this->error("Failed to import '{$name}': " . $e->getMessage());
+                $this->error("Failed to import '{$name}': ".$e->getMessage());
             }
         }
 

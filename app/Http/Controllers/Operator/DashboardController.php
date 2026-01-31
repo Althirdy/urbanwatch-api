@@ -22,9 +22,9 @@ class DashboardController extends Controller
             ->where('status', 'pending')
             ->where(function ($query) {
                 $query->whereDoesntHave('distribution')
-                      ->orWhereHas('distribution', function ($q) {
-                          $q->where('purok_leader_id', 1);
-                      });
+                    ->orWhereHas('distribution', function ($q) {
+                        $q->where('purok_leader_id', 1);
+                    });
             })
             ->get()
             ->map(function ($concern) {
@@ -105,7 +105,7 @@ class DashboardController extends Controller
             // but for now we implement basic notification here or dispatch the job directly.
             $leader = User::with('officialDetails')->find($leaderId);
             if ($leader && $leader->officialDetails && $leader->officialDetails->contact_number) {
-                 dispatch(new \App\Jobs\SendSmsNotificationJob(
+                dispatch(new \App\Jobs\SendSmsNotificationJob(
                     $leader->officialDetails->contact_number,
                     [
                         'tracking_code' => $concern->tracking_code,
@@ -119,11 +119,13 @@ class DashboardController extends Controller
             }
 
             DB::commit();
+
             return redirect()->back()->with('success', 'Concern assigned successfully.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Failed to assign concern: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Failed to assign concern: '.$e->getMessage());
         }
     }
 }

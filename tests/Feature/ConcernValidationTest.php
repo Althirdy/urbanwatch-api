@@ -62,6 +62,15 @@ class ConcernValidationTest extends TestCase
             ConcernValidationSuccess::class,
             ConcernValidationFailed::class,
         ]);
+
+        // Mock GeographicRoutingService to avoid spatial query issues
+        $this->mock(\App\Services\GeographicRoutingService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('findPurokLeader')
+                ->andReturn([
+                    'purok' => (object) ['name' => '176', 'id' => 1],
+                    'leader' => OfficialsDetails::where('user_id', 2)->first(),
+                ]);
+        });
     }
 
     public function test_valid_manual_concern_is_processed_correctly()
