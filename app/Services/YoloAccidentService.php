@@ -17,10 +17,16 @@ class YoloAccidentService
 
     protected $fileUploadService;
 
-    public function __construct(GeminiService $geminiService, FileUploadService $fileUploadService)
-    {
+    protected $routingService;
+
+    public function __construct(
+        GeminiService $geminiService,
+        FileUploadService $fileUploadService,
+        GeographicRoutingService $routingService
+    ) {
         $this->geminiService = $geminiService;
         $this->fileUploadService = $fileUploadService;
+        $this->routingService = $routingService;
     }
 
     /**
@@ -235,6 +241,35 @@ class YoloAccidentService
                 broadcast(new \App\Events\AccidentDetected($accident));
             } else {
                 broadcast(new \App\Events\AccidentUpdated($accident, $incidentMedia));
+            }
+
+            // Geographic Routing & Notification
+            try {
+                $routeData = $this->routingService->findPurokLeader($accident->latitude, $accident->longitude);
+                
+                if ($routeData && $routeData['leader']) {
+                    $leaderDetails = $routeData['leader'];
+                    Log::info("YOLO Service: Accident #{$accident->id} routed to Purok: {$routeData['purok']->name} (Leader ID: {$leaderDetails->user_id})");
+
+                    if ($leaderDetails->contact_number) {
+                        dispatch(new \App\Jobs\SendSmsNotificationJob(
+                            $leaderDetails->contact_number,
+                            [
+                                'tracking_code' => 'ACC-' . $accident->id, // Pseudo-code for accidents
+                                'category' => $accident->accident_type,
+                                'severity' => $accident->severity,
+                                'description' => $accident->description,
+                                'address' => $cctvDevice->location->location_name ?? 'Unknown Location',
+                                'custom_location' => $cctvDevice->location->barangay ?? '',
+                            ]
+                        ));
+                    }
+                } else {
+                    Log::info("YOLO Service: Accident #{$accident->id} location not found in mapping. No automatic leader notification.");
+                }
+            } catch (\Exception $e) {
+                Log::error("YOLO Service: Routing/Notification failed for Accident #{$accident->id}: " . $e->getMessage());
+                // Non-blocking: Don't fail the whole process if notification fails
             }
 
             $processingTimeMs = round($processingTime * 1000, 2);

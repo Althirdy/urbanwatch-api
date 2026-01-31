@@ -20,7 +20,7 @@ class UserController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = User::with(['role', 'officialDetails', 'citizenDetails'])
+        $query = User::with(['role', 'officialDetails.purok:id,name', 'citizenDetails'])
             ->where('id', '!=', auth()->id()); // Exclude logged-in user
 
         // Search functionality
@@ -62,10 +62,29 @@ class UserController extends Controller
         $roles = Roles::all();
         $locations = Locations::select('id', 'location_name', 'barangay')->get();
 
+        // Fetch Puroks with geometry and status
+        $puroksRaw = \App\Models\Purok::select('id', 'name', DB::raw('ST_AsGeoJSON(boundary) as geometry'))->get();
+        
+        // Get IDs of puroks that already have an active leader
+        $occupiedPurokIds = OfficialsDetails::where('status', 'active')
+            ->whereNotNull('purok_id')
+            ->pluck('purok_id')
+            ->toArray();
+
+        $puroks = $puroksRaw->map(function ($p) use ($occupiedPurokIds) {
+            return [
+                'id' => $p->id,
+                'name' => $p->name,
+                'geometry' => json_decode($p->geometry),
+                'status' => in_array($p->id, $occupiedPurokIds) ? 'occupied' : 'available',
+            ];
+        });
+
         return Inertia::render('users', [
             'users' => $users,
             'roles' => $roles,
             'locations' => $locations,
+            'puroks' => $puroks,
             'filters' => $request->only(['search', 'role_id', 'barangay']),
         ]);
     }
@@ -82,6 +101,9 @@ class UserController extends Controller
     public function store(UserRequest $request)
     {
         $validated = $request->validated();
+        
+        // Manual capture of purok_id as it might not be in UserRequest yet
+        $validated['purok_id'] = $request->input('purok_id');
 
         // Combine names for the user table
         $validated['name'] = trim(
@@ -108,6 +130,7 @@ class UserController extends Controller
                 // Operator or Purok Leader - create OfficialsDetails
                 OfficialsDetails::create([
                     'user_id' => $user->id,
+                    'purok_id' => $validated['purok_id'] ?? null, // Save Purok ID
                     'first_name' => $validated['first_name'],
                     'middle_name' => $validated['middle_name'],
                     'last_name' => $validated['last_name'],
@@ -176,6 +199,7 @@ class UserController extends Controller
     public function update(UserRequest $request, User $user)
     {
         $validated = $request->validated();
+        $validated['purok_id'] = $request->input('purok_id');
 
         // Combine names for the user table
         $validated['name'] = trim(
@@ -201,6 +225,7 @@ class UserController extends Controller
                 $officialDetails = $user->officialDetails()->updateOrCreate(
                     ['user_id' => $user->id],
                     [
+                        'purok_id' => $validated['purok_id'] ?? null, // Update Purok ID
                         'first_name' => $validated['first_name'],
                         'middle_name' => $validated['middle_name'],
                         'last_name' => $validated['last_name'],

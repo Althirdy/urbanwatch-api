@@ -25,10 +25,12 @@ export default function Users({
     users,
     roles,
     locations,
+    puroks,
 }: {
     users: PaginatedUsers;
     roles: roles_T[];
     locations: location_T[];
+    puroks: any[];
 }) {
     const [filtered_users, setFilteredUsers] = useState<users_T[]>(users.data);
     const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
@@ -38,7 +40,7 @@ export default function Users({
             <Head title="Users" />
             <div className="space-y-4 p-4">
                 <div className="flex items-center justify-between gap-4">
-                    <CreateUsers roles={roles} locations={locations} />
+                    <CreateUsers roles={roles} locations={locations} puroks={puroks} />
                     
                     {/* View Toggle */}
                     <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'card')}>
@@ -74,12 +76,14 @@ export default function Users({
                         users={filtered_users}
                         roles={roles}
                         locations={locations}
+                        puroks={puroks}
                     />
                 ) : (
                     <UserCard
                         users={filtered_users}
                         roles={roles}
                         locations={locations}
+                        puroks={puroks}
                     />
                 )}
             </div>

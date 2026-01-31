@@ -23,6 +23,7 @@ export type CitizenDetails = {
 export type OfficialsDetails = {
     id: number;
     user_id: number;
+    purok_id?: number;
     first_name: string;
     middle_name?: string;
     last_name: string;
@@ -35,6 +36,10 @@ export type OfficialsDetails = {
     status: string;
     created_at: string;
     updated_at: string;
+    purok?: {
+        id: number;
+        name: string;
+    };
 };
 
 export type users_T = {

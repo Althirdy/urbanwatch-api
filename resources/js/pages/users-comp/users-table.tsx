@@ -39,11 +39,13 @@ const UserTable = ({
     users,
     roles,
     locations,
+    puroks = [],
     isLoading = false,
 }: {
     users: users_T[];
     roles: roles_T[];
     locations: location_T[];
+    puroks?: any[];
     isLoading?: boolean;
 }) => {
     const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -55,7 +57,7 @@ const UserTable = ({
 
     const table = useReactTable({
         data: users,
-        columns: columns(roles, locations),
+        columns: columns(roles, locations, puroks),
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
         getCoreRowModel: getCoreRowModel(),
@@ -118,7 +120,7 @@ const UserTable = ({
                         {showLoading ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={columns(roles, locations).length}
+                                    colSpan={columns(roles, locations, puroks).length}
                                     className="h-48 text-center"
                                 >
                                     <div className="text-md flex items-center justify-center gap-2 text-muted-foreground">
@@ -151,7 +153,7 @@ const UserTable = ({
                         ) : (
                             <TableRow>
                                 <TableCell
-                                    colSpan={columns(roles, locations).length}
+                                    colSpan={columns(roles, locations, puroks).length}
                                     className="h-24 text-center text-muted-foreground"
                                 >
                                     No users found.
