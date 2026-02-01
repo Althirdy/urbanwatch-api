@@ -66,6 +66,9 @@ function ViewUWDevice({
                         >
                             {device.status}
                         </Badge>
+                        <Badge variant="outline" className="font-mono text-[10px] bg-muted/50">
+                            SN: {device.device_id}
+                        </Badge>
                     </DialogDescription>
                 </DialogHeader>
 

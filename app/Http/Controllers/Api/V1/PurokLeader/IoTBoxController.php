@@ -31,15 +31,15 @@ class IoTBoxController extends BaseApiController
     {
         // Validate the incoming request
         $validator = Validator::make($request->all(), [
-            'device_id' => 'required|integer',
-            'anomaly_type' => 'required|in:sound_anomaly,anti_tampering',
+            'device_id' => 'required|string',
+            'anomaly_type' => 'required|in:sound_anomaly,anti_tampering,crowded',
             'image' => 'nullable|image|max:10240', // Max 10MB
             'details' => 'nullable|array',
         ], [
             'device_id.required' => 'Device ID is required.',
-            'device_id.integer' => 'Device ID must be an integer.',
+            'device_id.string' => 'Device ID must be a string.',
             'anomaly_type.required' => 'Anomaly type is required.',
-            'anomaly_type.in' => 'Anomaly type must be sound_anomaly or anti_tampering.',
+            'anomaly_type.in' => 'Anomaly type must be sound_anomaly, anti_tampering, or crowded.',
             'image.image' => 'The file must be an image.',
             'image.max' => 'Image must not exceed 10MB.',
         ]);
@@ -241,7 +241,7 @@ class IoTBoxController extends BaseApiController
     public function verifyDevice(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'device_id' => 'required|integer',
+            'device_id' => 'required|string',
         ]);
 
         if ($validator->fails()) {

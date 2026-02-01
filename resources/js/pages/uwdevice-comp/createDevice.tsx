@@ -54,6 +54,7 @@ function AddUWDevice({
         location: false,
     });
     const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+    const [generatedDeviceId, setGeneratedDeviceId] = useState<string | null>(null);
     const [isCopied, setIsCopied] = useState(false);
     // Custom location state
     const [useCustomLocation, setUseCustomLocation] = useState(false);
@@ -199,6 +200,9 @@ function AddUWDevice({
                 if (flash?.api_token) {
                     setGeneratedToken(flash.api_token);
                 }
+                if (flash?.device_id) {
+                    setGeneratedDeviceId(flash.device_id.toString());
+                }
 
                 toast({
                     title: 'Success!',
@@ -267,27 +271,46 @@ function AddUWDevice({
                                     <Check className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                                 </div>
 
-                                <div className="w-full space-y-3">
-                                    <Label className="text-center block text-sm font-medium text-muted-foreground">
-                                        Your Device API Token
-                                    </Label>
-                                    <div className="relative group">
-                                        <div className="w-full bg-zinc-950 text-zinc-50 font-mono text-sm p-4 rounded-lg border border-zinc-800 break-all pr-12 select-all">
-                                            {generatedToken}
+                                <div className="flex flex-col gap-5 w-full max-w-md mx-auto">
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">
+                                            Device ID
+                                        </Label>
+                                        <div className="relative group overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-950 shadow-inner">
+                                            <div className="w-full text-zinc-100 font-mono text-sm px-4 py-3.5 break-all pr-12">
+                                                {generatedDeviceId || 'Generating...'}
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+                                                onClick={() => copyToClipboard(generatedDeviceId || '')}
+                                            >
+                                                {isCopied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                                            </Button>
                                         </div>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="absolute right-2 top-2 h-8 w-8 text-zinc-400 hover:text-white hover:bg-white/10"
-                                            onClick={() => copyToClipboard(generatedToken)}
-                                        >
-                                            {isCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                        </Button>
                                     </div>
-                                    <p className="text-xs text-center text-amber-600 dark:text-amber-400 font-medium">
-                                        ⚠️ Warning: This token is only shown once. Keep it secure!
-                                    </p>
+
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">
+                                            API Token
+                                        </Label>
+                                        <div className="relative group overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-950 shadow-inner">
+                                            <div className="w-full text-zinc-100 font-mono text-sm px-4 py-3.5 break-all pr-12">
+                                                {generatedToken || 'Generating...'}
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+                                                onClick={() => copyToClipboard(generatedToken || '')}
+                                            >
+                                                {isCopied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <Button
@@ -295,10 +318,11 @@ function AddUWDevice({
                                     className="w-full"
                                     onClick={() => {
                                         setGeneratedToken(null);
+                                        setGeneratedDeviceId(null);
                                         setDialogOpen(false);
                                     }}
                                 >
-                                    I have saved the token
+                                    I have saved the credentials
                                 </Button>
                             </div>
                         ) : (
@@ -317,7 +341,7 @@ function AddUWDevice({
                                                         setErrors((prev) => ({ ...prev, deviceName: false }));
                                                     }
                                                 }}
-                                                placeholder="Enter device name"
+                                                placeholder="Enter device name (e.g. South Entrance Sensor)"
                                                 className={errors.deviceName || serverErrors.device_name ? 'border-red-500' : ''}
                                             />
                                             {errors.deviceName && (

@@ -26,11 +26,11 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('officials_details', function (Blueprint $table) {
-            $table->string('first_name')->change();
-            $table->string('middle_name')->nullable()->change();
-            $table->string('last_name')->change();
-            $table->string('contact_number')->change();
-            $table->string('office_address')->change();
+            $table->text('first_name')->change();
+            $table->text('middle_name')->nullable()->change();
+            $table->text('last_name')->change();
+            $table->text('contact_number')->change();
+            $table->text('office_address')->change();
         });
     }
 };

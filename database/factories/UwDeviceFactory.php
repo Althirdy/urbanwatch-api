@@ -13,7 +13,7 @@ class UwDeviceFactory extends Factory
     public function definition(): array
     {
         return [
-            'device_id' => $this->faker->unique()->numberBetween(1000, 9999),
+            'device_id' => $this->faker->unique()->numerify('SN-######'),
             'device_name' => 'IoT Device '.$this->faker->word,
             'status' => 'active',
             'api_token' => 'uw_live_'.Str::random(40),

@@ -28,7 +28,7 @@ class UwDevice extends Model
     ];
 
     protected $casts = [
-        'device_id' => 'integer',
+        'device_id' => 'string',
         'custom_latitude' => 'decimal:7',
         'custom_longitude' => 'decimal:7',
         'last_seen_at' => 'datetime',

@@ -30,9 +30,9 @@ export type cctv_T = {
 
 export type uwDevice_T = {
     id: number;
+    device_id: string;
     device_name: string;
     location_id: number | null;
-    cctv_id: number | null;
     status: 'active' | 'inactive' | 'maintenance';
     custom_address: string | null;
     custom_latitude: number | null;
