@@ -264,7 +264,11 @@ function UWDeviceDisplay({
                                                 title={device.is_online ? 'Online' : 'Offline'}
                                             />
                                         </div>
-                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                        <div className="flex items-center gap-1.5 text-[10px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700 w-fit font-mono text-muted-foreground">
+                                            <Cpu className="h-3 w-3" />
+                                            <span>SN: {device.device_id}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                                             <MapPin className="h-4 w-4 shrink-0" />
                                             <span className="truncate">
                                                 {device.location?.barangay ||

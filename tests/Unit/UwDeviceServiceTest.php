@@ -24,7 +24,7 @@ class UwDeviceServiceTest extends TestCase
     public function it_can_create_a_device_with_an_api_token()
     {
         $data = [
-            'device_id' => 12345,
+            'device_id' => 'SN12345',
             'device_name' => 'Test Device',
             'status' => 'active',
         ];
@@ -36,7 +36,7 @@ class UwDeviceServiceTest extends TestCase
         $this->assertNotNull($device->api_token);
         $this->assertStringStartsWith('uw_live_', $device->api_token);
         $this->assertDatabaseHas('uw_devices', [
-            'device_id' => 12345,
+            'device_id' => 'SN12345',
             'device_name' => 'Test Device',
         ]);
     }

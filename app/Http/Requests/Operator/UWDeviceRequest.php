@@ -24,13 +24,6 @@ class UWDeviceRequest extends FormRequest
         $deviceId = $this->route('uwdevice')?->id;
 
         return [
-            'device_id' => [
-                'sometimes',
-                'integer',
-                $deviceId
-                    ? 'unique:uw_devices,device_id,'.$deviceId
-                    : 'unique:uw_devices,device_id',
-            ],
             'device_name' => [
                 'required',
                 'string',
@@ -53,9 +46,6 @@ class UWDeviceRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'device_id.required' => 'Device ID is required.',
-            'device_id.integer' => 'Device ID must be an integer.',
-            'device_id.unique' => 'This device ID is already registered.',
             'device_name.required' => 'Device name is required.',
             'device_name.max' => 'Device name cannot exceed 255 characters.',
             'device_name.unique' => 'A device with this name already exists. Please choose a unique name.',

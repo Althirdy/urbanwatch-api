@@ -15,10 +15,8 @@ class UwDeviceService
     public function createDevice(array $data): UwDevice
     {
         return DB::transaction(function () use ($data) {
-            // Generate a random 6-digit device_id if not provided
-            if (! isset($data['device_id'])) {
-                $data['device_id'] = $this->generateUniqueDeviceId();
-            }
+            // Force generate a unique 6-digit device_id as serial number
+            $data['device_id'] = $this->generateUniqueDeviceId();
 
             $data['api_token'] = 'uw_live_'.Str::random(40);
 
@@ -35,12 +33,12 @@ class UwDeviceService
     }
 
     /**
-     * Generate a unique 6-digit device ID.
+     * Generate a unique 6-digit device ID as a string.
      */
-    private function generateUniqueDeviceId(): int
+    private function generateUniqueDeviceId(): string
     {
         do {
-            $deviceId = random_int(100000, 999999);
+            $deviceId = (string) random_int(100000, 999999);
         } while (UwDevice::where('device_id', $deviceId)->exists());
 
         return $deviceId;
@@ -66,7 +64,7 @@ class UwDeviceService
     /**
      * Verify a device and update its heartbeat.
      */
-    public function verifyAndHeartbeat(int $deviceId, ?string $token): ?UwDevice
+    public function verifyAndHeartbeat(string $deviceId, ?string $token): ?UwDevice
     {
         $device = UwDevice::where('device_id', $deviceId)
             ->where('api_token', $token)
@@ -83,7 +81,7 @@ class UwDeviceService
     /**
      * Get a device by ID without token check (for internal use cases).
      */
-    public function getDeviceById(int $deviceId): ?UwDevice
+    public function getDeviceById(string $deviceId): ?UwDevice
     {
         return UwDevice::where('device_id', $deviceId)->first();
     }

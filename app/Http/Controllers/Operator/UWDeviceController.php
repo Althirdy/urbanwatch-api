@@ -32,6 +32,7 @@ class UWDeviceController extends Controller
             return redirect()->back()->with([
                 'success' => 'UW device created successfully!',
                 'api_token' => $uwDevice->api_token,
+                'device_id' => $uwDevice->device_id,
             ]);
         } catch (\Exception $e) {
             Log::error('UW Device Creation Error: '.$e->getMessage(), [
