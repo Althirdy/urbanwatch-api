@@ -9,14 +9,19 @@ use App\Jobs\SendConcernStatusNotificationJob;
 use App\Models\Citizen\Concern;
 use App\Models\ConcernDistribution;
 use App\Models\ConcernHistory;
-use App\Services\NotificationService as ServicesNotificationService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ConcernController extends BaseApiController
 {
-    public function __construct(protected ServicesNotificationService $notificationService) {}
+    protected NotificationService $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
 
     /**
      * Display a listing of the assigned concerns.
@@ -82,10 +87,35 @@ class ConcernController extends BaseApiController
      */
     public function update(Request $request, string $id)
     {
-        $request->validate([
-            'status' => 'required|in:pending,ongoing,escalated,resolved,rejected', // Added resolved to validation
-            'rejection_reason' => 'required_if:status,escalated|string|max:1000',
+        // Log incoming request for debugging
+        Log::info('PurokLeader Concern Update Request', [
+            'concern_id' => $id,
+            'request_data' => $request->all(),
+            'status' => $request->input('status'),
+            'rejection_reason' => $request->input('rejection_reason'),
+            'has_rejection_reason' => $request->has('rejection_reason'),
         ]);
+
+        try {
+            $request->validate([
+                'status' => 'required|in:pending,ongoing,escalated,resolved,rejected',
+                'rejection_reason' => 'required_if:status,rejected|string|max:500',
+                'remarks' => 'nullable|string|max:1000',
+            ], [
+                'status.required' => 'Status is required',
+                'status.in' => 'Status must be one of: pending, ongoing, escalated, resolved, rejected',
+                'rejection_reason.required_if' => 'Rejection reason is required when status is rejected',
+                'rejection_reason.string' => 'Rejection reason must be a string',
+                'rejection_reason.max' => 'Rejection reason must not exceed 500 characters',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation failed for concern update', [
+                'concern_id' => $id,
+                'errors' => $e->errors(),
+                'request_data' => $request->all(),
+            ]);
+            throw $e;
+        }
 
         DB::beginTransaction();
         try {
@@ -104,8 +134,10 @@ class ConcernController extends BaseApiController
             // 1. Update the global concern status
             $concern = Concern::find($id);
             $previousStatus = $concern->status;
-            if ($status == 'rejected') {
-                $rejectionReason = $request->input('rejection_reason', 'Rejected by purok leader without reason');
+
+            // Handle rejection specially
+            if ($status === 'rejected') {
+                $rejectionReason = $request->input('rejection_reason', 'Rejected by Purok Leader');
                 $concern->update([
                     'status' => $status,
                     'is_valid' => false,
@@ -168,7 +200,7 @@ class ConcernController extends BaseApiController
 
             DB::commit();
 
-            // Notify relevant parties about the status change
+            // Create in-app notification for citizen about status change
             $this->notificationService->notifyConcernStatusChanged(
                 $concern->fresh(),
                 $previousStatus,
@@ -177,9 +209,7 @@ class ConcernController extends BaseApiController
                 $remarks
             );
 
-            Log::info($purokLeader);
-
-            // Trigger event to notify citizen of status update
+            // Trigger event to notify citizen of status update (Pusher broadcast)
             event(new ConcernStatusUpdated(
                 $concern->fresh(),
                 $distribution->fresh(),

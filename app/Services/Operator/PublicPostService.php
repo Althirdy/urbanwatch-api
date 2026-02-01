@@ -3,6 +3,7 @@
 namespace App\Services\Operator;
 
 use App\Exceptions\UrbanWatchException;
+use App\Jobs\SendPublicPostNotificationsJob;
 use App\Models\Accident;
 use App\Models\PublicPost;
 use App\Models\Report;
@@ -144,14 +145,19 @@ class PublicPostService
 
     /**
      * Helper to trigger notifications for a public post.
+     * Dispatches a queued job to handle bulk notifications asynchronously.
      */
     protected function triggerPostNotifications(PublicPost $post)
     {
-        // Fetch all Citizens (3) and Purok Leaders (2)
-        $users = \App\Models\User::whereIn('role_id', [2, 3])->get(['id', 'role_id']);
+        // Fetch only user IDs for Citizens (3) and Purok Leaders (2)
+        // Using pluck to avoid loading full models - prevents N+1
+        $userIds = \App\Models\User::whereIn('role_id', [2, 3])
+            ->pluck('id')
+            ->toArray();
 
-        if ($users->isNotEmpty()) {
-            $this->notificationService->notifyNewPublicPost($post, $users);
+        if (! empty($userIds)) {
+            // Dispatch job to process notifications asynchronously
+            SendPublicPostNotificationsJob::dispatch($post, $userIds);
         }
     }
 

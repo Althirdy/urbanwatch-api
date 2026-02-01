@@ -8,6 +8,9 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     *
+     * Creates the notifications table for persistent notification storage.
+     * Supports both Citizen and Purok Leader apps.
      */
     public function up(): void
     {

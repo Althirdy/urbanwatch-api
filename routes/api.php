@@ -22,7 +22,7 @@ Route::prefix('v1')->group(function () {
     // YOLO detection routes
     require __DIR__.'/api/v1/yolo.php';
 
-    // Notifcation routes
+    // Notification routes
     require __DIR__.'/api/v1/notifications.php';
     // IoT Box routes
     require __DIR__.'/api/v1/iotbox.php';
