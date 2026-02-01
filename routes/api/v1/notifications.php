@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -22,9 +22,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // PUT /api/v1/notifications/mark-all-read - Mark all as read
     Route::put('notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
 
+    // DELETE /api/v1/notifications/clear - Clear all notifications
+    // NOTE: This MUST come BEFORE the {id} wildcard route
+    Route::delete('notifications/clear', [NotificationController::class, 'clearAll']);
+
     // DELETE /api/v1/notifications/{id} - Delete a notification
     Route::delete('notifications/{id}', [NotificationController::class, 'destroy']);
-
-    // DELETE /api/v1/notifications/clear - Clear all notifications
-    Route::delete('notifications/clear', [NotificationController::class, 'clearAll']);
 });

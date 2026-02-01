@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
+    use HasFactory;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -34,11 +37,16 @@ class Notification extends Model
         'updated_at' => 'datetime',
     ];
 
+    /**
+     * Notification Types
+     */
     public const TYPE_CONCERN_ASSIGNED = 'concern_assigned';
 
     public const TYPE_CONCERN_ACKNOWLEDGED = 'concern_acknowledged';
 
     public const TYPE_CONCERN_RESOLVED = 'concern_resolved';
+
+    public const TYPE_CONCERN_REJECTED = 'concern_rejected';
 
     public const TYPE_CONCERN_STATUS_UPDATE = 'concern_status_update';
 
