@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1\PurokLeader;
 
+use App\Events\AnomalyLogCreated;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\AnomalyLog;
+use App\Models\UwDevice;
 use App\Services\FileUploadService;
 use App\Services\UwDeviceService;
 use Illuminate\Http\Request;
@@ -98,6 +100,9 @@ class IoTBoxController extends BaseApiController
             ]);
 
             DB::commit();
+
+            // Broadcast real-time event for mobile app
+            event(new AnomalyLogCreated($anomalyLog));
 
             return $this->sendResponse([
                 'anomaly_log_id' => $anomalyLog->id,
@@ -268,5 +273,90 @@ class IoTBoxController extends BaseApiController
             'device_name' => $iotBox->device_name,
             'status' => $iotBox->status,
         ], 'Device verified successfully');
+    }
+
+    /**
+     * Get anomaly log statistics for dashboard.
+     */
+    public function statistics(Request $request)
+    {
+        try {
+            $today = now()->startOfDay();
+            $thisWeek = now()->startOfWeek();
+            $thisMonth = now()->startOfMonth();
+
+            // Base query
+            $baseQuery = AnomalyLog::query();
+
+            // Overall statistics
+            $stats = [
+                'total' => [
+                    'all_time' => AnomalyLog::count(),
+                    'today' => AnomalyLog::where('created_at', '>=', $today)->count(),
+                    'this_week' => AnomalyLog::where('created_at', '>=', $thisWeek)->count(),
+                    'this_month' => AnomalyLog::where('created_at', '>=', $thisMonth)->count(),
+                ],
+                'by_status' => [
+                    'pending' => AnomalyLog::where('is_confirmed', false)->count(),
+                    'confirmed' => AnomalyLog::where('is_confirmed', true)->count(),
+                ],
+                'by_type' => [
+                    'sound_anomaly' => AnomalyLog::where('anomaly_type', 'sound_anomaly')->count(),
+                    'anti_tampering' => AnomalyLog::where('anomaly_type', 'anti_tampering')->count(),
+                    'crowded' => AnomalyLog::where('anomaly_type', 'crowded')->count(),
+                ],
+                'today_by_type' => [
+                    'sound_anomaly' => AnomalyLog::where('anomaly_type', 'sound_anomaly')
+                        ->where('created_at', '>=', $today)->count(),
+                    'anti_tampering' => AnomalyLog::where('anomaly_type', 'anti_tampering')
+                        ->where('created_at', '>=', $today)->count(),
+                    'crowded' => AnomalyLog::where('anomaly_type', 'crowded')
+                        ->where('created_at', '>=', $today)->count(),
+                ],
+                'devices' => [
+                    'total' => UwDevice::count(),
+                    'active' => UwDevice::where('status', 'active')->count(),
+                    'online' => UwDevice::where('last_seen_at', '>=', now()->subMinutes(5))->count(),
+                ],
+                'recent_anomalies' => AnomalyLog::with('iotBox')
+                    ->orderBy('created_at', 'desc')
+                    ->take(5)
+                    ->get()
+                    ->map(function ($log) {
+                        return [
+                            'id' => $log->id,
+                            'anomaly_type' => $log->anomaly_type,
+                            'anomaly_type_label' => $this->getAnomalyTypeLabel($log->anomaly_type),
+                            'device_name' => $log->iotBox?->device_name ?? 'Unknown',
+                            'location' => $log->iotBox?->display_location ?? 'Unknown',
+                            'is_confirmed' => $log->is_confirmed,
+                            'created_at' => $log->created_at->toISOString(),
+                            'time_ago' => $log->created_at->diffForHumans(),
+                        ];
+                    }),
+            ];
+
+            return $this->sendResponse($stats, 'Anomaly statistics retrieved successfully');
+
+        } catch (\Exception $e) {
+            Log::error('Error retrieving anomaly statistics', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return $this->sendError('Failed to retrieve anomaly statistics');
+        }
+    }
+
+    /**
+     * Get human-readable label for anomaly type.
+     */
+    private function getAnomalyTypeLabel(string $type): string
+    {
+        return match ($type) {
+            'sound_anomaly' => 'Sound Anomaly',
+            'anti_tampering' => 'Anti-Tampering Alert',
+            'crowded' => 'Crowded Area Detected',
+            default => ucfirst(str_replace('_', ' ', $type)),
+        };
     }
 }

@@ -17,3 +17,9 @@ Broadcast::channel('purok-leader.{purokLeaderId}', function ($user, $purokLeader
     // Only allow access if the user is a purok leader (role_id = 2) and the channel matches their ID
     return (int) $user->id === (int) $purokLeaderId && (int) $user->role_id === 2;
 });
+
+// Public channel for anomaly log real-time updates (IoT Box alerts)
+// Note: This is a public channel - all authenticated users can subscribe
+Broadcast::channel('anomaly-logs', function () {
+    return true;
+});
