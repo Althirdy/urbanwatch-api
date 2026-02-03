@@ -18,6 +18,7 @@ import {
     Calendar,
     Eye,
     Globe,
+    ImageIcon,
     LocateFixed,
     Mail,
     MoveLeft,
@@ -122,7 +123,7 @@ function ViewPublicPostDetails({ post, children }: ViewPublicPostDetailsProps) {
                     {/* Post Preview Image */}
                     <div className="flex flex-col gap-2">
                         <p className="text-md font-medium">Post Image</p>
-                        <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
+                        <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-muted/20 flex flex-col items-center justify-center">
                             {post.image_path ? (
                                 <img
                                     src={post.image_path}
@@ -130,7 +131,13 @@ function ViewPublicPostDetails({ post, children }: ViewPublicPostDetailsProps) {
                                     className="h-full w-full object-cover"
                                 />
                             ) : (
-                                <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
+                                <>
+                                    <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/10 dark:stroke-neutral-100/10" />
+                                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                        <ImageIcon className="h-10 w-10 opacity-20" />
+                                        <span className="text-sm font-medium">No Image available</span>
+                                    </div>
+                                </>
                             )}
                         </div>
                     </div>

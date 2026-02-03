@@ -31,7 +31,7 @@ class FileUploadService
         $path = '';
 
         // Optimization for Images
-        if (str_starts_with($mimeType, 'image/') && $mimeType !== 'image/gif') {
+        if (str_starts_with($mimeType, 'image/') && $mimeType !== 'image/gif' && function_exists('imagecreatefromjpeg')) {
             try {
                 $manager = new ImageManager(new Driver);
                 $image = $manager->read($file);

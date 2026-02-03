@@ -12,6 +12,7 @@ use App\Services\NotificationService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class PublicPostService
 {
@@ -172,12 +173,38 @@ class PublicPostService
     /**
      * Update a public post.
      */
-    public function updatePublicPost(PublicPost $publicPost, array $data)
+    public function updatePublicPost(PublicPost $publicPost, array $data, ?UploadedFile $image = null)
     {
-        // Update the public post fields
-        // Only update fields present in $data
         DB::beginTransaction();
         try {
+            // Handle Image Upload
+            if ($image) {
+                // Delete old image if it exists
+                if ($publicPost->image_path) {
+                    $this->deleteImageFile($publicPost->image_path);
+                }
+
+                $uploadResult = $this->fileUploadService->uploadSingle($image, 'public_posts');
+                $data['image_path'] = $uploadResult['public_url'];
+            } elseif (isset($data['delete_image']) && $data['delete_image']) {
+                if ($publicPost->image_path) {
+                    $this->deleteImageFile($publicPost->image_path);
+                }
+                $data['image_path'] = null;
+            }
+
+            // Sync status and published_at
+            if (isset($data['status'])) {
+                if ($data['status'] === 'published') {
+                    $data['published_at'] = $data['published_at'] ?? now();
+                } elseif ($data['status'] === 'scheduled') {
+                    // Keep existing or use provided
+                    $data['published_at'] = $data['published_at'] ?? $publicPost->published_at;
+                } elseif ($data['status'] === 'draft') {
+                    $data['published_at'] = null;
+                }
+            }
+
             $publicPost->update($data);
             DB::commit();
 
@@ -352,6 +379,30 @@ class PublicPostService
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
+        }
+    }
+
+    /**
+     * Helper to delete an image file from storage.
+     */
+    protected function deleteImageFile(string $imageUrl)
+    {
+        try {
+            // Extract the path from the URL
+            // This is a naive implementation that assumes standard Laravel storage URL
+            $path = parse_url($imageUrl, PHP_URL_PATH);
+
+            // Remove /storage prefix if exists (for local disk)
+            if (str_starts_with($path, '/storage/')) {
+                $path = substr($path, 9);
+            }
+
+            // Delete from the default disk which FileUploadService uses
+            $disk = config('filesystems.default') === 'local' ? 'public' : config('filesystems.default');
+            Storage::disk($disk)->delete($path);
+        } catch (\Exception $e) {
+            // Log error but don't fail the operation
+            \Illuminate\Support\Facades\Log::error('Failed to delete image: '.$e->getMessage());
         }
     }
 }

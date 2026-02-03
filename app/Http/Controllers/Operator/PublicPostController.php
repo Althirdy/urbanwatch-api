@@ -106,10 +106,11 @@ class PublicPostController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'nullable|string|max:255',
             'content' => 'nullable|string',
-            'image_path' => 'nullable|string',
+            'image' => 'nullable|image|max:5120',
             'category' => 'nullable|string',
             'published_at' => 'nullable|date',
             'status' => 'nullable|string|in:draft,published,scheduled',
+            'delete_image' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -124,24 +125,22 @@ class PublicPostController extends Controller
             return back()->withErrors($validator->errors());
         }
 
-        $post = $this->publicPostService->updatePublicPost($publicPost, $request->only([
+        $image = $request->file('image');
+        $data = $request->only([
             'title',
             'content',
-            'image_path',
             'category',
             'published_at',
             'status',
-        ]));
+            'delete_image',
+        ]);
 
-        if ($request->expectsJson()) {
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Public post updated successfully',
-                'data' => $post,
-            ]);
-        }
+        $post = $this->publicPostService->updatePublicPost($publicPost, $data, $image);
 
-        return redirect()->route('public-posts')->with('success', 'Public post updated successfully');
+        return back()->with([
+            'status' => 'success',
+            'message' => 'Public post updated successfully',
+        ]);
     }
 
     /**
