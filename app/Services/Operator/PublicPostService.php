@@ -391,18 +391,18 @@ class PublicPostService
             // Extract the path from the URL
             // This is a naive implementation that assumes standard Laravel storage URL
             $path = parse_url($imageUrl, PHP_URL_PATH);
-            
+
             // Remove /storage prefix if exists (for local disk)
             if (str_starts_with($path, '/storage/')) {
                 $path = substr($path, 9);
             }
-            
+
             // Delete from the default disk which FileUploadService uses
             $disk = config('filesystems.default') === 'local' ? 'public' : config('filesystems.default');
             Storage::disk($disk)->delete($path);
         } catch (\Exception $e) {
             // Log error but don't fail the operation
-            \Illuminate\Support\Facades\Log::error("Failed to delete image: " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Failed to delete image: '.$e->getMessage());
         }
     }
 }
