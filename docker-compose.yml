@@ -42,7 +42,7 @@ services:
     restart: always
     environment:
       - TUNNEL_TOKEN=${TUNNEL_TOKEN}
-    command: tunnel run --token ${TUNNEL_TOKEN}
+    command: tunnel run --token ${TUNNEL_TOKEN} --protocol http2
     networks:
       - prod-net
       - uat-net 
