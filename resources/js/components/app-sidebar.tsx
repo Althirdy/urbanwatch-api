@@ -26,15 +26,16 @@ import {
     MapPin,
     User,
     Users,
+    LayoutDashboard,
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
-    //{
-    //    title: 'Dashboard',
-    //    href: '/dashboard',
-    //    icon: LayoutDashboard,
-    // },
+    {
+        title: 'Dashboard',
+        href: '/dashboard',
+        icon: LayoutDashboard,
+     },
     {
         title: 'Users',
         href: users().url,
