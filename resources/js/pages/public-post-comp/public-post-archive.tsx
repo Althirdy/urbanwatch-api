@@ -13,6 +13,8 @@ import { PublicPost_T } from '@/types/public-post-types';
 import { useForm } from '@inertiajs/react';
 import { Calendar, TriangleAlert, User } from 'lucide-react';
 
+import { toast } from '@/components/use-toast';
+
 type ArchivePublicPostProps = {
     post: PublicPost_T;
     children: React.ReactNode;
@@ -33,6 +35,19 @@ function ArchivePublicPost({ post, children }: ArchivePublicPostProps) {
 
     const handleArchive = () => {
         destroy(`/public-post/${post.id}`, {
+            onSuccess: () => {
+                toast({
+                    title: "Success",
+                    description: "Public post archived successfully.",
+                });
+            },
+            onError: () => {
+                toast({
+                    title: "Error",
+                    description: "Failed to archive public post.",
+                    variant: "destructive",
+                });
+            },
             preserveScroll: true,
         });
     };
@@ -58,17 +73,15 @@ function ArchivePublicPost({ post, children }: ArchivePublicPostProps) {
                                     <div className="flex items-center gap-2">
                                         <TriangleAlert className="h-4 w-4" />
                                         <span>
-                                            <strong>Report:</strong>{' '}
-                                            {post.report?.report_type ||
-                                                'Unknown'}
+                                            <strong>Category:</strong>{' '}
+                                            {post.category || 'General'}
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <User className="h-4 w-4" />
                                         <span>
-                                            <strong>Reporter:</strong>{' '}
-                                            {post.report?.user?.name ||
-                                                'Unknown'}
+                                            <strong>Published By:</strong>{' '}
+                                            {post.publishedBy?.name || 'Barangay Office'}
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2">
