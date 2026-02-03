@@ -29,8 +29,8 @@ const reportTypeColors: Record<string, string> = {
 function getStatusBadge(publishedAt: string | null) {
     if (!publishedAt) {
         return (
-            <span className="inline-flex items-center rounded-[var(--radius)] bg-zinc-600 px-2.5 py-0.5 text-xs font-medium">
-                Draft
+            <span className="inline-flex items-center rounded-md border bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400">
+                DRAFT
             </span>
         );
     }
@@ -40,15 +40,15 @@ function getStatusBadge(publishedAt: string | null) {
 
     if (publishDate > now) {
         return (
-            <span className="inline-flex items-center rounded-[var(--radius)] bg-yellow-800 px-2.5 py-0.5 text-xs font-medium">
-                Scheduled
+            <span className="inline-flex items-center rounded-md border bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400">
+                SCHEDULED
             </span>
         );
     }
 
     return (
-        <span className="inline-flex items-center rounded-[var(--radius)] bg-green-800 px-2.5 py-0.5 text-xs font-medium text-foreground">
-            Published
+        <span className="inline-flex items-center rounded-md border bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400">
+            PUBLISHED
         </span>
     );
 }
@@ -119,9 +119,9 @@ export const columns = (): ColumnDef<PublicPost_T>[] => [
                             title={post.content}
                         >
                             {post.content &&
-                            post.content.length > 100
+                                post.content.length > 100
                                 ? post.content.substring(0, 100) +
-                                  '...'
+                                '...'
                                 : post.content}
                         </span>
                     </div>
@@ -134,7 +134,13 @@ export const columns = (): ColumnDef<PublicPost_T>[] => [
         header: 'Published By',
         cell: ({ row }) => {
             const post = row.original;
-            return <div>{post.publishedBy?.name || 'Unknown'}</div>;
+            return (
+                <div className="flex flex-col items-center">
+                    <span className="text-sm font-medium">
+                        {post.publishedBy?.name || 'Barangay Office'}
+                    </span>
+                </div>
+            );
         },
     },
     {
