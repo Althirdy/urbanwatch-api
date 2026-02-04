@@ -55,7 +55,7 @@ class UserSeeder extends Seeder
         OfficialsDetails::firstOrCreate(
             ['user_id' => User::where('email', 'nestorparungao@gmail.com')->first()->id],
             [
-                'contact_number' => '+63 987-654-3210',
+                'contact_number' => '+63 945-899-6127',
                 'first_name' => 'Nestor',
                 'middle_name' => '',
                 'last_name' => 'Parungao',

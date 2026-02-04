@@ -56,7 +56,10 @@ class CCTVController extends BaseApiController
 
     public function getActiveCCTVs()
     {
-        $cctvDevices = cctvDevices::where('status', 'active')->get();
+        $cacheKey = 'cctv_devices_active';
+        $cctvDevices = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(1), function () {
+            return cctvDevices::where('status', 'active')->get();
+        });
 
         return $this->sendResponse(CCTVResource::collection($cctvDevices), 'Active CCTV devices retrieved successfully.');
     }
@@ -68,10 +71,13 @@ class CCTVController extends BaseApiController
      */
     public function getYoloEnabledCCTVs()
     {
-        $cctvDevices = cctvDevices::where('yolo_enabled', true)
-            ->where('status', 'active')
-            ->with('location:id,location_name,landmark,barangay')
-            ->get();
+        $cacheKey = 'cctv_devices_yolo_active';
+        $cctvDevices = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(1), function () {
+            return cctvDevices::where('yolo_enabled', true)
+                ->where('status', 'active')
+                ->with('location:id,location_name,landmark,barangay')
+                ->get();
+        });
 
         return $this->sendResponse(CCTVResource::collection($cctvDevices), 'YOLO-enabled CCTV devices retrieved successfully.');
     }

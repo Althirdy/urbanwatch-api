@@ -69,6 +69,23 @@ class PublicPostService
 
     public function getPublicPostMobile(?string $search = null, int $perPage = 15)
     {
+        // If there's a search, we don't cache to avoid cache explosion
+        if ($search) {
+            return $this->buildMobileQuery($search)->cursorPaginate($perPage);
+        }
+
+        $cacheKey = 'public_posts_mobile_latest';
+
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(30), function () use ($perPage) {
+            return $this->buildMobileQuery()->cursorPaginate($perPage);
+        });
+    }
+
+    /**
+     * Helper to build the mobile query.
+     */
+    protected function buildMobileQuery(?string $search = null)
+    {
         $query = PublicPost::with([
             'publishedBy',
         ])
@@ -77,12 +94,11 @@ class PublicPostService
             ->whereNull('postable_type')
             ->orderBy('created_at', 'desc');
 
-        // Search by title
         if ($search) {
             $query->where('title', 'like', "%{$search}%");
         }
 
-        return $query->cursorPaginate($perPage);
+        return $query;
     }
 
     /**
