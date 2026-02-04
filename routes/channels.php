@@ -23,3 +23,9 @@ Broadcast::channel('operators', function ($user) {
     // Only allow access if the user is an operator (role_id = 1)
     return (int) $user->role_id === 1;
 });
+
+// Public channel for anomaly log real-time updates (IoT Box alerts)
+// Note: This is a public channel - all authenticated users can subscribe
+Broadcast::channel('anomaly-logs', function () {
+    return true;
+});

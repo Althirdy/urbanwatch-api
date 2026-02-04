@@ -21,6 +21,7 @@ Route::prefix('iot-box')->group(function () {
 // Authenticated routes for operators/purok leaders
 Route::middleware(['auth:sanctum', 'ability.access'])->group(function () {
     Route::prefix('anomaly-logs')->group(function () {
+        Route::get('/statistics', [IoTBoxController::class, 'statistics']);
         Route::get('/', [IoTBoxController::class, 'index']);
         Route::get('/{id}', [IoTBoxController::class, 'show']);
         Route::put('/{id}', [IoTBoxController::class, 'update']);
