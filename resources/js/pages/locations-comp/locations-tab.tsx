@@ -14,7 +14,7 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { Check, ChevronsUpDown, Search, Filter, X} from 'lucide-react';
+import { Check, ChevronsUpDown, Search, Filter, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { location_T } from '@/types/location-types';
@@ -119,13 +119,12 @@ const LocationActionTab = ({
                 </div>
 
                 {/* Filter Controls */}
-                <div className="flex flex-wrap items-center gap-2">
+                {/* <div className="flex flex-wrap items-center gap-2">
                     <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Filter className="h-4 w-4" />
                         <span className="text-xs font-medium hidden sm:inline">Filters:</span>
                     </div>
 
-                    {/* Barangay Filter */}
                     <Popover open={barangayOpen} onOpenChange={setBarangayOpen}>
                         <PopoverTrigger asChild>
                             <Button
@@ -147,7 +146,6 @@ const LocationActionTab = ({
                                 <CommandList>
                                     <CommandEmpty>No Barangay found.</CommandEmpty>
                                     <CommandGroup>
-                                        {/* Add "All Barangays" option */}
                                         <CommandItem
                                             key="all-barangay"
                                             value=""
@@ -166,7 +164,6 @@ const LocationActionTab = ({
                                                 )}
                                             />
                                         </CommandItem>
-                                        {/* Use searchable_barangays for dropdown options */}
                                         {searchable_barangays.map((barangayName) => (
                                             <CommandItem
                                                 key={barangayName}
@@ -197,7 +194,6 @@ const LocationActionTab = ({
                         </PopoverContent>
                     </Popover>
 
-                    {/* Clear Filters */}
                     {hasActiveFilters && (
                         <Button
                             variant="ghost"
@@ -209,7 +205,7 @@ const LocationActionTab = ({
                             Clear
                         </Button>
                     )}
-                </div>
+                </div> */}
             </div>
 
             {/* Results count */}
