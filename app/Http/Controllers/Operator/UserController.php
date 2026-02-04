@@ -339,10 +339,21 @@ class UserController extends Controller
 
             // Get suspension history
             $suspensionHistory = UserSuspension::where('user_id', $user->id)
-                ->with('suspendedBy:id,name,email')
+                ->with(['suspendedBy:id,name,email', 'suspendedBy.officialDetails:user_id,first_name,middle_name,last_name'])
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($suspension) {
+                    // Get admin name from official details if available, otherwise use user name
+                    $adminName = $suspension->suspendedBy?->name ?? 'System';
+                    if ($suspension->suspendedBy?->officialDetails) {
+                        $details = $suspension->suspendedBy->officialDetails;
+                        $adminName = trim(
+                            $details->first_name.' '.
+                            ($details->middle_name ? $details->middle_name.' ' : '').
+                            $details->last_name
+                        );
+                    }
+
                     return [
                         'id' => $suspension->id,
                         'punishment_type' => $suspension->punishment_type,
@@ -351,7 +362,7 @@ class UserController extends Controller
                         'expires_at' => $suspension->expires_at?->format('Y-m-d H:i:s'),
                         'status' => $suspension->status,
                         'reason' => $suspension->reason,
-                        'suspended_by' => $suspension->suspendedBy->name,
+                        'suspended_by' => $adminName,
                         'is_active' => $suspension->isActive(),
                     ];
                 });
@@ -500,6 +511,96 @@ class UserController extends Controller
         } catch (\Exception $e) {
             return back()
                 ->with('error', 'Failed to revoke suspension.');
+        }
+    }
+
+    /**
+     * Get operator details with password change logs
+     */
+    public function getOperatorDetails(User $user)
+    {
+        if ($user->role_id !== 1) {
+            return response()->json(['error' => 'User is not an operator'], 400);
+        }
+
+        $user->load(['officialDetails', 'role']);
+
+        $passwordLogs = \App\Models\OperatorPasswordLog::where('operator_id', $user->id)
+            ->with(['changedByUser.officialDetails'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'action' => $log->action,
+                    'reason' => $log->reason,
+                    'changed_by' => $log->changed_by_name,
+                    'changed_at' => $log->created_at->format('M d, Y H:i'),
+                    'changed_at_human' => $log->created_at->diffForHumans(),
+                    'ip_address' => $log->ip_address,
+                ];
+            });
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role->name,
+                'created_at' => $user->created_at->format('M d, Y'),
+                'official_details' => $user->officialDetails ? [
+                    'first_name' => $user->officialDetails->first_name,
+                    'middle_name' => $user->officialDetails->middle_name,
+                    'last_name' => $user->officialDetails->last_name,
+                    'contact_number' => $user->officialDetails->contact_number,
+                    'office_address' => $user->officialDetails->office_address,
+                    'assigned_brgy' => $user->officialDetails->assigned_brgy,
+                    'status' => $user->officialDetails->status,
+                ] : null,
+            ],
+            'password_logs' => $passwordLogs,
+        ]);
+    }
+
+    /**
+     * Reset operator password with logging
+     */
+    public function resetOperatorPassword(Request $request, User $user)
+    {
+        if ($user->role_id !== 1) {
+            return back()->with('error', 'User is not an operator');
+        }
+
+        $request->validate([
+            'new_password' => 'required|string|min:8|confirmed',
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Update password
+            $user->update([
+                'password' => Hash::make($request->new_password),
+            ]);
+
+            // Log the password change
+            \App\Models\OperatorPasswordLog::create([
+                'operator_id' => $user->id,
+                'changed_by' => auth()->id(),
+                'action' => 'reset',
+                'reason' => $request->reason,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            DB::commit();
+
+            return back()->with('success', 'Password reset successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->with('error', 'Failed to reset password. Please try again.');
         }
     }
 }

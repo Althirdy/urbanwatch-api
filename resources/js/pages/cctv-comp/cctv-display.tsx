@@ -76,6 +76,22 @@ function CCTVDisplay({
         }
     };
 
+    // Get status badge styles
+    const getStatusStyles = (status: string) => {
+        if (!status) return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
+
+        switch (status.toLowerCase()) {
+            case 'active':
+                return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20';
+            case 'maintenance':
+                return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
+            case 'inactive':
+                return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
+            default:
+                return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
+        }
+    };
+
     // Get status icon
     const getStatusIcon = (status: string) => {
         switch (status) {
@@ -118,14 +134,7 @@ function CCTVDisplay({
                                     <div className="absolute top-4 right-4 z-10">
                                         <Badge
                                             variant="outline"
-                                            className={cn(
-                                                "gap-1 capitalize font-medium",
-                                                device.status === 'active'
-                                                    ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
-                                                    : device.status === 'maintenance'
-                                                        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
-                                                        : 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20'
-                                            )}
+                                            className={`gap-1 capitalize font-medium ${getStatusStyles(device.status)}`}
                                         >
                                             {getStatusIcon(device.status)}
                                             {device.status}
@@ -218,7 +227,7 @@ function CCTVDisplay({
                                             </Button>
                                         </TooltipTrigger>
                                     </ArchiveCCTV>
-                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
+                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2 ">
                                         <p>Archive CCTV</p>
                                     </TooltipContent>
                                 </Tooltip>

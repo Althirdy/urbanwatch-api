@@ -32,8 +32,7 @@ class StorePublicPostRequest extends FormRequest
                 'nullable',
                 'date',
                 'required_if:status,scheduled',
-                // If scheduled, must be in future (optional strictness)
-                // 'after:now'
+                'after:now', // Scheduled posts must be in the future
             ],
             // Polymorphic relations (optional for manual posts)
             'postable_id' => ['nullable', 'integer'],

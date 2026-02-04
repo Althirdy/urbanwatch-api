@@ -30,6 +30,8 @@ class PublicPost extends Model
         'deleted_at' => 'datetime',
     ];
 
+    protected $appends = ['computed_status'];
+
     /**
      * Boot the model.
      */
@@ -106,6 +108,26 @@ class PublicPost extends Model
     {
         return $query->whereNull('published_at')
             ->orWhere('published_at', '>', now());
+    }
+
+    /**
+     * Get the computed status based on current time and published_at.
+     * This ensures scheduled posts automatically become "published" when their time arrives.
+     */
+    public function getComputedStatusAttribute(): string
+    {
+        // If no published_at date is set, it's a draft
+        if (! $this->published_at) {
+            return 'draft';
+        }
+
+        // If published_at is in the future, it's scheduled
+        if ($this->published_at > now()) {
+            return 'scheduled';
+        }
+
+        // If published_at is in the past or now, it's published
+        return 'published';
     }
 
     /**
