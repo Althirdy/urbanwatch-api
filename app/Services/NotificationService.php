@@ -3,11 +3,14 @@
 namespace App\Services;
 
 use App\Jobs\SendSystemAnnouncementJob;
+use App\Models\AnomalyLog;
 use App\Models\Citizen\Concern;
 use App\Models\ConcernDistribution;
 use App\Models\Notification;
 use App\Models\PublicPost;
+use App\Models\Purok;
 use App\Models\User;
+use App\Models\UwDevice;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -358,5 +361,205 @@ class NotificationService
         return Notification::where('user_id', $userId)
             ->where('user_type', $userType)
             ->delete();
+    }
+
+    // ========================================
+    // ANOMALY LOG NOTIFICATIONS (IoT Box)
+    // ========================================
+
+    /**
+     * Create notification for the purok leader whose territory contains the IoT box location.
+     * Uses spatial query to find the correct purok based on device coordinates.
+     */
+    public function notifyAnomalyDetected(AnomalyLog $anomalyLog, UwDevice $iotBox): int
+    {
+        $count = 0;
+
+        try {
+            $latitude = $iotBox->latitude;
+            $longitude = $iotBox->longitude;
+
+            if (! $latitude || ! $longitude) {
+                Log::warning('IoT box has no coordinates, cannot determine purok for notification', [
+                    'anomaly_log_id' => $anomalyLog->id,
+                    'iot_box_id' => $iotBox->id,
+                ]);
+
+                return 0;
+            }
+
+            // Find the purok that contains this IoT box location using spatial query
+            $purok = Purok::whereRaw('ST_Contains(boundary, POINT(?, ?))', [$longitude, $latitude])
+                ->first();
+
+            if (! $purok) {
+                Log::warning('IoT box location is not within any purok boundary', [
+                    'anomaly_log_id' => $anomalyLog->id,
+                    'iot_box_id' => $iotBox->id,
+                    'latitude' => $latitude,
+                    'longitude' => $longitude,
+                ]);
+
+                return 0;
+            }
+
+            // Find active purok leader(s) assigned to this purok
+            $purokLeaders = User::where('role_id', 2)
+                ->whereHas('officialDetails', function ($query) use ($purok) {
+                    $query->where('status', 'active')
+                        ->where('purok_id', $purok->id);
+                })
+                ->get();
+
+            if ($purokLeaders->isEmpty()) {
+                Log::warning('No active purok leaders found for this purok', [
+                    'anomaly_log_id' => $anomalyLog->id,
+                    'purok_id' => $purok->id,
+                    'purok_name' => $purok->name,
+                ]);
+
+                return 0;
+            }
+
+            $anomalyTypeLabel = $this->getAnomalyTypeLabel($anomalyLog->anomaly_type);
+            $locationName = $iotBox->display_location ?? 'Unknown Location';
+            $now = now();
+
+            $notifications = [];
+
+            foreach ($purokLeaders as $purokLeader) {
+                $notifications[] = [
+                    'user_id' => $purokLeader->id,
+                    'user_type' => Notification::USER_TYPE_PUROK_LEADER,
+                    'type' => Notification::TYPE_ANOMALY_DETECTED,
+                    'title' => "IoT Alert: {$anomalyTypeLabel}",
+                    'message' => "{$anomalyTypeLabel} detected at {$locationName} by {$iotBox->device_name}.",
+                    'data' => json_encode([
+                        'anomaly_log_id' => $anomalyLog->id,
+                        'anomaly_type' => $anomalyLog->anomaly_type,
+                        'anomaly_type_label' => $anomalyTypeLabel,
+                        'device_id' => $anomalyLog->device_id,
+                        'iot_box_id' => $iotBox->id,
+                        'device_name' => $iotBox->device_name,
+                        'location' => $locationName,
+                        'latitude' => $iotBox->latitude,
+                        'longitude' => $iotBox->longitude,
+                        'image' => $anomalyLog->image,
+                        'details' => $anomalyLog->details,
+                        'purok_id' => $purok->id,
+                        'purok_name' => $purok->name,
+                    ]),
+                    'read_at' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            // Bulk insert for efficiency
+            if (count($notifications) > 0) {
+                foreach (array_chunk($notifications, 100) as $chunk) {
+                    DB::table('notifications')->insert($chunk);
+                    $count += count($chunk);
+                }
+            }
+
+            Log::info('Created notifications for anomaly detection', [
+                'anomaly_log_id' => $anomalyLog->id,
+                'anomaly_type' => $anomalyLog->anomaly_type,
+                'notification_count' => $count,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to create anomaly detection notifications', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'anomaly_log_id' => $anomalyLog->id,
+            ]);
+        }
+
+        return $count;
+    }
+
+    /**
+     * Create a notification when an anomaly log is confirmed.
+     * Optionally notify specific users or broadcast to all purok leaders.
+     */
+    public function notifyAnomalyConfirmed(AnomalyLog $anomalyLog, User $confirmedBy): int
+    {
+        $count = 0;
+
+        try {
+            $iotBox = $anomalyLog->iotBox;
+            $anomalyTypeLabel = $this->getAnomalyTypeLabel($anomalyLog->anomaly_type);
+            $locationName = $iotBox?->display_location ?? 'Unknown Location';
+            $now = now();
+
+            // Get all active purok leaders to notify about confirmation
+            $purokLeaders = User::where('role_id', 2)
+                ->where('id', '!=', $confirmedBy->id) // Don't notify the one who confirmed
+                ->whereHas('officialDetails', function ($query) {
+                    $query->where('status', 'active');
+                })
+                ->get();
+
+            $notifications = [];
+
+            foreach ($purokLeaders as $purokLeader) {
+                $notifications[] = [
+                    'user_id' => $purokLeader->id,
+                    'user_type' => Notification::USER_TYPE_PUROK_LEADER,
+                    'type' => Notification::TYPE_ANOMALY_CONFIRMED,
+                    'title' => 'Anomaly Confirmed',
+                    'message' => "{$anomalyTypeLabel} at {$locationName} has been confirmed by {$confirmedBy->name}.",
+                    'data' => json_encode([
+                        'anomaly_log_id' => $anomalyLog->id,
+                        'anomaly_type' => $anomalyLog->anomaly_type,
+                        'anomaly_type_label' => $anomalyTypeLabel,
+                        'iot_box_id' => $iotBox?->id,
+                        'device_name' => $iotBox?->device_name,
+                        'location' => $locationName,
+                        'confirmed_by' => $confirmedBy->name,
+                        'confirmed_by_id' => $confirmedBy->id,
+                    ]),
+                    'read_at' => null,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            // Bulk insert
+            if (count($notifications) > 0) {
+                foreach (array_chunk($notifications, 100) as $chunk) {
+                    DB::table('notifications')->insert($chunk);
+                    $count += count($chunk);
+                }
+            }
+
+            Log::info('Created notifications for anomaly confirmation', [
+                'anomaly_log_id' => $anomalyLog->id,
+                'confirmed_by' => $confirmedBy->id,
+                'notification_count' => $count,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to create anomaly confirmation notifications', [
+                'error' => $e->getMessage(),
+                'anomaly_log_id' => $anomalyLog->id,
+            ]);
+        }
+
+        return $count;
+    }
+
+    /**
+     * Get human-readable label for anomaly type.
+     */
+    private function getAnomalyTypeLabel(string $type): string
+    {
+        return match ($type) {
+            'sound_anomaly' => 'Sound Anomaly',
+            'anti_tampering' => 'Anti-Tampering Alert',
+            default => ucfirst(str_replace('_', ' ', $type)),
+        };
     }
 }
