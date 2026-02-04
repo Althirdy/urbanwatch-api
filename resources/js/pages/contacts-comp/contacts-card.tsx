@@ -90,7 +90,7 @@ const ContactCard = ({ contacts }: { contacts: Contact[] }) => {
 
 
                         {/* Contact Info - Compact */}
-                        <div className="space-y-2 mb-3 px-4">
+                        <div className="space-y-1 ">
                             {/* Contact Person */}
                             {contact.contact_person && (
                                 <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-md border border-zinc-100 dark:border-zinc-800/80">

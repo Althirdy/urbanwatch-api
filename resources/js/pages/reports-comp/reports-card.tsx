@@ -284,7 +284,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                                     </Button>
                                                 </TooltipTrigger>
                                             </ArchiveReport>
-                                            <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
+                                            <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                                                 <p>Archive Report</p>
                                             </TooltipContent>
                                         </Tooltip>

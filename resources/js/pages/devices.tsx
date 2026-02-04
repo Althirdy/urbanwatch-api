@@ -62,13 +62,13 @@ export default function Devices({
                         <TabsList className="h-10 p-1">
                             <TabsTrigger
                                 value="cctv"
-                                className="h-7 px-3 text- data-[state=active]:bg-background"
+                                className="h-8 px-3 text- data-[state=active]:bg-background"
                             >
                                 CCTV
                             </TabsTrigger>
                             <TabsTrigger
                                 value="uwDevice"
-                                className="h-7 px-3 text-xs data-[state=active]:bg-background"
+                                className="h-8 px-3 text-xs data-[state=active]:bg-background"
                             >
                                 IoT Box
                             </TabsTrigger>

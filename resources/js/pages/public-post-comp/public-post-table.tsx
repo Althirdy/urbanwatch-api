@@ -132,7 +132,7 @@ function PublicPostsTable({
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell
                                             key={cell.id}
-                                            className="text-center"
+                                            className="text-center text-sm"
                                         >
                                             {flexRender(
                                                 cell.column.columnDef.cell,

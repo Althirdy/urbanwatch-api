@@ -154,21 +154,21 @@ export const columns = (
                 const user = row.original;
 
                 return (
-                    <div className="flex justify-center gap-2">
+                    <div className="flex justify-center gap-1.5">
                         <Tooltip>
                             <ViewUser user={user}>
                                 <TooltipTrigger asChild>
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="cursor-pointer"
+                                        className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                         onClick={(e) => e.stopPropagation()}
                                     >
-                                        <ExternalLink className="h-4 w-4" />
+                                        <ExternalLink className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                     </Button>
                                 </TooltipTrigger>
                             </ViewUser>
-                            <TooltipContent>
+                            <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                                 <p>View Details</p>
                             </TooltipContent>
                         </Tooltip>
@@ -184,10 +184,10 @@ export const columns = (
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="cursor-pointer"
+                                            className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <SquarePen className="h-4 w-4" />
+                                            <SquarePen className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                         </Button>
                                     </TooltipTrigger>
                                 </EditUser>
@@ -203,10 +203,10 @@ export const columns = (
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="cursor-pointer"
+                                            className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <BadgeAlert className="h-4 w-4" />
+                                            <BadgeAlert className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                         </Button>
                                     </TooltipTrigger>
                                 </SuspensionUser>

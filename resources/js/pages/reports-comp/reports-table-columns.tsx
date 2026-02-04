@@ -164,14 +164,14 @@ export const columns = (reportTypes: string[]): ColumnDef<reports_T>[] => [
             };
 
             return (
-                <div className="flex justify-center gap-2">
+                <div className="flex justify-center gap-1.5">
                     {!report.is_acknowledge && (
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="cursor-pointer bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 border-orange-200"
+                                    className="cursor-pointer h-8 w-8 p-0 bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-900/40"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleAcknowledge();
@@ -180,7 +180,7 @@ export const columns = (reportTypes: string[]): ColumnDef<reports_T>[] => [
                                     <Check className="h-4 w-4" />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent>
+                            <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                                 <p>Acknowledge Report</p>
                             </TooltipContent>
                         </Tooltip>
@@ -192,7 +192,7 @@ export const columns = (reportTypes: string[]): ColumnDef<reports_T>[] => [
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="cursor-pointer bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 border-green-200"
+                                    className="cursor-pointer h-8 w-8 p-0 bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 border-green-200 dark:bg-green-950/30 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-900/40"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         handleResolve();
@@ -201,7 +201,7 @@ export const columns = (reportTypes: string[]): ColumnDef<reports_T>[] => [
                                     <CheckCircle className="h-4 w-4" />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent>
+                            <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                                 <p>Mark as Resolved</p>
                             </TooltipContent>
                         </Tooltip>
@@ -213,14 +213,14 @@ export const columns = (reportTypes: string[]): ColumnDef<reports_T>[] => [
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="cursor-pointer"
+                                    className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <Open className="h-4 w-4" />
+                                    <Open className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                 </Button>
                             </TooltipTrigger>
                         </ViewReportDetails>
-                        <TooltipContent>
+                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                             <p>View Details</p>
                         </TooltipContent>
                     </Tooltip>
@@ -230,14 +230,14 @@ export const columns = (reportTypes: string[]): ColumnDef<reports_T>[] => [
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="cursor-pointer"
+                                    className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <SquarePen className="h-4 w-4" />
+                                    <SquarePen className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                 </Button>
                             </TooltipTrigger>
                         </EditReport>
-                        <TooltipContent>
+                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                             <p>Edit Report</p>
                         </TooltipContent>
                     </Tooltip>
@@ -254,7 +254,7 @@ export const columns = (reportTypes: string[]): ColumnDef<reports_T>[] => [
                                 </Button>
                             </TooltipTrigger>
                         </ArchiveReport>
-                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
+                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                             <p>Archive Report</p>
                         </TooltipContent>
                     </Tooltip>

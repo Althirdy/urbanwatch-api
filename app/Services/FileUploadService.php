@@ -33,6 +33,11 @@ class FileUploadService
         // Optimization for Images
         if (str_starts_with($mimeType, 'image/') && $mimeType !== 'image/gif' && function_exists('imagecreatefromjpeg')) {
             try {
+                // Check if Intervention Image classes exist
+                if (!class_exists('Intervention\Image\ImageManager')) {
+                    throw new \Exception('Intervention Image not available');
+                }
+                
                 $manager = new ImageManager(new Driver);
                 $image = $manager->read($file);
 
