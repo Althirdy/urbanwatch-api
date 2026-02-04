@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useForm } from '@inertiajs/react';
 import { toast } from '@/components/use-toast';
 import { Spinner } from '@/components/ui/spinner';
+import { assign } from '@/routes/dashboard';
 
 // Fix marker icon issue
 const createMarkerIcon = (color: string) => {
@@ -38,7 +39,7 @@ export default function DashboardMap({ puroks, concerns, purokLeaders }: Dashboa
         e.preventDefault();
         if (!selectedConcern || !data.leader_id) return;
 
-        post(route('dashboard.assign', selectedConcern.id), {
+        post(assign(selectedConcern.id).url, {
             onSuccess: () => {
                 toast({
                     title: "Assigned Successfully",
@@ -137,7 +138,7 @@ export default function DashboardMap({ puroks, concerns, purokLeaders }: Dashboa
                                 <SelectContent>
                                     {purokLeaders.map((leader) => (
                                         <SelectItem key={leader.id} value={leader.id.toString()}>
-                                            {leader.name} ({leader.purok_name})
+                                            {leader.name} — {leader.purok_name}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
