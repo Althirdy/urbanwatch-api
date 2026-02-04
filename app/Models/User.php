@@ -72,30 +72,33 @@ class User extends Authenticatable
     {
         return Attribute::make(
             get: function (?string $value, array $attributes) {
-                // If name is already set in the database, return it
-                if (! empty($value)) {
-                    return $value;
-                }
-
-                // Otherwise, build name from relationships if loaded
+                // Prioritize building name from relationships if loaded
                 if ($this->relationLoaded('officialDetails') && $this->officialDetails) {
-                    return trim(
+                    $fullName = trim(
                         ($this->officialDetails->first_name ?? '').' '.
                             (($this->officialDetails->middle_name ?? null) ? ($this->officialDetails->middle_name.' ') : '').
                             ($this->officialDetails->last_name ?? '')
                     );
+
+                    if (! empty($fullName)) {
+                        return $fullName;
+                    }
                 }
 
                 if ($this->relationLoaded('citizenDetails') && $this->citizenDetails) {
-                    return trim(
+                    $fullName = trim(
                         ($this->citizenDetails->first_name ?? '').' '.
                             (($this->citizenDetails->middle_name ?? null) ? ($this->citizenDetails->middle_name.' ') : '').
                             ($this->citizenDetails->last_name ?? '')
                     );
+
+                    if (! empty($fullName)) {
+                        return $fullName;
+                    }
                 }
 
-                // Fallback to empty string if no name available
-                return '';
+                // Fallback to the name column (which should be decrypted by cast)
+                return $value ?? '';
             },
         );
     }

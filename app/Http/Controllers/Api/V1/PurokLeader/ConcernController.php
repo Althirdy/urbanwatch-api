@@ -18,9 +18,12 @@ class ConcernController extends BaseApiController
 {
     protected NotificationService $notificationService;
 
-    public function __construct(NotificationService $notificationService)
+    protected \App\Services\ConcernService $concernService;
+
+    public function __construct(NotificationService $notificationService, \App\Services\ConcernService $concernService)
     {
         $this->notificationService = $notificationService;
+        $this->concernService = $concernService;
     }
 
     /**
@@ -135,14 +138,10 @@ class ConcernController extends BaseApiController
             $concern = Concern::find($id);
             $previousStatus = $concern->status;
 
-            // Handle rejection specially
+            // Handle rejection specially (Empowered Purok Leader Rejection)
             if ($status === 'rejected') {
                 $rejectionReason = $request->input('rejection_reason', 'Rejected by Purok Leader');
-                $concern->update([
-                    'status' => $status,
-                    'is_valid' => false,
-                    'rejection_reason' => $rejectionReason,
-                ]);
+                $this->concernService->rejectConcernByOfficial($concern, $rejectionReason, auth()->user());
                 $remarks = "Rejected by Purok Leader: {$rejectionReason}";
             } else {
                 $concern->update(['status' => $status]);

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\ConcernAssigned;
+use App\Events\ConcernUnassigned;
 use App\Exceptions\UrbanWatchException;
 use App\Jobs\ProcessManualConcernJob;
 use App\Jobs\ProcessVoiceConcernJob;
@@ -477,66 +478,83 @@ class ConcernService
 
                 // Find Purok Leader using Geographic Routing Service
                 $routeData = $this->routingService->findPurokLeader($concern->latitude, $concern->longitude);
-                $purokLeaderId = 1; // Default to Admin/Operator
-                $purokName = 'Unmapped Area';
-
                 if ($routeData && $routeData['leader']) {
                     $purokLeaderId = $routeData['leader']->user_id;
                     $purokName = $routeData['purok']->name;
                     Log::info("Concern #{$concern->id} routed to Purok: {$purokName} (Leader ID: {$purokLeaderId})");
+
+                    // Use the new assignToLeader method
+                    $this->assignToLeader($concern, $purokLeaderId, 'Concern verified and assigned to Purok Leader.');
                 } else {
-                    Log::info("Concern #{$concern->id} location not found in mapping. Routing to Barangay Admin.");
-                }
+                    Log::info("Concern #{$concern->id} location not found in mapping or no active leader. Remained Unassigned for Operator pool.");
 
-                $purokLeaderDetails = \App\Models\OfficialsDetails::where('user_id', $purokLeaderId)->first();
+                    // Create unassigned history
+                    ConcernHistory::create([
+                        'concern_id' => $concern->id,
+                        'status' => 'pending',
+                        'remarks' => 'Location not mapped to an active Purok Leader. Routing to Operator pool for manual assignment.',
+                    ]);
 
-                if (! $purokLeaderDetails) {
-                    Log::error("Target official (ID: {$purokLeaderId}) not found for Concern #{$concern->id}");
-
-                    return;
-                }
-
-                $distribution = ConcernDistribution::create([
-                    'concern_id' => $concern->id,
-                    'purok_leader_id' => $purokLeaderId,
-                    'status' => 'assigned',
-                    'assigned_at' => now(),
-                ]);
-
-                $distribution->load('purokLeader.officialDetails');
-
-                // Create History Log
-                ConcernHistory::create([
-                    'concern_id' => $concern->id,
-                    'status' => 'pending',
-                    'remarks' => 'Concern verified and assigned to Purok Leader.',
-                ]);
-
-                // Broadcast Event
-                $uploadedMedia = $concern->media->pluck('original_path')->toArray();
-                event(new ConcernAssigned($concern, $distribution, $uploadedMedia));
-
-                $this->notificationService->notifyConcernAssigned($concern, $distribution);
-
-                // 3. Send SMS Notification to Purok Leader (Async)
-                if ($purokLeaderDetails->contact_number) {
-                    dispatch(new \App\Jobs\SendSmsNotificationJob(
-                        $purokLeaderDetails->contact_number,
-                        [
-                            'tracking_code' => $concern->tracking_code,
-                            'category' => $concern->category,
-                            'severity' => $concern->severity,
-                            'description' => $concern->description,
-                            'address' => $concern->address,
-                            'custom_location' => $concern->custom_location,
-                        ]
-                    ));
+                    // Broadcast to Operators
+                    event(new ConcernUnassigned($concern));
                 }
             });
         } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
             Log::warning("Finalization lock timed out for Concern #{$concernId}. Retrying later via job if applicable.");
             throw $e;
         }
+    }
+
+    /**
+     * Assign a concern to a specific leader manually or automatically.
+     * Handles Distribution, History, Real-time Broadcasting, and Notifications (In-app + SMS).
+     */
+    public function assignToLeader(Concern $concern, int $leaderId, ?string $remarks = null): ConcernDistribution
+    {
+        Log::info("Assigning Concern #{$concern->id} to Leader ID: {$leaderId}");
+
+        $distribution = ConcernDistribution::updateOrCreate(
+            ['concern_id' => $concern->id],
+            [
+                'purok_leader_id' => $leaderId,
+                'status' => 'assigned',
+                'assigned_at' => now(),
+            ]
+        );
+
+        $distribution->load('purokLeader.officialDetails');
+        $purokLeaderDetails = $distribution->purokLeader->officialDetails;
+
+        // Create History Log
+        ConcernHistory::create([
+            'concern_id' => $concern->id,
+            'status' => 'pending',
+            'remarks' => $remarks ?? 'Concern assigned to Purok Leader.',
+        ]);
+
+        // 1. Broadcast Real-time Event (Echo)
+        $uploadedMedia = $concern->media->pluck('original_path')->toArray();
+        event(new ConcernAssigned($concern, $distribution, $uploadedMedia));
+
+        // 2. Create In-App Notification
+        $this->notificationService->notifyConcernAssigned($concern, $distribution);
+
+        // 3. Send SMS Notification (Async)
+        if ($purokLeaderDetails && $purokLeaderDetails->contact_number) {
+            dispatch(new \App\Jobs\SendSmsNotificationJob(
+                $purokLeaderDetails->contact_number,
+                [
+                    'tracking_code' => $concern->tracking_code,
+                    'category' => $concern->category,
+                    'severity' => $concern->severity,
+                    'description' => $concern->description,
+                    'address' => $concern->address,
+                    'custom_location' => $concern->custom_location,
+                ]
+            ));
+        }
+
+        return $distribution;
     }
 
     /**
@@ -589,6 +607,28 @@ class ConcernService
 
         // Proceed to finalization (Deduplication, Assignment, SMS)
         $this->finalizeConcern($concern->id);
+    }
+
+    /**
+     * Centralized logic for an official (Purok Leader or Operator) to reject a concern.
+     * Marks as invalid/rejected and increments citizen strikes.
+     */
+    public function rejectConcernByOfficial(Concern $concern, string $reason, User $actor)
+    {
+        return DB::transaction(function () use ($concern, $reason, $actor) {
+            $this->markAsInvalid($concern->id, $reason, [
+                'rejected_by' => $actor->id,
+                'rejection_timestamp' => now()->toDateTimeString(),
+            ]);
+
+            // Update distribution status if it exists
+            if ($concern->distribution) {
+                $concern->distribution->update(['status' => 'rejected']);
+            }
+
+            // The markAsInvalid already handles history and strikes.
+            return $concern->fresh();
+        });
     }
 
     /**

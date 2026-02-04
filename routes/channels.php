@@ -17,3 +17,9 @@ Broadcast::channel('purok-leader.{purokLeaderId}', function ($user, $purokLeader
     // Only allow access if the user is a purok leader (role_id = 2) and the channel matches their ID
     return (int) $user->id === (int) $purokLeaderId && (int) $user->role_id === 2;
 });
+
+// Operator private channel for receiving unassigned concerns and accidents
+Broadcast::channel('operators', function ($user) {
+    // Only allow access if the user is an operator (role_id = 1)
+    return (int) $user->role_id === 1;
+});

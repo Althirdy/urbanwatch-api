@@ -4,8 +4,6 @@ namespace App\Http\Controllers\Operator;
 
 use App\Http\Controllers\Controller;
 use App\Models\Citizen\Concern;
-use App\Models\ConcernDistribution;
-use App\Models\ConcernHistory;
 use App\Models\Purok;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -14,18 +12,19 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
+    protected \App\Services\ConcernService $concernService;
+
+    public function __construct(\App\Services\ConcernService $concernService)
+    {
+        $this->concernService = $concernService;
+    }
+
     public function index()
     {
-        // 1. Fetch Concerns that need attention (Unmapped or Assigned to Admin)
-        // assuming '1' is the Admin/Operator ID fallback
+        // 1. Fetch Concerns that need attention (Absolutely Unassigned)
         $unmappedConcerns = Concern::with(['media'])
             ->where('status', 'pending')
-            ->where(function ($query) {
-                $query->whereDoesntHave('distribution')
-                    ->orWhereHas('distribution', function ($q) {
-                        $q->where('purok_leader_id', 1);
-                    });
-            })
+            ->whereDoesntHave('distribution')
             ->get()
             ->map(function ($concern) {
                 return [
@@ -55,7 +54,7 @@ class DashboardController extends Controller
             ->whereHas('officialDetails', function ($q) {
                 $q->where('status', 'active');
             })
-            ->with('officialDetails')
+            ->with(['officialDetails.purok'])
             ->get()
             ->map(function ($user) {
                 return [
@@ -83,44 +82,14 @@ class DashboardController extends Controller
             $concern = Concern::findOrFail($id);
             $leaderId = $request->leader_id;
 
-            // Update or Create Distribution
-            ConcernDistribution::updateOrCreate(
-                ['concern_id' => $concern->id],
-                [
-                    'purok_leader_id' => $leaderId,
-                    'status' => 'assigned',
-                    'assigned_at' => now(),
-                ]
-            );
-
-            // Create History Log
-            ConcernHistory::create([
-                'concern_id' => $concern->id,
-                'status' => 'pending',
-                'remarks' => 'Manually assigned to Purok Leader by Operator.',
-            ]);
-
-            // Notify Leader (SMS/Event)
-            // Ideally delegate to ConcernService logic to avoid duplication,
-            // but for now we implement basic notification here or dispatch the job directly.
-            $leader = User::with('officialDetails')->find($leaderId);
-            if ($leader && $leader->officialDetails && $leader->officialDetails->contact_number) {
-                dispatch(new \App\Jobs\SendSmsNotificationJob(
-                    $leader->officialDetails->contact_number,
-                    [
-                        'tracking_code' => $concern->tracking_code,
-                        'category' => $concern->category,
-                        'severity' => $concern->severity,
-                        'description' => $concern->description,
-                        'address' => $concern->address,
-                        'custom_location' => 'Manual Assignment',
-                    ]
-                ));
-            }
+            // Use centralized assignment logic from ConcernService
+            $this->concernService->assignToLeader($concern, $leaderId, 'Manually assigned to Purok Leader by Operator.');
 
             DB::commit();
 
             return redirect()->back()->with('success', 'Concern assigned successfully.');
+
+        } catch (\Exception $e) {
 
         } catch (\Exception $e) {
             DB::rollBack();
