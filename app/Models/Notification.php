@@ -56,6 +56,11 @@ class Notification extends Model
 
     public const TYPE_SYSTEM_ANNOUNCEMENT = 'system_announcement';
 
+    // Anomaly Log Types (IoT Box)
+    public const TYPE_ANOMALY_DETECTED = 'anomaly_detected';
+
+    public const TYPE_ANOMALY_CONFIRMED = 'anomaly_confirmed';
+
     /**
      * User Types
      */

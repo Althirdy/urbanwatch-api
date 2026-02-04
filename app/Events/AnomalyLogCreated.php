@@ -80,7 +80,6 @@ class AnomalyLogCreated implements ShouldBroadcastNow
         return match ($type) {
             'sound_anomaly' => 'Sound Anomaly',
             'anti_tampering' => 'Anti-Tampering Alert',
-            'crowded' => 'Crowded Area Detected',
             default => ucfirst(str_replace('_', ' ', $type)),
         };
     }
