@@ -6,13 +6,16 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Archive, ExternalLink, Mail, MapPin, SquarePen, User } from 'lucide-react';
+import { SharedData } from '@/types';
+import { usePage } from '@inertiajs/react';
+import { Archive, BadgeAlert, ExternalLink, Mail, MapPin, SquarePen, User } from 'lucide-react';
 
 import { location_T } from '@/types/location-types';
 import { roles_T } from '@/types/role-types';
 import { users_T } from '@/types/user-types';
 import ArchiveUser from './users-archive';
 import EditUser from './users-edit';
+import SuspensionUser from './users-suspension';
 import ViewUser from './users-view';
 
 // Role badge styles
@@ -35,13 +38,15 @@ const getRoleBadgeStyles = (roleName?: string) => {
 const getStatusBadgeStyles = (status?: string) => {
     switch (status?.toLowerCase()) {
         case 'active':
-            return 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-500/30';
+            return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20';
         case 'inactive':
-            return 'bg-zinc-500/15 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 border-zinc-500/30';
+            return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
         case 'suspended':
-            return 'bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-400 border-red-500/30';
+            return 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20';
+        case 'maintenance':
+            return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
         default:
-            return 'bg-zinc-500/15 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 border-zinc-500/30';
+            return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
     }
 };
 
@@ -56,7 +61,12 @@ const UserCard = ({
     locations: location_T[];
     puroks?: any[];
 }) => {
-    console.log("users in card:", users);
+    const { auth } = usePage<SharedData>().props;
+    const currentUserId = auth.user.id;
+
+    // Filter out the current logged-in user
+    const filteredUsers = users.filter((user) => user.id !== currentUserId);
+
     // Get user's full name
     const getFullName = (user: users_T) => {
         if (user.official_details) {
@@ -78,7 +88,7 @@ const UserCard = ({
 
     return (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {users.length === 0 && (
+            {filteredUsers.length === 0 && (
                 <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
                     <User className="h-12 w-12 text-muted-foreground/50 mb-3" />
                     <h3 className="text-sm font-medium text-foreground">No users found</h3>
@@ -88,12 +98,12 @@ const UserCard = ({
                 </div>
             )}
 
-            {users.map((user) => (
+            {filteredUsers.map((user) => (
                 <Card
                     key={user.id}
-                    className="group relative overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700"
+                    className="group relative py-4 overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700 h-full"
                 >
-                    <CardContent className="p-4">
+                    <CardContent className="p-4 flex flex-col h-full">
                         {/* Header Row */}
                         <div className="flex items-start justify-between gap-2 mb-2">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -121,9 +131,9 @@ const UserCard = ({
                                 {user.role?.name?.toLowerCase() !== 'citizen' && (
                                     <Badge
                                         variant="outline"
-                                        className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 capitalize ${getStatusBadgeStyles(user.status)}`}
+                                        className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 capitalize ${getStatusBadgeStyles(user.official_details?.status || user.citizen_details?.status)}`}
                                     >
-                                        {user.status}
+                                        {user.official_details?.status || user.citizen_details?.status}
                                     </Badge>
                                 )}
                             </div>
@@ -131,7 +141,7 @@ const UserCard = ({
                         </div>
 
                         {/* User Info - Compact */}
-                        <div className="space-y-2 mb-3 px-4">
+                        <div className="space-y-2 mb-3 px-4 flex-grow">
                             {/* Email */}
                             <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-md border border-zinc-100 dark:border-zinc-800/80">
                                 <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -142,7 +152,7 @@ const UserCard = ({
                         </div>
 
                         {/* Action Buttons - Premium Footer */}
-                        <div className="flex items-center justify-end gap-1.5 pt-2 border-t dark:border-zinc-800">
+                        <div className="flex items-center justify-end gap-1.5 pt-2 mt-auto border-t dark:border-zinc-800">
                             <Tooltip>
                                 <ViewUser user={user}>
                                     <TooltipTrigger asChild>
@@ -159,22 +169,42 @@ const UserCard = ({
                                     <p>View Details</p>
                                 </TooltipContent>
                             </Tooltip>
-                            <Tooltip>
-                                <EditUser user={user} roles={roles} locations={locations} puroks={puroks}>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                                        >
-                                            <SquarePen className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                </EditUser>
-                                <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
-                                    <p>Edit Account</p>
-                                </TooltipContent>
-                            </Tooltip>
+                            {user.role?.name?.toLowerCase() !== 'citizen' && (
+                                <Tooltip>
+                                    <EditUser user={user} roles={roles} locations={locations} puroks={puroks}>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                            >
+                                                <SquarePen className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                    </EditUser>
+                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                        <p>Edit Account</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            )}
+                            {user.role?.name?.toLowerCase() === 'citizen' && (
+                                <Tooltip>
+                                    <SuspensionUser user={user}>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                            >
+                                                <BadgeAlert className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                    </SuspensionUser>
+                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                        <p>Suspend Account</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            )}
                             <Tooltip>
                                 <ArchiveUser user={user}>
                                     <TooltipTrigger asChild>
@@ -187,7 +217,7 @@ const UserCard = ({
                                         </Button>
                                     </TooltipTrigger>
                                 </ArchiveUser>
-                                <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
+                                <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                                     <p>Archive Account</p>
                                 </TooltipContent>
                             </Tooltip>

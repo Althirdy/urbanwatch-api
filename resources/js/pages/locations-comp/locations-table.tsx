@@ -93,15 +93,15 @@ const LocationsTable = ({
                                     return (
                                         <TableHead
                                             key={header.id}
-                                            className="border-r px-2 py-2 text-center font-semibold last:border-r-0"
+                                            className="border-r px-2 py-2 text-center text-sm font-semibold last:border-r-0"
                                         >
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
-                                                      header.column.columnDef
-                                                          .header,
-                                                      header.getContext(),
-                                                  )}
+                                                    header.column.columnDef
+                                                        .header,
+                                                    header.getContext(),
+                                                )}
                                         </TableHead>
                                     );
                                 })}
@@ -132,7 +132,7 @@ const LocationsTable = ({
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell
                                             key={cell.id}
-                                            className="text-center"
+                                            className="text-center text-sm  "
                                         >
                                             {flexRender(
                                                 cell.column.columnDef.cell,

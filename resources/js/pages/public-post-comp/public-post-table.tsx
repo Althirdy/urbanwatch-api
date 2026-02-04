@@ -93,15 +93,15 @@ function PublicPostsTable({
                                     return (
                                         <TableHead
                                             key={header.id}
-                                            className="border-r px-2 py-2 text-center font-semibold last:border-r-0"
+                                            className="border-r px-2 py-2 text-center text-sm font-semibold last:border-r-0"
                                         >
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
-                                                      header.column.columnDef
-                                                          .header,
-                                                      header.getContext(),
-                                                  )}
+                                                    header.column.columnDef
+                                                        .header,
+                                                    header.getContext(),
+                                                )}
                                         </TableHead>
                                     );
                                 })}

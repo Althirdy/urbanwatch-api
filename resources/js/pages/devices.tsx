@@ -44,8 +44,8 @@ export default function Devices({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Devices" />
 
-            <div className="space-y-4 p-4">
-                <div className="flex items-center  gap-4">
+            <div className="space-y-2 p-4">
+                <div className="flex items-center  gap-2">
                     {viewMode === 'cctv' ? (
                         <AddCCTVDevice location={locations} />
 
@@ -59,7 +59,7 @@ export default function Devices({
 
                     {/* View Toggle */}
                     <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cctv' | 'uwDevice')}>
-                        <TabsList className="h-9 p-1">
+                        <TabsList className="h-10 p-1">
                             <TabsTrigger
                                 value="cctv"
                                 className="h-7 px-3 text- data-[state=active]:bg-background"
@@ -70,7 +70,7 @@ export default function Devices({
                                 value="uwDevice"
                                 className="h-7 px-3 text-xs data-[state=active]:bg-background"
                             >
-                                UW Device
+                                IoT Box
                             </TabsTrigger>
                         </TabsList>
                     </Tabs>

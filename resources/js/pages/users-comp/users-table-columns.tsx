@@ -55,7 +55,7 @@ export const columns = (
                         onClick={() =>
                             column.toggleSorting(column.getIsSorted() === 'asc')
                         }
-                        className="cursor-pointer transition-colors duration-200 ease-in-out"
+                        className="cursor-pointer text-sm transition-colors duration-200 ease-in-out"
                     >
                         User ID
                         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -127,7 +127,7 @@ export const columns = (
                     return null;
                 }
 
-                const statusText = user.status || 'Active';
+                const statusText = user.official_details?.status || user.citizen_details?.status || 'active';
 
                 return (
                     <Badge
@@ -228,7 +228,7 @@ export const columns = (
                                     </Button>
                                 </TooltipTrigger>
                             </ArchiveUser>
-                            <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
+                            <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                                 <p>Archive User</p>
                             </TooltipContent>
                         </Tooltip>

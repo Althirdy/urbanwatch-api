@@ -141,8 +141,7 @@ function ViewUser({ user, children }: ViewUserProps) {
         const status =
             user.citizen_details?.status ||
             user.official_details?.status ||
-            user.status ||
-            'Active';
+            'active';
         return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
     };
 
@@ -218,8 +217,8 @@ function ViewUser({ user, children }: ViewUserProps) {
                             {user.role?.name?.toLowerCase() !== 'citizen' && (
                                 <Badge
                                     className={`inline-flex h-fit items-center rounded-[var(--radius)] px-2.5 py-1 text-xs font-medium text-foreground ${getUserStatus(user) === 'Active'
-                                            ? 'bg-green-800 dark:bg-green-900'
-                                            : 'bg-gray-800'
+                                        ? 'bg-green-800 dark:bg-green-900'
+                                        : 'bg-gray-800'
                                         }`}
                                 >
                                     {getUserStatus(user)}

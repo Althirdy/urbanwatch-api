@@ -242,7 +242,7 @@ function AddUWDevice({
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
                 <Button className="cursor-pointer px-4 py-2">
-                    <Plus className="mr-2 h-4 w-4" /> Add Device
+                    <Plus className="h-4 w-4" /> Add IoT Box
                 </Button>
             </DialogTrigger>
             <DialogContent

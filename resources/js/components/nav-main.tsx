@@ -12,7 +12,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
     const page = usePage();
     return (
         <SidebarGroup className="px-2 py-0">
-            <SidebarGroupLabel>Operator Dashboard</SidebarGroupLabel>
+            <SidebarGroupLabel className='text-md'>Operator Dashboard</SidebarGroupLabel>
             <SidebarMenu>
                 {items.map((item) => (
                     <SidebarMenuItem key={item.title}>

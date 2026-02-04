@@ -41,20 +41,20 @@ export default function Users({
             <div className="space-y-4 p-4">
                 <div className="flex items-center justify-between gap-4">
                     <CreateUsers roles={roles} locations={locations} puroks={puroks} />
-                    
+
                     {/* View Toggle */}
                     <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'card')}>
-                        <TabsList className="h-9 p-1">
+                        <TabsList className="h-10 p-1">
                             <TabsTrigger
                                 value="table"
-                                className="h-7 px-3 text-xs data-[state=active]:bg-background"
+                                className="h-7 px-3 text-sm data-[state=active]:bg-background"
                             >
                                 <Table className="h-3.5 w-3.5 mr-1.5" />
                                 Table
                             </TabsTrigger>
                             <TabsTrigger
                                 value="card"
-                                className="h-7 px-3 text-xs data-[state=active]:bg-background"
+                                className="h-7 px-3 text-sm data-[state=active]:bg-background"
                             >
                                 <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
                                 Cards
@@ -67,6 +67,7 @@ export default function Users({
                 <UserActionTab
                     users={users}
                     roles={roles}
+                    locations={locations}
                     setFilteredUsers={setFilteredUsers}
                 />
 
