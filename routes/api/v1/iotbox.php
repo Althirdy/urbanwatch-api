@@ -25,5 +25,9 @@ Route::middleware(['auth:sanctum', 'ability.access'])->group(function () {
         Route::get('/', [IoTBoxController::class, 'index']);
         Route::get('/{id}', [IoTBoxController::class, 'show']);
         Route::put('/{id}', [IoTBoxController::class, 'update']);
+        
+        // Anomaly merging/branching endpoints
+        Route::post('/merge', [IoTBoxController::class, 'mergeAnomalies']);
+        Route::post('/{id}/unmerge', [IoTBoxController::class, 'unmergeAnomaly']);
     });
 });

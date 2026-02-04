@@ -18,10 +18,13 @@ class AnomalyLog extends Model
         'image',
         'details',
         'is_confirmed',
+        'parent_anomaly_id',
+        'is_duplicate',
     ];
 
     protected $casts = [
         'is_confirmed' => 'boolean',
+        'is_duplicate' => 'boolean',
         'details' => 'array',
     ];
 
@@ -31,5 +34,57 @@ class AnomalyLog extends Model
     public function iotBox()
     {
         return $this->belongsTo(UwDevice::class, 'iot_box_id');
+    }
+
+    /**
+     * Get the parent anomaly (if this is a duplicate/follow-up).
+     */
+    public function parentAnomaly()
+    {
+        return $this->belongsTo(AnomalyLog::class, 'parent_anomaly_id');
+    }
+
+    /**
+     * Get all duplicate/related anomalies grouped under this parent.
+     */
+    public function relatedAnomalies()
+    {
+        return $this->hasMany(AnomalyLog::class, 'parent_anomaly_id');
+    }
+
+    /**
+     * Alias for relatedAnomalies (matches concern naming convention).
+     */
+    public function duplicates()
+    {
+        return $this->hasMany(AnomalyLog::class, 'parent_anomaly_id');
+    }
+
+    /**
+     * Get anomaly type label for display.
+     */
+    public function getAnomalyTypeLabelAttribute(): string
+    {
+        return match ($this->anomaly_type) {
+            'sound_anomaly' => 'Sound Anomaly',
+            'anti_tampering' => 'Anti-Tampering Alert',
+            default => ucfirst(str_replace('_', ' ', $this->anomaly_type)),
+        };
+    }
+
+    /**
+     * Check if this anomaly is a parent (has related anomalies).
+     */
+    public function isParent(): bool
+    {
+        return $this->parent_anomaly_id === null && !$this->is_duplicate;
+    }
+
+    /**
+     * Scope for only parent anomalies (non-duplicates).
+     */
+    public function scopeParentsOnly($query)
+    {
+        return $query->where('is_duplicate', false);
     }
 }
