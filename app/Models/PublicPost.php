@@ -117,7 +117,7 @@ class PublicPost extends Model
     public function getComputedStatusAttribute(): string
     {
         // If no published_at date is set, it's a draft
-        if (!$this->published_at) {
+        if (! $this->published_at) {
             return 'draft';
         }
 

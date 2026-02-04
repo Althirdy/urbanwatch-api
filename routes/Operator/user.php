@@ -11,6 +11,10 @@ Route::middleware('auth')->group(function () {
     Route::post('user/{user}/suspend', [UserController::class, 'applySuspension'])->name('user.suspend');
     Route::patch('user/{user}/revoke-suspension', [UserController::class, 'revokeSuspension'])->name('user.revoke-suspension');
 
+    // Operator password management routes
+    Route::get('user/{user}/operator-details', [UserController::class, 'getOperatorDetails'])->name('user.operator-details');
+    Route::post('user/{user}/reset-password', [UserController::class, 'resetOperatorPassword'])->name('user.reset-password');
+
     Route::patch('user/{user}/archive', [UserController::class, 'archive'])->name('user.archive');
     Route::resource('user', UserController::class);
 });

@@ -1,6 +1,7 @@
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PurokSelectorMap from '@/components/purok-selector-map';
+import { toast } from '@/components/use-toast';
 import { location_T } from '@/types/location-types';
 import { roles_T } from '@/types/role-types';
 import { users_T } from '@/types/user-types';
@@ -11,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Info, MoveLeft, Save, SquarePen } from 'lucide-react';
-import { FormEvent } from 'react';
+import { FormEvent, useState } from 'react';
 
 type EditUserProps = {
     user: users_T;
@@ -47,6 +48,8 @@ type EditUserForm = {
 };
 
 function EditUser({ user, roles, locations, puroks = [], children }: EditUserProps) {
+    const [open, setOpen] = useState(false);
+
     const getUserFullName = (user: users_T) => {
         if (user.official_details) {
             return `${user.official_details.first_name} ${user.official_details.middle_name ? user.official_details.middle_name + ' ' : ''}${user.official_details.last_name}`;
@@ -97,15 +100,25 @@ function EditUser({ user, roles, locations, puroks = [], children }: EditUserPro
         }));
         put(`/user/${user.id}`, {
             onSuccess: () => {
-                const closeButton = document.querySelector('[data-dialog-close]') as HTMLButtonElement;
-                if (closeButton) closeButton.click();
+                toast({
+                    title: 'Success',
+                    description: 'User updated successfully.',
+                });
+                setOpen(false);
+            },
+            onError: (errors) => {
+                toast({
+                    title: 'Error',
+                    description: Object.values(errors).flat().join(', ') || 'Failed to update user.',
+                    variant: 'destructive',
+                });
             },
             preserveScroll: true,
         });
     };
 
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 {children || (
                     <div className="cursor-pointer rounded-full p-2 hover:bg-primary/20">

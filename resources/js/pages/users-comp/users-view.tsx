@@ -18,6 +18,7 @@ import { useEffect, useState } from 'react';
 
 import { useIdentifyNumber } from '@/hooks/use-identify-number';
 import { AvailablePunishmentsData, users_T } from '@/types/user-types';
+import { cn } from '@/lib/utils';
 
 // Network provider color configurations
 const networkColors: Record<
@@ -166,7 +167,7 @@ function ViewUser({ user, children }: ViewUserProps) {
                         suspensionData.active_suspension && (
                             <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
                                 <div className="mb-2 flex items-center gap-2">
-                                    <Badge className="inline-flex items-center rounded-[var(--radius)] bg-red-800 px-2.5 py-1 text-xs font-medium text-foreground dark:bg-red-900">
+                                    <Badge variant="destructive" className="text-[10px] font-medium px-1.5 py-0.5">
                                         Suspended
                                     </Badge>
                                 </div>
@@ -216,10 +217,13 @@ function ViewUser({ user, children }: ViewUserProps) {
                             </div>
                             {user.role?.name?.toLowerCase() !== 'citizen' && (
                                 <Badge
-                                    className={`inline-flex h-fit items-center rounded-[var(--radius)] px-2.5 py-1 text-xs font-medium text-foreground ${getUserStatus(user) === 'Active'
-                                        ? 'bg-green-800 dark:bg-green-900'
-                                        : 'bg-gray-800'
-                                        }`}
+                                    variant="outline"
+                                    className={cn(
+                                        "text-[10px] font-medium px-1.5 py-0.5",
+                                        getUserStatus(user) === 'Active'
+                                            ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
+                                            : 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20'
+                                    )}
                                 >
                                     {getUserStatus(user)}
                                 </Badge>

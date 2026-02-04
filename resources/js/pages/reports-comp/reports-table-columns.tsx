@@ -79,7 +79,7 @@ export const columns = (reportTypes: string[]): ColumnDef<reports_T>[] => [
             return (
                 <Badge
                     variant="outline"
-                    className={`font-medium ${colorClass}`}
+                    className={`text-[10px] font-medium px-1.5 py-0.5 ${colorClass}`}
                 >
                     {reportType}
                 </Badge>
@@ -136,7 +136,7 @@ export const columns = (reportTypes: string[]): ColumnDef<reports_T>[] => [
             return (
                 <Badge
                     variant="outline"
-                    className={`font-medium ${colorClass}`}
+                    className={`text-[10px] font-medium px-1.5 py-0.5 ${colorClass}`}
                 >
                     {status}
                 </Badge>

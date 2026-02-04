@@ -155,7 +155,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                     </CardTitle>
                                     <div className="flex items-center gap-2">
 
-                                        <Badge variant="outline" className="h-4 px-1 text-xs font-medium text-muted-foreground">
+                                        <Badge variant="outline" className="text-[10px] font-medium px-1.5 py-0.5 text-muted-foreground">
 
                                             #{report.id}
 
@@ -164,14 +164,14 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                         {report.status === 'False Alarm' ? (
                                             <Badge
                                                 variant="outline"
-                                                className="h-4 px-1.5 text-xs capitalize border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+                                                className="text-[10px] font-medium px-1.5 py-0.5 capitalize border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
                                             >
                                                 False Alarm
                                             </Badge>
                                         ) : (
                                             <Badge
                                                 variant={report.status === 'Resolved' ? 'default' : 'secondary'}
-                                                className="h-4 px-1.5 text-xs capitalize"
+                                                className="text-[10px] font-medium px-1.5 py-0.5 capitalize"
                                             >
                                                 {report.status}
                                             </Badge>

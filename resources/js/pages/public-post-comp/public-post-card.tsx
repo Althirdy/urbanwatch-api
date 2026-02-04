@@ -67,7 +67,7 @@ function StatusBadge({ publishedAt }: { publishedAt: string | null }) {
         return (
             <Badge
                 variant="outline"
-                className="bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20 font-medium"
+                className="text-[10px] font-medium px-1.5 py-0.5 bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20"
             >
                 Draft
             </Badge>
@@ -80,7 +80,7 @@ function StatusBadge({ publishedAt }: { publishedAt: string | null }) {
         return (
             <Badge
                 variant="outline"
-                className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 font-medium"
+                className="text-[10px] font-medium px-1.5 py-0.5 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20"
             >
                 Scheduled
             </Badge>
@@ -90,7 +90,7 @@ function StatusBadge({ publishedAt }: { publishedAt: string | null }) {
     return (
         <Badge
             variant="outline"
-            className="bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20 font-medium"
+            className="text-[10px] font-medium px-1.5 py-0.5 bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20"
         >
             Published
         </Badge>
@@ -166,7 +166,7 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
                                             {post.category && (
                                                 <Badge
                                                     variant="outline"
-                                                    className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 font-medium capitalize"
+                                                    className="text-[10px] font-medium px-1.5 py-0.5 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 capitalize"
                                                 >
                                                     {post.category}
                                                 </Badge>
@@ -175,7 +175,7 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
                                                 <Badge
                                                     variant="outline"
                                                     className={cn(
-                                                        "font-medium capitalize",
+                                                        "text-[10px] font-medium px-1.5 py-0.5 capitalize",
                                                         post.postable.status === 'resolved'
                                                             ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
                                                             : post.postable.status === 'ongoing'

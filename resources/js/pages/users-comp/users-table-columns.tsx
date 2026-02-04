@@ -4,6 +4,7 @@ import {
     ArrowUpDown,
     BadgeAlert,
     ExternalLink,
+    KeyRound,
     SquarePen,
 } from 'lucide-react';
 
@@ -21,6 +22,7 @@ import { roles_T } from '@/types/role-types';
 import { users_T } from '@/types/user-types';
 import ArchiveUser from './users-archive';
 import EditUser from './users-edit';
+import OperatorDetails from './operator-details';
 import SuspensionUser from './users-suspension';
 import ViewUser from './users-view';
 
@@ -93,7 +95,7 @@ export const columns = (
                 return (
                     <Badge
                         variant="outline"
-                        className={`font-medium ${bgColor}`}
+                        className={`text-[10px] font-medium px-1.5 py-0.5 ${bgColor}`}
                     >
                         {roleName}
                     </Badge>
@@ -133,7 +135,7 @@ export const columns = (
                     <Badge
                         variant="outline"
                         className={cn(
-                            "font-medium capitalize",
+                            "text-[10px] font-medium px-1.5 py-0.5 capitalize",
                             statusText.toLowerCase() === 'active'
                                 ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
                                 : statusText.toLowerCase() === 'suspended'
@@ -172,7 +174,8 @@ export const columns = (
                                 <p>View Details</p>
                             </TooltipContent>
                         </Tooltip>
-                        {user.role?.name?.toLowerCase() !== 'citizen' && (
+                        {/* Edit button only for Purok Leader */}
+                        {user.role?.name?.toLowerCase() === 'purok leader' && (
                             <Tooltip>
                                 <EditUser
                                     user={user}
@@ -193,6 +196,26 @@ export const columns = (
                                 </EditUser>
                                 <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                                     <p>Edit User</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
+                        {/* Operator Details button for Operators */}
+                        {user.role?.name?.toLowerCase() === 'operator' && (
+                            <Tooltip>
+                                <OperatorDetails user={user}>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <KeyRound className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                </OperatorDetails>
+                                <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                    <p>Manage Password</p>
                                 </TooltipContent>
                             </Tooltip>
                         )}

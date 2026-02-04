@@ -8,13 +8,14 @@ import {
 } from '@/components/ui/tooltip';
 import { SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
-import { Archive, BadgeAlert, ExternalLink, Mail, MapPin, SquarePen, User } from 'lucide-react';
+import { Archive, BadgeAlert, ExternalLink, KeyRound, Mail, MapPin, SquarePen, User } from 'lucide-react';
 
 import { location_T } from '@/types/location-types';
 import { roles_T } from '@/types/role-types';
 import { users_T } from '@/types/user-types';
 import ArchiveUser from './users-archive';
 import EditUser from './users-edit';
+import OperatorDetails from './operator-details';
 import SuspensionUser from './users-suspension';
 import ViewUser from './users-view';
 
@@ -169,7 +170,8 @@ const UserCard = ({
                                     <p>View Details</p>
                                 </TooltipContent>
                             </Tooltip>
-                            {user.role?.name?.toLowerCase() !== 'citizen' && (
+                            {/* Edit button only for Purok Leader */}
+                            {user.role?.name?.toLowerCase() === 'purok leader' && (
                                 <Tooltip>
                                     <EditUser user={user} roles={roles} locations={locations} puroks={puroks}>
                                         <TooltipTrigger asChild>
@@ -184,6 +186,24 @@ const UserCard = ({
                                     </EditUser>
                                     <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                                         <p>Edit Account</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            )}
+                            {user.role?.name?.toLowerCase() === 'operator' && (
+                                <Tooltip>
+                                    <OperatorDetails user={user}>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                            >
+                                                <KeyRound className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                            </Button>
+                                        </TooltipTrigger>
+                                    </OperatorDetails>
+                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                        <p>Manage Password</p>
                                     </TooltipContent>
                                 </Tooltip>
                             )}
