@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 
 class UserProfileService
 {
@@ -30,10 +31,31 @@ class UserProfileService
      */
     public function requestUpdateOtp(User $user, string $type, string $newValue): array
     {
+        // Check if user is locked from too many failed OTP verification attempts
+        $verifyKey = "profile_update:verify:{$user->id}:{$type}";
+        if (RateLimiter::tooManyAttempts($verifyKey, 5)) {
+            $seconds = RateLimiter::availableIn($verifyKey);
+            throw new UrbanWatchException(
+                "Too many failed attempts. Please try again in $seconds seconds.",
+                429,
+                ['lock_type' => 'rate_limit', 'seconds' => $seconds]
+            );
+        }
+
         // 1. Check Cooldown (30 Days)
         if ($user->last_sensitive_update_at && Carbon::parse($user->last_sensitive_update_at)->addDays(30)->isFuture()) {
             $daysLeft = (int) ceil(now()->floatDiffInDays(Carbon::parse($user->last_sensitive_update_at)->addDays(30)));
             throw new UrbanWatchException("For security, you can only update your contact information once every 30 days. Please try again in $daysLeft days.", 403);
+        }
+
+        // Check OTP request cooldown (60 seconds between requests)
+        $requestLockKey = "profile_update_lock_{$user->id}_{$type}";
+        if (Cache::has($requestLockKey)) {
+            throw new UrbanWatchException(
+                'Please wait before requesting another OTP.',
+                429,
+                ['lock_type' => 'cooldown', 'seconds' => 60]
+            );
         }
 
         // 2. Validate New Value
@@ -80,6 +102,9 @@ class UserProfileService
             'new_value' => $newValue,
         ], 600);
 
+        // Set request cooldown (60 seconds)
+        Cache::put($requestLockKey, true, 60);
+
         // Send SMS
         SendOtpJob::dispatch($phoneToSendOtp, $otp);
 
@@ -99,11 +124,28 @@ class UserProfileService
      */
     public function verifyAndUpdateContactInfo(User $user, string $type, string $otp): User
     {
+        // Rate limiting: 5 attempts per user per type per 5 minutes
+        $verifyKey = "profile_update:verify:{$user->id}:{$type}";
+        if (RateLimiter::tooManyAttempts($verifyKey, 5)) {
+            $seconds = RateLimiter::availableIn($verifyKey);
+            throw new UrbanWatchException(
+                "Too many verification attempts. Please try again in $seconds seconds.",
+                429,
+                ['lock_type' => 'rate_limit', 'seconds' => $seconds]
+            );
+        }
+
         $cacheKey = "profile_update_otp_{$user->id}_{$type}";
         $cachedData = Cache::get($cacheKey);
 
-        if (! $cachedData || $cachedData['otp'] !== $otp) {
-            throw new UrbanWatchException('Invalid or expired OTP.', 400);
+        if (! $cachedData) {
+            RateLimiter::hit($verifyKey, 300);
+            throw new UrbanWatchException('OTP has expired. Please request a new one.', 400);
+        }
+
+        if ($cachedData['otp'] !== $otp) {
+            RateLimiter::hit($verifyKey, 300);
+            throw new UrbanWatchException('Invalid OTP code.', 400);
         }
 
         $newValue = $cachedData['new_value'];
@@ -127,8 +169,10 @@ class UserProfileService
 
             DB::commit();
 
-            // Clear cache
+            // Clear cache and rate limiter on success
             Cache::forget($cacheKey);
+            Cache::forget("profile_update_lock_{$user->id}_{$type}");
+            RateLimiter::clear($verifyKey);
 
             return $user;
         } catch (\Exception $e) {

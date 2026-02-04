@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 
 class PasswordResetController extends Controller
@@ -38,6 +39,19 @@ class PasswordResetController extends Controller
 
         $phone = $request->phone;
 
+        // Check if phone is globally locked from too many failed verification attempts
+        $verifyKey = 'password_reset:verify:'.$phone;
+        if (RateLimiter::tooManyAttempts($verifyKey, 5)) {
+            $seconds = RateLimiter::availableIn($verifyKey);
+
+            return response()->json([
+                'success' => false,
+                'message' => "Too many failed attempts. Please try again in $seconds seconds.",
+                'lock_type' => 'rate_limit',
+                'seconds' => $seconds,
+            ], 429);
+        }
+
         // Find user by phone number in CitizenDetails
         $citizenDetails = CitizenDetails::where('phone_number', $phone)->first();
 
@@ -46,7 +60,7 @@ class PasswordResetController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'If a user with this phone number exists, an OTP will be sent.',
-                'data' => ['phone' => $phone, 'expires_in' => 1],
+                'data' => ['phone' => $phone, 'expires_in' => 5],
             ]);
         }
 
@@ -54,7 +68,9 @@ class PasswordResetController extends Controller
         if (Cache::has('password_reset_lock_'.$phone)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Please wait 60 seconds before requesting again.',
+                'message' => 'Please wait before requesting again.',
+                'lock_type' => 'cooldown',
+                'seconds' => 60,
             ], 429);
         }
 
@@ -99,19 +115,44 @@ class PasswordResetController extends Controller
         $phone = $request->phone;
         $otpCode = $request->otp;
 
+        // Rate limiting: 5 attempts per phone per 5 minutes
+        $key = 'password_reset:verify:'.$phone;
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+
+            return response()->json([
+                'success' => false,
+                'message' => "Too many verification attempts. Please try again in $seconds seconds.",
+                'lock_type' => 'rate_limit',
+                'seconds' => $seconds,
+            ], 429);
+        }
+
         // Check if OTP exists in cache
         $cachedOtp = Cache::get('password_reset_otp_'.$phone);
 
-        if (! $cachedOtp || $cachedOtp != $otpCode) {
+        if (! $cachedOtp) {
+            RateLimiter::hit($key, 300);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid or expired OTP code.',
+                'message' => 'OTP has expired or does not exist. Please request a new one.',
             ], 400);
         }
 
-        // OTP is valid - clear it
+        if ($cachedOtp != $otpCode) {
+            RateLimiter::hit($key, 300);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP code.',
+            ], 400);
+        }
+
+        // OTP is valid - clear it and rate limiter
         Cache::forget('password_reset_otp_'.$phone);
         Cache::forget('password_reset_lock_'.$phone);
+        RateLimiter::clear($key);
 
         // Generate a verification token (valid for 15 minutes)
         $tokenData = [
