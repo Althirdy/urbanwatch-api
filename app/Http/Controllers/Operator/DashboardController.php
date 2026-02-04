@@ -4,8 +4,6 @@ namespace App\Http\Controllers\Operator;
 
 use App\Http\Controllers\Controller;
 use App\Models\Citizen\Concern;
-use App\Models\ConcernDistribution;
-use App\Models\ConcernHistory;
 use App\Models\Purok;
 use App\Models\User;
 use Illuminate\Http\Request;
