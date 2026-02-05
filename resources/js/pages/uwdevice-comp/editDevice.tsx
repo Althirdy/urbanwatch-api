@@ -1,5 +1,4 @@
 import { MapModal } from '@/components/map-modal';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -23,46 +22,29 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import {
-    Tooltip,
-    TooltipContent,
     TooltipProvider,
-    TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { toast } from '@/components/use-toast';
+import { getPackageDropdownOptions, getPackageLocation } from '@/lib/geojson-packages';
 import { router } from '@inertiajs/react';
-import { Camera, Check, HelpCircle, MoveLeft, Save, SquarePen } from 'lucide-react';
+import { MoveLeft, Save, SquarePen } from 'lucide-react';
 import React, { useState } from 'react';
-import {
-    cctv_T,
-    location_T,
-    uwDevice_T,
-} from '../../types/cctv-location-types';
+import { uwDevice_T } from '../../types/cctv-location-types';
 
 interface EditUWDeviceProps {
-    location: location_T[];
     device: uwDevice_T;
-    cctvDevices?: cctv_T[];
     children?: React.ReactNode;
 }
 
 function EditUWDevice({
-    location,
     device,
-    cctvDevices,
     children,
 }: EditUWDeviceProps): React.JSX.Element {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [deviceName, setDeviceName] = useState(device?.device_name || '');
-    const [selectedLocation, setSelectedLocation] = useState(
-        device?.location?.id?.toString() || '',
-    );
-    const [selectedLocationDetails, setSelectedLocationDetails] =
-        useState<location_T | null>(device?.location || null);
+    const [selectedLocation, setSelectedLocation] = useState('');
     const [status, setStatus] = useState<string>(device?.status || 'active');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [useCustomLocation, setUseCustomLocation] = useState(
-        !!device?.custom_address,
-    );
     const [customAddress, setCustomAddress] = useState(
         device?.custom_address || '',
     );
@@ -77,21 +59,26 @@ function EditUWDevice({
     });
     const [serverErrors, setServerErrors] = useState<{ [key: string]: string }>({});
 
-    const getStatusVariant = (status: string) => {
-        switch (status) {
-            case 'active': return 'default';
-            case 'inactive': return 'secondary';
-            case 'maintenance': return 'destructive';
-            default: return 'outline';
-        }
+    const packageOptions = getPackageDropdownOptions();
+
+    // Called when auto-detected from map click - only updates package/address, keeps clicked coordinates
+    const handlePackageSelectFromMap = (packageName: string) => {
+        setSelectedLocation(packageName);
+        setCustomAddress(packageName);
     };
 
-    const handleLocationChange = (value: string) => {
-        setSelectedLocation(value);
-        const locationDetails = location.find(
-            (loc) => loc.id.toString() === value,
-        );
-        setSelectedLocationDetails(locationDetails || null);
+    const handleLocationChange = (packageName: string) => {
+        setSelectedLocation(packageName);
+        setCustomAddress(packageName);
+
+        // Get the GeoJSON centroid for the selected package
+        const packageLocation = getPackageLocation(packageName);
+        if (packageLocation) {
+            setCoordinates({
+                latitude: packageLocation.centroid.latitude.toString(),
+                longitude: packageLocation.centroid.longitude.toString(),
+            });
+        }
     };
 
     const handleLocationSelect = (location: { lat: number; lng: number }) => {
@@ -101,21 +88,15 @@ function EditUWDevice({
         });
     };
 
-    const getFilteredCameras = () => {
-        if (useCustomLocation) return [];
-        if (!selectedLocationDetails) return [];
-        return (cctvDevices || []).filter(
-            (camera) => camera.location?.id === selectedLocationDetails.id,
-        );
-    };
-
     const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setServerErrors({});
-        const newErrors = { deviceName: !deviceName.trim(), location: !useCustomLocation && !selectedLocation };
-        if (useCustomLocation && (!customAddress.trim() || !coordinates.latitude || !coordinates.longitude)) {
-            newErrors.location = true;
-        }
+
+        const newErrors = {
+            deviceName: !deviceName.trim(),
+            location: !customAddress.trim() || !coordinates.latitude || !coordinates.longitude
+        };
+
         setErrors(newErrors);
 
         if (newErrors.deviceName || newErrors.location) {
@@ -126,16 +107,15 @@ function EditUWDevice({
         setIsSubmitting(true);
         const formData = {
             device_name: deviceName,
-            location_id: useCustomLocation ? null : parseInt(selectedLocation),
             status: status,
-            custom_address: useCustomLocation ? customAddress : null,
-            custom_latitude: useCustomLocation ? parseFloat(coordinates.latitude) : null,
-            custom_longitude: useCustomLocation ? parseFloat(coordinates.longitude) : null,
+            custom_address: customAddress,
+            custom_latitude: parseFloat(coordinates.latitude),
+            custom_longitude: parseFloat(coordinates.longitude),
         };
 
         router.put(`/devices/uwdevice/${device.id}`, formData, {
             onSuccess: () => {
-                router.flushAll(); // Clear prefetch cache to prevent stale data
+                router.flushAll();
                 toast({ title: 'Success!', description: 'UW Device updated successfully.' });
                 setDialogOpen(false);
             },
@@ -161,7 +141,7 @@ function EditUWDevice({
                     <TooltipProvider>
                         <DialogHeader className="flex-shrink-0 px-6 pt-6">
                             <DialogTitle>Edit IoT Sensor</DialogTitle>
-                            <DialogDescription>Update the IoT sensor configuration and linked cameras</DialogDescription>
+                            <DialogDescription>Update the IoT sensor configuration</DialogDescription>
                         </DialogHeader>
 
                         <div className="flex-1 overflow-y-auto px-6 py-4">
@@ -184,62 +164,68 @@ function EditUWDevice({
                                 </div>
 
                                 <div className="flex flex-col gap-4">
-                                    <div className="flex items-center justify-between">
-                                        <Label>Location Assignment</Label>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            type="button"
-                                            className="h-7 text-xs"
-                                            onClick={() => {
-                                                setUseCustomLocation(!useCustomLocation);
-                                                setSelectedLocation('');
-                                                setSelectedLocationDetails(null);
-                                            }}
-                                        >
-                                            {useCustomLocation ? 'Use Predefined Location' : 'Use Custom Location'}
-                                        </Button>
-                                    </div>
+                                    <Label>Location Assignment</Label>
 
-                                    {!useCustomLocation ? (
-                                        <Select value={selectedLocation} onValueChange={handleLocationChange}>
-                                            <SelectTrigger className={errors.location ? 'border-red-500' : ''}>
-                                                <SelectValue placeholder="Select Location" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectGroup>
-                                                    {location.map((loc) => (
-                                                        <SelectItem key={loc.id} value={loc.id.toString()}>
-                                                            {loc.location_name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectGroup>
-                                            </SelectContent>
-                                        </Select>
-                                    ) : (
-                                        <div className="space-y-4">
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="location-select">Package/Area</Label>
+                                            <Select onValueChange={handleLocationChange} value={selectedLocation}>
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Select to update location" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectGroup>
+                                                        {packageOptions.map((pkg) => (
+                                                            <SelectItem key={pkg.id} value={pkg.id}>
+                                                                {pkg.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectGroup>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="edit-custom-address">Full Address</Label>
+                                            <Input
+                                                id="edit-custom-address"
+                                                value={customAddress}
+                                                onChange={(e) => setCustomAddress(e.target.value)}
+                                                placeholder="Enter full address"
+                                                className={errors.location && !customAddress ? 'border-red-500' : ''}
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
-                                                <Label htmlFor="edit-custom-address">Address</Label>
+                                                <Label>Latitude (Auto-filled)</Label>
                                                 <Input
-                                                    id="edit-custom-address"
-                                                    value={customAddress}
-                                                    onChange={(e) => setCustomAddress(e.target.value)}
-                                                    placeholder="Enter full address"
+                                                    value={coordinates.latitude}
+                                                    disabled
+                                                    placeholder="Select on map"
+                                                    className={`bg-gray-100 ${errors.location && !coordinates.latitude ? 'border-red-500' : ''}`}
                                                 />
                                             </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                    <Label>Latitude</Label>
-                                                    <Input value={coordinates.latitude} disabled placeholder="Select on map" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <Label>Longitude</Label>
-                                                    <Input value={coordinates.longitude} disabled placeholder="Select on map" />
-                                                </div>
+                                            <div className="space-y-2">
+                                                <Label>Longitude (Auto-filled)</Label>
+                                                <Input
+                                                    value={coordinates.longitude}
+                                                    disabled
+                                                    placeholder="Select on map"
+                                                    className={`bg-gray-100 ${errors.location && !coordinates.longitude ? 'border-red-500' : ''}`}
+                                                />
                                             </div>
-                                            <MapModal onLocationSelect={handleLocationSelect} coordinates={coordinates} />
                                         </div>
-                                    )}
+                                        <p className="text-xs text-gray-500">Coordinates are auto-filled when you select a package. Use the map below to adjust if needed.</p>
+                                        <MapModal
+                                            onLocationSelect={handleLocationSelect}
+                                            onPackageSelect={handlePackageSelectFromMap}
+                                            selectedPackage={selectedLocation}
+                                            coordinates={coordinates}
+                                        />
+                                        {errors.location && (
+                                            <span className="text-sm text-red-500">Please fill in address and select location on map</span>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="flex flex-col gap-2">
@@ -257,52 +243,6 @@ function EditUWDevice({
                                         </SelectContent>
                                     </Select>
                                 </div>
-
-                                {!useCustomLocation && (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-2">
-                                            <Label>Linked CCTV Cameras</Label>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                                                </TooltipTrigger>
-                                                <TooltipContent side="right" className="max-w-[300px]">
-                                                    <p className="text-xs">
-                                                        These cameras are situated at the same location as the IoT sensor.
-                                                        Linking them allows for cross-referencing anomaly data with visual confirmation.
-                                                    </p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </div>
-                                        <div className="space-y-3">
-                                            {getFilteredCameras().length > 0 ? (
-                                                getFilteredCameras().map((camera) => (
-                                                    <div key={camera.id} className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="flex h-5 w-5 items-center justify-center rounded bg-primary/10">
-                                                                <Check className="h-3 w-3 text-primary" />
-                                                            </div>
-                                                            <div>
-                                                                <div className="text-sm font-medium">{camera.device_name}</div>
-                                                                <div className="text-xs text-muted-foreground">{camera.location?.location_name || 'No location'} • {camera.id}</div>
-                                                            </div>
-                                                        </div>
-                                                        <Badge variant={getStatusVariant(camera.status)} className="capitalize">{camera.status}</Badge>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div className="rounded-lg border-2 border-dashed p-6 text-center text-muted-foreground">
-                                                    <Camera className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                                                    <p className="text-sm">
-                                                        {selectedLocationDetails
-                                                            ? `No cameras found at ${selectedLocationDetails.location_name}`
-                                                            : 'Select a location to see linked cameras'}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         </div>
 

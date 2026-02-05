@@ -17,6 +17,7 @@ import { MoveLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { useIdentifyNumber } from '@/hooks/use-identify-number';
+import { baseBadgeClasses, getStatusColorClass } from '@/lib/badgeStyles';
 import { AvailablePunishmentsData, users_T } from '@/types/user-types';
 import { cn } from '@/lib/utils';
 
@@ -219,10 +220,8 @@ function ViewUser({ user, children }: ViewUserProps) {
                                 <Badge
                                     variant="outline"
                                     className={cn(
-                                        "text-[10px] font-medium px-1.5 py-0.5",
-                                        getUserStatus(user) === 'Active'
-                                            ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
-                                            : 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20'
+                                        baseBadgeClasses,
+                                        getStatusColorClass(getUserStatus(user))
                                     )}
                                 >
                                     {getUserStatus(user)}

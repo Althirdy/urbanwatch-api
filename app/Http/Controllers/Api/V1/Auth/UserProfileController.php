@@ -10,6 +10,7 @@ use App\Services\UserProfileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class UserProfileController extends BaseApiController
 {
@@ -103,33 +104,52 @@ class UserProfileController extends BaseApiController
     }
 
     /**
-     * Upload and update profile avatar.
+     * Upload and update profile avatar/photo.
      */
     public function updateAvatar(Request $request): JsonResponse
     {
         $request->validate([
-            'avatar' => 'required|image|max:5120', // 5MB max
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB max
         ]);
 
         try {
             $user = $request->user();
             $file = $request->file('avatar');
 
+            // Delete old photo if exists (handle both path and URL formats)
+            if ($user->profile_photo_path) {
+                $oldPath = $user->profile_photo_path;
+
+                // If it's a full URL, extract the path
+                if (filter_var($oldPath, FILTER_VALIDATE_URL)) {
+                    $parsedUrl = parse_url($oldPath);
+                    $oldPath = ltrim($parsedUrl['path'] ?? '', '/storage/');
+                }
+
+                // Try to delete from public disk
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
+
             // Upload using existing service
-            $uploadResult = $this->fileUploadService->uploadSingle($file, 'avatars');
+            $uploadResult = $this->fileUploadService->uploadSingle($file, 'profile-photos');
 
             if (! $uploadResult['public_url']) {
-                throw new \Exception('Failed to upload avatar.');
+                throw new \Exception('Failed to upload profile photo.');
             }
+
+            // Store the storage path (not the full URL) for easier deletion later
             $user->forceFill([
-                'profile_photo_path' => $uploadResult['public_url'],
+                'profile_photo_path' => $uploadResult['storage_path'],
             ])->save();
 
             return $this->sendResponse([
-                'avatar_url' => $uploadResult['public_url'],
-            ], 'Avatar updated successfully.');
+                'profile_photo_path' => $uploadResult['storage_path'],
+                'profile_photo_url' => $uploadResult['public_url'],
+            ], 'Profile photo updated successfully.');
         } catch (\Exception $e) {
-            Log::error('Avatar Upload Error: '.$e->getMessage());
+            Log::error('Profile Photo Upload Error: '.$e->getMessage());
 
             return $this->sendError('An unexpected error occurred during upload.', 500);
         }

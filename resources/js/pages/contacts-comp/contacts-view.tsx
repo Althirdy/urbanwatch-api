@@ -129,20 +129,18 @@ export default function ViewContacts({ contact, children }: ViewContactsProps) {
                             </div>
                             <div className="flex flex-col items-end gap-2">
                                 <Badge
-                                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium text-foreground ${
-                                        contact.active
+                                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium text-foreground ${contact.active
                                             ? 'bg-green-800 dark:bg-green-900'
                                             : 'bg-gray-800'
-                                    }`}
+                                        }`}
                                 >
                                     {contact.active ? 'Active' : 'Inactive'}
                                 </Badge>
                                 <Badge
-                                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium ${
-                                        responderTypeColors[
-                                            contact.responder_type
+                                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium ${responderTypeColors[
+                                        contact.responder_type
                                         ] || 'bg-blue-100 text-blue-800'
-                                    }`}
+                                        }`}
                                 >
                                     {contact.responder_type}
                                 </Badge>
@@ -151,80 +149,9 @@ export default function ViewContacts({ contact, children }: ViewContactsProps) {
                     </div>
 
                     <div className="grid auto-rows-min gap-6">
-                        {/* Location Map */}
-                        {contact.latitude && contact.longitude && (
-                            <div className="grid gap-3">
-                                <Label>Location Map</Label>
-                                <div className="h-64 w-full overflow-hidden rounded-[var(--radius)] border">
-                                    <iframe
-                                        width="100%"
-                                        height="100%"
-                                        frameBorder="0"
-                                        style={{ border: 0 }}
-                                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(contact.longitude) - 0.01},${Number(contact.latitude) - 0.01},${Number(contact.longitude) + 0.01},${Number(contact.latitude) + 0.01}&layer=mapnik&marker=${contact.latitude},${contact.longitude}`}
-                                        loading="lazy"
-                                        referrerPolicy="no-referrer-when-downgrade"
-                                    ></iframe>
-                                </div>
-                            </div>
-                        )}
 
-                        {/* GPS Coordinates */}
-                        {contact.latitude && contact.longitude && (
-                            <div className="flex flex-col">
-                                <span className="text-sm text-foreground">
-                                    GPS Coordinates
-                                </span>
-                                <div className="flex w-full flex-row justify-between gap-3">
-                                    <div className="w-full space-y-2">
-                                        <Label
-                                            htmlFor="latitude"
-                                            className="text-muted-foreground"
-                                        >
-                                            Latitude
-                                        </Label>
-                                        <Input
-                                            id="latitude"
-                                            value={Number(
-                                                contact.latitude,
-                                            ).toFixed(2)}
-                                            readOnly
-                                            tabIndex={-1}
-                                            className="cursor-not-allowed border-none bg-muted select-none focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
-                                        />
-                                    </div>
-                                    <div className="w-full space-y-2">
-                                        <Label
-                                            htmlFor="longitude"
-                                            className="text-muted-foreground"
-                                        >
-                                            Longitude
-                                        </Label>
-                                        <Input
-                                            id="longitude"
-                                            value={Number(
-                                                contact.longitude,
-                                            ).toFixed(2)}
-                                            readOnly
-                                            tabIndex={-1}
-                                            className="cursor-not-allowed border-none bg-muted select-none focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
 
-                        {/* Location/Address */}
-                        <div className="grid gap-3">
-                            <Label htmlFor="location">Location</Label>
-                            <Input
-                                id="location"
-                                value={contact.location}
-                                readOnly
-                                tabIndex={-1}
-                                className="cursor-not-allowed border-none bg-muted select-none focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
-                            />
-                        </div>
+
 
                         {/* Contact Numbers in a row */}
                         <div className="flex flex-col">
@@ -249,12 +176,12 @@ export default function ViewContacts({ contact, children }: ViewContactsProps) {
                                         />
                                         {primaryPhoneInfo.network !==
                                             'Unknown' && (
-                                            <Badge
-                                                className={`${networkColors[primaryPhoneInfo.carrier]?.bg || networkColors[primaryPhoneInfo.network]?.bg} ${networkColors[primaryPhoneInfo.carrier]?.text || networkColors[primaryPhoneInfo.network]?.text} ${networkColors[primaryPhoneInfo.carrier]?.border || networkColors[primaryPhoneInfo.network]?.border} absolute right-2 rounded-[var(--radius)] border`}
-                                            >
-                                                {primaryPhoneInfo.carrier}
-                                            </Badge>
-                                        )}
+                                                <Badge
+                                                    className={`${networkColors[primaryPhoneInfo.carrier]?.bg || networkColors[primaryPhoneInfo.network]?.bg} ${networkColors[primaryPhoneInfo.carrier]?.text || networkColors[primaryPhoneInfo.network]?.text} ${networkColors[primaryPhoneInfo.carrier]?.border || networkColors[primaryPhoneInfo.network]?.border} absolute right-2 rounded-[var(--radius)] border`}
+                                                >
+                                                    {primaryPhoneInfo.carrier}
+                                                </Badge>
+                                            )}
                                     </div>
                                 </div>
                                 <div className="w-full space-y-2">
@@ -276,7 +203,7 @@ export default function ViewContacts({ contact, children }: ViewContactsProps) {
                                         />
                                         {contact.backup_mobile &&
                                             backupPhoneInfo.network !==
-                                                'Unknown' && (
+                                            'Unknown' && (
                                                 <Badge
                                                     className={`${networkColors[backupPhoneInfo.carrier]?.bg || networkColors[backupPhoneInfo.network]?.bg} ${networkColors[backupPhoneInfo.carrier]?.text || networkColors[backupPhoneInfo.network]?.text} ${networkColors[backupPhoneInfo.carrier]?.border || networkColors[backupPhoneInfo.network]?.border} absolute right-2 rounded-[var(--radius)] border`}
                                                 >

@@ -1,31 +1,25 @@
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/use-toast';
 import { Contact } from '@/types/contacts-types';
 import { router, useForm } from '@inertiajs/react';
-import { Archive, MapPin, Phone, User } from 'lucide-react';
+import { Archive, Phone, User } from 'lucide-react';
 import React, { useState } from 'react';
+import { getResponderTypeColorClass, getStatusColorClass } from '@/lib/badgeStyles';
 
-const responderTypeColors: Record<string, string> = {
-    Fire: 'bg-red-600  text-foreground',
-    Emergency: 'bg-yellow-500 text-black',
-    Crime: 'bg-zinc-700  text-foreground',
-    Traffic: 'bg-orange-500 text-black',
-    Barangay: 'bg-blue-500  text-foreground',
-    Others: 'bg-gray-600  text-foreground',
-};
+
 
 interface DeleteContactsProps {
     contact: Contact;
@@ -68,112 +62,74 @@ export default function DeleteContacts({
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 font-bold text-destructive">
-                        <Archive className="h-5 w-5" />
+        <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
+            <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
+            <AlertDialogContent className="sm:max-w-md">
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2 text-muted-foreground">
+                        <Archive className="h-6 w-6" />
                         Archive Contact
-                    </DialogTitle>
-                    <DialogDescription>
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="mt-2 text-foreground/90">
                         Are you sure you want to archive this contact? This
                         action cannot be undone.
-                    </DialogDescription>
-                </DialogHeader>
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
                 <div className="space-y-4">
-                    <div className="space-y-3 border-l-4 border-destructive/20 pl-4">
+                    <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                         <div className="flex flex-row items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-
-                            <h1 className="text-lg font-bold">
-                                {contact.branch_unit_name}
-                            </h1>
-                            <Badge
-                                className={`inline-flex items-center rounded-[var(--radius)] px-2.5 py-1 text-xs font-medium ${responderTypeColors[
-                                    contact.responder_type
-                                    ] || 'bg-blue-100 text-blue-800'
-                                    }`}
-                            >
-                                {contact.responder_type}
-                            </Badge>
-                        </div>
-                        <div className="flex flex-row items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            {contact.contact_person && (
-                                <p>{contact.contact_person}</p>
-                            )}
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 text-sm">
-                            <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                <div>
-                                    <span className="text-muted-foreground">
-                                        Address:
-                                    </span>
-                                    <p className="font-medium">
-                                        {contact.location}
-                                    </p>
+                            <div className="h-fit w-fit rounded-md bg-muted p-2 text-muted-foreground">
+                                <User className="h-5 w-5" />
+                            </div>
+                            <div className="flex flex-1 flex-col min-w-0">
+                                <h1 className="text-lg font-bold truncate">
+                                    {contact.branch_unit_name}
+                                </h1>
+                                <div className="flex items-center gap-2">
+                                    <Badge
+                                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${getResponderTypeColorClass(
+                                            contact.responder_type
+                                        )}`}
+                                    >
+                                        {contact.responder_type}
+                                    </Badge>
+                                    <Badge
+                                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${getStatusColorClass(contact.active ? 'active' : 'inactive')}`}
+                                    >
+                                        {contact.active ? 'Active' : 'Inactive'}
+                                    </Badge>
                                 </div>
                             </div>
+                        </div>
+
+                        {contact.contact_person && (
+                            <div className="flex items-center gap-2 text-sm border-t border-border pt-2">
+                                <span className="text-muted-foreground">Contact Person:</span>
+                                <p className="font-medium text-foreground">{contact.contact_person}</p>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 gap-2 text-sm border-t border-border pt-2">
                             <div className="flex items-center gap-2">
                                 <Phone className="h-4 w-4 text-muted-foreground" />
-                                <div>
-                                    <span className="text-muted-foreground">
-                                        Primary Mobile:
-                                    </span>
-                                    <p className="font-medium">
-                                        {contact.primary_mobile}
-                                    </p>
-                                </div>
+                                <span className="text-muted-foreground">Primary Mobile:</span>
+                                <p className="font-medium text-foreground">{contact.primary_mobile}</p>
                             </div>
                             {contact.backup_mobile && (
                                 <div className="flex items-center gap-2">
                                     <Phone className="h-4 w-4 text-muted-foreground" />
-                                    <div>
-                                        <span className="text-muted-foreground">
-                                            Backup Mobile:
-                                        </span>
-                                        <p className="font-medium">
-                                            {contact.backup_mobile}
-                                        </p>
-                                    </div>
+                                    <span className="text-muted-foreground">Backup Mobile:</span>
+                                    <p className="font-medium text-foreground">{contact.backup_mobile}</p>
                                 </div>
                             )}
                         </div>
-
-                        {contact.latitude && contact.longitude && (
-                            <div className="text-sm">
-                                <span className="text-muted-foreground">
-                                    Coordinates:
-                                </span>
-                                <p className="mt-1 rounded bg-muted p-1 font-mono text-xs">
-                                    {contact.latitude}, {contact.longitude}
-                                </p>
-                            </div>
-                        )}
-
-                        <div className="text-sm">
-                            <span className="text-muted-foreground">
-                                Status:
-                            </span>
-                            <Badge
-                                className={`ml-2 inline-flex items-center rounded-[var(--radius)] px-2 py-1 text-xs font-medium ${contact.active
-                                        ? 'bg-green-800'
-                                        : 'bg-gray-800'
-                                    }`}
-                            >
-                                {contact.active ? 'Active' : 'Inactive'}
-                            </Badge>
-                        </div>
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                        <Label htmlFor="archive-contact">
+                    <div className="flex flex-col gap-3 py-2">
+                        <Label htmlFor="archive-contact" className="text-sm text-muted-foreground">
                             To confirm archiving, type{' '}
-                            <span className="font-medium text-destructive">
-                                {contact.branch_unit_name}
+                            <span className="font-bold text-destructive">
+                                "{contact.branch_unit_name}"
                             </span>{' '}
                             below:
                         </Label>
@@ -186,43 +142,40 @@ export default function DeleteContacts({
                                 className={
                                     confirmText &&
                                         confirmText !== contact.branch_unit_name
-                                        ? 'border-red-500'
+                                        ? 'border-destructive'
                                         : ''
                                 }
                             />
                             {confirmText &&
                                 confirmText !== contact.branch_unit_name && (
-                                    <span className="absolute -bottom-5 left-0 text-xs text-red-500">
-                                        Please type the exact branch/unit name
-                                        to confirm
+                                    <span className="absolute -bottom-5 left-0 text-[10px] text-destructive">
+                                        Name must match exactly
                                     </span>
                                 )}
                         </div>
                     </div>
                 </div>
-                <DialogFooter className="sm:justify-end">
-                    <DialogClose asChild>
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => setConfirmText('')}
-                            disabled={processing}
-                        >
-                            Cancel
-                        </Button>
-                    </DialogClose>
-                    <Button
-                        variant="destructive"
+                <AlertDialogFooter className="sm:justify-end gap-2 pt-2">
+                    <AlertDialogCancel
+                        onClick={() => setConfirmText('')}
+                        disabled={processing}
+                        className="cursor-pointer"
+                    >
+                        Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={handleDelete}
                         disabled={
                             confirmText !== contact.branch_unit_name ||
                             processing
                         }
-                        onClick={handleDelete}
+                        className="cursor-pointer bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
                         {processing ? 'Archiving...' : 'Archive Contact'}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     );
 }
+

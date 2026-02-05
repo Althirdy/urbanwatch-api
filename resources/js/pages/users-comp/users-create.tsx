@@ -21,7 +21,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import PurokSelectorMap from '@/components/purok-selector-map';
 import { toast } from '@/components/use-toast';
-import { location_T } from '@/types/location-types';
+import { locations } from '@/lib/packages';
 import { roles_T } from '@/types/role-types';
 import { useForm } from '@inertiajs/react';
 import { MoveLeft, Plus, UserPlus } from 'lucide-react';
@@ -46,11 +46,9 @@ type CreateUserForm = {
 
 function CreateUsers({
     roles,
-    locations,
     puroks = [], // Default to empty array if not passed
 }: {
     roles: roles_T[];
-    locations: location_T[];
     puroks?: any[]; // Using any for now to avoid extensive type definitions, or define interface
 }) {
     const [open, setOpen] = useState(false);
@@ -596,10 +594,10 @@ function CreateUsers({
                                                         <SelectItem
                                                             key={location.id}
                                                             value={
-                                                                location.location_name
+                                                                location.name
                                                             }
                                                         >
-                                                            {location.location_name}
+                                                            {location.name}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>

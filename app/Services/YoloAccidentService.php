@@ -69,20 +69,20 @@ class YoloAccidentService
      */
     protected function getCctvDeviceWithLocation(int $deviceId): cctvDevices
     {
-        $cctvDevice = cctvDevices::with('location')->find($deviceId);
+        $cctvDevice = cctvDevices::find($deviceId);
 
         if (! $cctvDevice) {
             throw new \Exception("CCTV Device not found: ID {$deviceId}");
         }
 
-        if (! $cctvDevice->location) {
-            throw new \Exception("CCTV Device {$deviceId} has no location assigned");
+        if (! $cctvDevice->latitude || ! $cctvDevice->longitude) {
+            throw new \Exception("CCTV Device {$deviceId} has no coordinates assigned");
         }
 
         Log::info('YOLO Service: CCTV Device loaded', [
             'device_id' => $cctvDevice->id,
             'device_name' => $cctvDevice->device_name,
-            'location' => $cctvDevice->location->location_name,
+            'location' => $cctvDevice->location_name,
         ]);
 
         return $cctvDevice;
@@ -102,7 +102,7 @@ class YoloAccidentService
     {
         $context = [
             'device_name' => $cctvDevice->device_name,
-            'location' => $cctvDevice->location->location_name.', '.$cctvDevice->location->barangay,
+            'location' => $cctvDevice->location_name,
         ];
 
         Log::info('YOLO Service: Sending image to Gemini AI for verification');
@@ -156,7 +156,7 @@ class YoloAccidentService
             'message' => 'Detection verified as false alarm by AI - Image not stored',
             'reasoning' => $aiAnalysis['reasoning'] ?? 'Not a real emergency',
             'deviceName' => $cctvDevice->device_name,
-            'location' => $cctvDevice->location->location_name,
+            'location' => $cctvDevice->location_name,
             'processingTimeMs' => $processingTimeMs,
         ];
     }
@@ -259,8 +259,8 @@ class YoloAccidentService
                                 'category' => $accident->accident_type,
                                 'severity' => $accident->severity,
                                 'description' => $accident->description,
-                                'address' => $cctvDevice->location->location_name ?? 'Unknown Location',
-                                'custom_location' => $cctvDevice->location->barangay ?? '',
+                                'address' => $cctvDevice->location_name ?? 'Unknown Location',
+                                'custom_location' => '',
                             ]
                         ));
                     }
@@ -286,8 +286,8 @@ class YoloAccidentService
                 'description' => $accident->description,
                 'latitude' => $accident->latitude,
                 'longitude' => $accident->longitude,
-                'locationName' => $cctvDevice->location->location_name,
-                'barangay' => $cctvDevice->location->barangay,
+                'locationName' => $cctvDevice->location_name,
+                'barangay' => null, // Removed: barangay no longer stored on cctv_devices
                 'occurredAt' => $accident->occurred_at,
                 'confidence' => $aiAnalysis['confidence'] ?? null,
                 'detectedObjects' => $aiAnalysis['detected_objects'] ?? [],
@@ -323,8 +323,8 @@ class YoloAccidentService
             'cctv_device_id' => $device->id,
             'title' => $aiAnalysis['title'] ?? 'Insidente na Natukoy',
             'description' => $aiAnalysis['description'] ?? 'Awtomatikong natukoy ng AI system',
-            'latitude' => $device->location->latitude,
-            'longitude' => $device->location->longitude,
+            'latitude' => $device->latitude,
+            'longitude' => $device->longitude,
             'occurred_at' => $detectedAt ?? now(),
             'accident_type' => $aiAnalysis['accident_type'] ?? 'Accident',
             'status' => 'Pending',

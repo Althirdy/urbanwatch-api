@@ -79,16 +79,6 @@ class ContactController extends Controller
             ->values()
             ->toArray();
 
-        // Fetch distinct locations
-        $packageLocations = Contact::select('location')
-            ->distinct()
-            ->whereNotNull('location')
-            ->orderBy('location')
-            ->get()
-            ->map(fn ($contact, $index) => ['id' => $index + 1, 'name' => $contact->location])
-            ->values()
-            ->toArray();
-
         // Get distinct active statuses
         $statuses = Contact::select('active')
             ->distinct()
@@ -103,7 +93,6 @@ class ContactController extends Controller
             'contacts' => $contacts,
             'responderTypes' => $responderTypes,
             'branchUnitNames' => $branchUnitNames,
-            'packageLocations' => $packageLocations,
             'statuses' => $statuses,
         ];
     }

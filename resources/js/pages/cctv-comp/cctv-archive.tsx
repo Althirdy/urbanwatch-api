@@ -1,16 +1,20 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/components/use-toast';
+import { getDeviceStatusColorClass } from '@/lib/badgeStyles';
 import { router, useForm } from '@inertiajs/react';
 import { Activity, Archive, Camera, Settings, Wifi } from 'lucide-react';
 import { useState } from 'react';
@@ -28,8 +32,8 @@ function ArchiveCCTV({ cctv, onArchiveSuccess, children }: ArchiveCCTVProps) {
 
     const { delete: deleteRequest, processing } = useForm();
 
-    // Check if confirmation text matches device name
-    const isConfirmationValid = confirmationText === cctv.device_name;
+    // Check if confirmation text matches location name
+    const isConfirmationValid = confirmationText === cctv.location_name;
 
     // Get status icon
     const getStatusIcon = (status: string) => {
@@ -45,19 +49,6 @@ function ArchiveCCTV({ cctv, onArchiveSuccess, children }: ArchiveCCTVProps) {
         }
     };
 
-    const getStatusStyles = (status: string) => {
-        switch (status.toLocaleUpperCase()) {
-            case 'ACTIVE':
-                return 'bg-green-700 rounded-[var(--radius)]  dark:bg-green-800 dark:';
-            case 'MAINTENANCE':
-                return 'bg-orange-100 rounded-[var(--radius)] dark:bg-orange-700 ';
-            case 'INACTIVE':
-                return 'bg-gray-100 rounded-[var(--radius)]  dark:bg-zinc-600 ';
-            default:
-                return 'bg-gray-100 rounded-[var(--radius)]  dark:bg-zinc-600 ';
-        }
-    };
-
     const handleArchive = () => {
         if (!isConfirmationValid) return;
 
@@ -66,7 +57,7 @@ function ArchiveCCTV({ cctv, onArchiveSuccess, children }: ArchiveCCTVProps) {
                 router.flushAll(); // Clear prefetch cache to prevent stale data
                 toast({
                     title: 'CCTV Device Archived',
-                    description: `${cctv.device_name} has been successfully archived.`,
+                    description: `${cctv.location_name} has been successfully archived.`,
                     variant: 'default',
                 });
                 setOpen(false);
@@ -90,140 +81,115 @@ function ArchiveCCTV({ cctv, onArchiveSuccess, children }: ArchiveCCTVProps) {
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                {children || <Archive className="text-destructive" size={20} />}
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader className="space-y-3">
-                    <DialogTitle className="flex items-center gap-2 font-bold text-destructive">
-                        <Archive className="h-5 w-5" />
+        <AlertDialog open={open} onOpenChange={setOpen}>
+            <AlertDialogTrigger asChild>
+                {children || (
+                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80 hover:bg-destructive/10">
+                        <Archive size={20} />
+                    </Button>
+                )}
+            </AlertDialogTrigger>
+            <AlertDialogContent className="sm:max-w-[500px]">
+                <AlertDialogHeader className="space-y-3">
+                    <AlertDialogTitle className="flex items-center gap-2 text-muted-foreground">
+                        <Archive className="h-6 w-6" />
                         Archive CCTV Device
-                    </DialogTitle>
-                    <DialogDescription>
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="mt-2 text-foreground/90">
                         Are you sure you want to archive this CCTV device? This
                         action cannot be undone.
-                    </DialogDescription>
-                </DialogHeader>
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
 
                 {/* Device Information Card */}
-                <div className="space-y-3 rounded-[var(--radius)] border border-[var(--border)] p-4">
+                <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                     <div className="flex items-center gap-3">
-                        <div className="h-fit w-fit rounded-[var(--radius)] bg-zinc-500 p-2">
+                        <div className="h-fit w-fit rounded-md bg-muted p-2 text-muted-foreground">
                             <Camera className="h-6 w-auto" />
                         </div>
                         <div className="flex min-w-0 flex-1 items-center">
                             <h3 className="text-lg font-semibold text-foreground">
-                                {cctv.device_name}
+                                {cctv.location_name}
                             </h3>
                         </div>
                         <Badge
-                            className={`gap-1 capitalize ${getStatusStyles(cctv.status)}`}
+                            className={`gap-1 capitalize ${getDeviceStatusColorClass(cctv.status)}`}
                         >
                             {getStatusIcon(cctv.status)}
                             {cctv.status}
                         </Badge>
                     </div>
 
-                    {/* Location Details */}
-                    <div className="space-y-1 border-t border-[var(--border)] pt-2 text-sm">
+                    {/* Coordinate Details */}
+                    <div className="space-y-1 border-t border-border pt-2 text-sm">
                         <div className="flex justify-between">
-                            <span className="text-[var(--muted-foreground)]">
-                                Location:
+                            <span className="text-muted-foreground">
+                                Latitude:
                             </span>
-                            <span className="text-whte">
-                                {cctv.location?.location_name}
-                            </span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-[var(--muted-foreground)]">
-                                Barangay:
-                            </span>
-                            <span className="text-foreground">
-                                {cctv.location?.barangay}
+                            <span className="font-medium text-foreground">
+                                {cctv.latitude || 'N/A'}
                             </span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-[var(--muted-foreground)]">
-                                Landmark:
+                            <span className="text-muted-foreground">
+                                Longitude:
                             </span>
-                            <span className="text-foreground">
-                                {cctv.location?.landmark}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Device Specifications */}
-                    <div className="grid grid-cols-2 gap-4 border-t border-[var(--border)] pt-2">
-                        <div className="text-sm">
-                            <span className="block text-[var(--muted-foreground)]">
-                                Resolution:
-                            </span>
-                            <span className="text-foreground">
-                                {cctv.resolution || 'N/A'}
-                            </span>
-                        </div>
-                        <div className="text-sm">
-                            <span className="block text-[var(--muted-foreground)]">
-                                FPS:
-                            </span>
-                            <span className="text-foreground">
-                                {cctv.fps || 'N/A'}
-                            </span>
-                        </div>
-                        <div className="text-sm">
-                            <span className="block text-[var(--muted-foreground)]">
-                                Brand:
-                            </span>
-                            <span className="text-foreground">
-                                {cctv.brand || 'N/A'}
-                            </span>
-                        </div>
-                        <div className="text-sm">
-                            <span className="block text-[var(--muted-foreground)]">
-                                Model:
-                            </span>
-                            <span className="text-foreground">
-                                {cctv.model || 'N/A'}
+                            <span className="font-medium text-foreground">
+                                {cctv.longitude || 'N/A'}
                             </span>
                         </div>
                     </div>
                 </div>
 
                 {/* Confirmation Input */}
-                <div className="space-y-2">
-                    <div className="text-sm text-[var(--muted-foreground)]">
+                <div className="space-y-3 py-2">
+                    <Label
+                        htmlFor="archive-cctv"
+                        className="text-sm text-muted-foreground"
+                    >
                         To confirm archival, type{' '}
-                        <span className="font-bold text-[var(--destructive)] select-none">
-                            "{cctv.device_name}"
+                        <span className="font-bold text-destructive">
+                            "{cctv.location_name}"
                         </span>{' '}
                         below:
+                    </Label>
+                    <div className="relative">
+                        <Input
+                            id="archive-cctv"
+                            placeholder="Enter device name to confirm"
+                            value={confirmationText}
+                            onChange={(e) => setConfirmationText(e.target.value)}
+                            className={
+                                confirmationText && !isConfirmationValid
+                                    ? 'border-destructive'
+                                    : ''
+                            }
+                        />
+                        {confirmationText && !isConfirmationValid && (
+                            <span className="absolute -bottom-5 left-0 text-[10px] text-destructive">
+                                Name must match exactly
+                            </span>
+                        )}
                     </div>
-                    <Input
-                        placeholder="Enter device name to confirm"
-                        value={confirmationText}
-                        onChange={(e) => setConfirmationText(e.target.value)}
-                        className="text-foreground"
-                    />
                 </div>
-                <DialogFooter className="gap-2">
-                    <Button
-                        variant="outline"
+
+                <AlertDialogFooter className="gap-2 pt-2">
+                    <AlertDialogCancel
                         onClick={handleClose}
-                        className="border-gray-600 bg-transparent text-gray-300 hover:bg-gray-800"
+                        className="cursor-pointer"
                     >
                         Cancel
-                    </Button>
-                    <Button
+                    </AlertDialogCancel>
+                    <AlertDialogAction
                         onClick={handleArchive}
                         disabled={!isConfirmationValid || processing}
-                        className="bg-red-600 text-foreground hover:bg-red-700"
+                        className="cursor-pointer bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
                         {processing ? 'Archiving...' : 'Archive Device'}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     );
 }
 

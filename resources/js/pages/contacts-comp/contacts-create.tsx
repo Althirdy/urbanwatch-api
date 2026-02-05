@@ -1,4 +1,3 @@
-import { MapModal } from '@/components/map-modal';
 import { Button } from '@/components/ui/button';
 import {
     Command,
@@ -56,11 +55,10 @@ type SelectionState = {
 type PageProps = {
     responderTypes: ResponderType[];
     branchUnitNames: BranchUnitName[];
-    packageLocations: Location[];
 };
 
 function AddContacts() {
-    const { responderTypes, branchUnitNames, packageLocations } =
+    const { responderTypes, branchUnitNames } =
         usePage<PageProps>().props;
     // Dialog control state
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -106,16 +104,6 @@ function AddContacts() {
             open: false,
         });
 
-    const [locationState, setLocationState] = useState<SelectionState>({
-        value: null,
-        open: false,
-    });
-
-    const [coordinates, setCoordinates] = useState({
-        latitude: '',
-        longitude: '',
-    });
-
     // Handlers for branch/unit name selection
     const handleBranchUnitNameSelect = (selected: BranchUnitName | null) => {
         setBranchUnitNameState({
@@ -134,27 +122,7 @@ function AddContacts() {
         setData('responder_type', selected ? selected.name : '');
     };
 
-    // Handlers for location selection
-    const handleLocationSelect = (selected: Location | null) => {
-        setLocationState({
-            value: selected,
-            open: false,
-        });
-        setData('location', selected ? selected.name : '');
-    };
 
-    const handleMapLocationSelect = (location: {
-        lat: number;
-        lng: number;
-    }) => {
-        const coords = {
-            latitude: location.lat.toString(),
-            longitude: location.lng.toString(),
-        };
-        setCoordinates(coords);
-        setData('latitude', coords.latitude);
-        setData('longitude', coords.longitude);
-    };
 
     const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -174,15 +142,6 @@ function AddContacts() {
             toast({
                 title: 'Validation Error',
                 description: 'Responder Type is required.',
-                variant: 'destructive',
-            });
-            return;
-        }
-
-        if (!data.location.trim()) {
-            toast({
-                title: 'Validation Error',
-                description: 'Package is required.',
                 variant: 'destructive',
             });
             return;
@@ -216,15 +175,6 @@ function AddContacts() {
             return;
         }
 
-        if (!data.latitude || !data.longitude) {
-            toast({
-                title: 'Validation Error',
-                description: 'GPS Coordinate is required.',
-                variant: 'destructive',
-            });
-            return;
-        }
-
         post('/contacts', {
             onSuccess: () => {
                 router.flushAll(); // Clear prefetch cache to prevent stale data
@@ -234,8 +184,6 @@ function AddContacts() {
                 // Reset all state when successful
                 setBranchUnitNameState({ value: null, open: false });
                 setResponderTypeState({ value: null, open: false });
-                setLocationState({ value: null, open: false });
-                setCoordinates({ latitude: '', longitude: '' });
                 toast({
                     title: 'Success',
                     description: 'Contact created successfully!',
@@ -262,8 +210,6 @@ function AddContacts() {
                     setHasAttemptedSubmit(false);
                     setBranchUnitNameState({ value: null, open: false });
                     setResponderTypeState({ value: null, open: false });
-                    setLocationState({ value: null, open: false });
-                    setCoordinates({ latitude: '', longitude: '' });
                     reset();
                 }
             }}
@@ -284,8 +230,7 @@ function AddContacts() {
                     <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
                         <DialogTitle>Add Contacts</DialogTitle>
                         <DialogDescription>
-                            Responder details, barangay, phones and service
-                            radius
+                            Responder details and communication data
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 space-y-6 overflow-y-auto px-6 py-4">
@@ -395,200 +340,86 @@ function AddContacts() {
                             </div>
 
                             {/* Responder Type and Package - Side by Side */}
-                            <div className="grid grid-cols-2 gap-4">
-                                {/* Responder Type */}
-                                <div>
-                                    <Label>Responder Type</Label>
-                                    <Popover
-                                        open={responderTypeState.open}
-                                        onOpenChange={(open) =>
-                                            setResponderTypeState({
-                                                ...responderTypeState,
-                                                open,
-                                            })
-                                        }
-                                    >
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                role="combobox"
-                                                aria-expanded={
-                                                    responderTypeState.open
-                                                }
-                                                className={`w-full justify-between ${hasAttemptedSubmit && !data.responder_type ? 'border-red-500' : ''}`}
-                                            >
-                                                {responderTypeState.value
-                                                    ? responderTypeState.value
-                                                        .name
-                                                    : 'Select Type'}
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-full p-0">
-                                            <Command>
-                                                <CommandInput placeholder="Search responder type..." />
-                                                <CommandList>
-                                                    <CommandEmpty>
-                                                        No responder type found.
-                                                    </CommandEmpty>
-                                                    <CommandGroup>
-                                                        {responderTypes.map(
-                                                            (type) => (
-                                                                <CommandItem
-                                                                    key={
-                                                                        type.id
-                                                                    }
-                                                                    value={
-                                                                        type.name
-                                                                    }
-                                                                    onSelect={() =>
-                                                                        handleResponderTypeSelect(
-                                                                            type,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <Check
-                                                                        className={cn(
-                                                                            'h-4 w-4',
-                                                                            responderTypeState
-                                                                                .value
-                                                                                ?.id ===
-                                                                                type.id
-                                                                                ? 'opacity-100'
-                                                                                : 'opacity-0',
-                                                                        )}
-                                                                    />
-                                                                    {type.name}
-                                                                </CommandItem>
-                                                            ),
-                                                        )}
-                                                    </CommandGroup>
-                                                </CommandList>
-                                            </Command>
-                                        </PopoverContent>
-                                    </Popover>
-                                    {hasAttemptedSubmit &&
-                                        !data.responder_type && (
-                                            <p className="mt-1 text-sm text-red-500">
-                                                Responder Type is required
-                                            </p>
-                                        )}
-                                    {errors.responder_type && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            {errors.responder_type}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Package - Dropdown */}
-                                <div>
-                                    <Label>Package</Label>
-                                    <Popover
-                                        open={locationState.open}
-                                        onOpenChange={(open) =>
-                                            setLocationState({
-                                                ...locationState,
-                                                open,
-                                            })
-                                        }
-                                    >
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                role="combobox"
-                                                aria-expanded={
-                                                    locationState.open
-                                                }
-                                                className={`w-full justify-between ${hasAttemptedSubmit && !data.location ? 'border-red-500' : ''}`}
-                                            >
-                                                {locationState.value
-                                                    ? locationState.value.name
-                                                    : 'Select Package'}
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-full p-0">
-                                            <Command>
-                                                <CommandInput placeholder="Search package..." />
-                                                <CommandList className="max-h-[300px] overflow-y-auto">
-                                                    <CommandEmpty>
-                                                        No package found.
-                                                    </CommandEmpty>
-                                                    <CommandGroup>
-                                                        {packageLocations.map(
-                                                            (location) => (
-                                                                <CommandItem
-                                                                    key={
-                                                                        location.id
-                                                                    }
-                                                                    value={
-                                                                        location.name
-                                                                    }
-                                                                    onSelect={() =>
-                                                                        handleLocationSelect(
-                                                                            location,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <Check
-                                                                        className={cn(
-                                                                            'h-4 w-4',
-                                                                            locationState
-                                                                                .value
-                                                                                ?.id ===
-                                                                                location.id
-                                                                                ? 'opacity-100'
-                                                                                : 'opacity-0',
-                                                                        )}
-                                                                    />
-                                                                    {
-                                                                        location.name
-                                                                    }
-                                                                </CommandItem>
-                                                            ),
-                                                        )}
-                                                    </CommandGroup>
-                                                </CommandList>
-                                            </Command>
-                                        </PopoverContent>
-                                    </Popover>
-                                    {hasAttemptedSubmit && !data.location && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            Package is required
-                                        </p>
-                                    )}
-                                    {errors.location && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            {errors.location}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* GPS Coordinates - Barangay 176E Area */}
-                            <div className="space-y-2">
-                                <Label>
-                                    GPS Coordinate (Barangay 176E, Bagong
-                                    Silang)
-                                </Label>
-                                <MapModal
-                                    onLocationSelect={handleMapLocationSelect}
-                                    coordinates={coordinates}
-                                />
+                            {/* Responder Type */}
+                            <div>
+                                <Label>Responder Type</Label>
+                                <Popover
+                                    open={responderTypeState.open}
+                                    onOpenChange={(open) =>
+                                        setResponderTypeState({
+                                            ...responderTypeState,
+                                            open,
+                                        })
+                                    }
+                                >
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={
+                                                responderTypeState.open
+                                            }
+                                            className={`w-full justify-between ${hasAttemptedSubmit && !data.responder_type ? 'border-red-500' : ''}`}
+                                        >
+                                            {responderTypeState.value
+                                                ? responderTypeState.value
+                                                    .name
+                                                : 'Select Type'}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-full p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Search responder type..." />
+                                            <CommandList>
+                                                <CommandEmpty>
+                                                    No responder type found.
+                                                </CommandEmpty>
+                                                <CommandGroup>
+                                                    {responderTypes.map(
+                                                        (type: ResponderType) => (
+                                                            <CommandItem
+                                                                key={
+                                                                    type.id
+                                                                }
+                                                                value={
+                                                                    type.name
+                                                                }
+                                                                onSelect={() =>
+                                                                    handleResponderTypeSelect(
+                                                                        type,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <Check
+                                                                    className={cn(
+                                                                        'h-4 w-4',
+                                                                        responderTypeState
+                                                                            .value
+                                                                            ?.id ===
+                                                                            type.id
+                                                                            ? 'opacity-100'
+                                                                            : 'opacity-0',
+                                                                    )}
+                                                                />
+                                                                {type.name}
+                                                            </CommandItem>
+                                                        ),
+                                                    )}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                                 {hasAttemptedSubmit &&
-                                    (!data.latitude || !data.longitude) && (
+                                    !data.responder_type && (
                                         <p className="mt-1 text-sm text-red-500">
-                                            GPS Coordinate is required
+                                            Responder Type is required
                                         </p>
                                     )}
-                                {errors.latitude && (
+                                {errors.responder_type && (
                                     <p className="mt-1 text-sm text-red-500">
-                                        {errors.latitude}
-                                    </p>
-                                )}
-                                {errors.longitude && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.longitude}
+                                        {errors.responder_type}
                                     </p>
                                 )}
                             </div>

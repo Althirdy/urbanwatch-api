@@ -3,6 +3,7 @@
 namespace Tests\Feature\Operator;
 
 use App\Events\ConcernUnassigned;
+use App\Events\ConcernValidationFailed;
 use App\Models\Citizen\Concern;
 use App\Models\Purok;
 use App\Models\User;
@@ -69,6 +70,8 @@ class ConcernAssignmentTest extends TestCase
 
     public function test_it_allows_purok_leader_to_reject_concern_as_false_alarm()
     {
+        Event::fake([ConcernValidationFailed::class]);
+
         $citizenRoleId = \App\Models\Roles::where('name', 'Citizen')->value('id');
         $leaderRoleId = \App\Models\Roles::where('name', 'Purok Leader')->value('id');
 

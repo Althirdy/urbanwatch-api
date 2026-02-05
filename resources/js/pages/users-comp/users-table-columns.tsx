@@ -15,9 +15,9 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { baseBadgeClasses, getRoleColorClass, getStatusColorClass } from '@/lib/badgeStyles';
 import { cn } from '@/lib/utils';
 
-import { location_T } from '@/types/location-types';
 import { roles_T } from '@/types/role-types';
 import { users_T } from '@/types/user-types';
 import ArchiveUser from './users-archive';
@@ -25,13 +25,6 @@ import EditUser from './users-edit';
 import OperatorDetails from './operator-details';
 import SuspensionUser from './users-suspension';
 import ViewUser from './users-view';
-
-const roleColors: Record<string, string> = {
-    Operator: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20',
-    Citizen: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20',
-    'Purok Leader': 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
-    Admin: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20',
-};
 
 const getFullName = (user: users_T) => {
     if (user.official_details) {
@@ -45,7 +38,6 @@ const getFullName = (user: users_T) => {
 
 export const columns = (
     roles: roles_T[],
-    locations: location_T[],
     puroks: any[] = [],
 ): ColumnDef<users_T>[] => [
         {
@@ -90,12 +82,11 @@ export const columns = (
             cell: ({ row }) => {
                 const user = row.original;
                 const roleName = user.role?.name || 'N/A';
-                const bgColor = roleColors[roleName] || 'bg-gray-500';
 
                 return (
                     <Badge
                         variant="outline"
-                        className={`text-[10px] font-medium px-1.5 py-0.5 ${bgColor}`}
+                        className={`${baseBadgeClasses} ${getRoleColorClass(roleName)}`}
                     >
                         {roleName}
                     </Badge>
@@ -135,12 +126,9 @@ export const columns = (
                     <Badge
                         variant="outline"
                         className={cn(
-                            "text-[10px] font-medium px-1.5 py-0.5 capitalize",
-                            statusText.toLowerCase() === 'active'
-                                ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
-                                : statusText.toLowerCase() === 'suspended'
-                                    ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
-                                    : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
+                            baseBadgeClasses,
+                            "capitalize",
+                            getStatusColorClass(statusText)
                         )}
                     >
                         {statusText}
@@ -180,7 +168,6 @@ export const columns = (
                                 <EditUser
                                     user={user}
                                     roles={roles}
-                                    locations={locations}
                                     puroks={puroks}
                                 >
                                     <TooltipTrigger asChild>

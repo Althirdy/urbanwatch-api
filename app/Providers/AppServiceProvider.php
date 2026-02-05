@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Services\LocationService;
 use App\Services\TextBeeService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -18,8 +17,6 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Register services
-        $this->app->scoped(LocationService::class);
-
         $this->app->singleton(TextBeeService::class, function ($app) {
             return new TextBeeService(
                 config('services.textbee.api_key'),
@@ -36,7 +33,6 @@ class AppServiceProvider extends ServiceProvider
         // Register Observers
         \App\Models\PublicPost::observe(\App\Observers\PublicPostObserver::class);
         \App\Models\Contact::observe(\App\Observers\ContactObserver::class);
-        \App\Models\Locations::observe(\App\Observers\LocationObserver::class);
         \App\Models\UwDevice::observe(\App\Observers\UwDeviceObserver::class);
         \App\Models\cctvDevices::observe(\App\Observers\CctvDeviceObserver::class);
 
