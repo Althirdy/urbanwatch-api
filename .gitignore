@@ -28,3 +28,5 @@ yarn-error.log
 /.zed
 
 /docs
+package-lock.json
+vite.config.ts
