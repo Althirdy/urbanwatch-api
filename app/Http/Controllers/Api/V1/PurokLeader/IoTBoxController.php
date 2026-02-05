@@ -41,13 +41,12 @@ class IoTBoxController extends BaseApiController
     {
         // Validate the incoming request
         $validator = Validator::make($request->all(), [
-            'device_id' => 'required|string',
+            'device_id' => 'required',
             'anomaly_type' => 'required|in:sound_anomaly,anti_tampering',
             'image' => 'nullable|image|max:10240', // Max 10MB
             'details' => 'nullable|array',
         ], [
             'device_id.required' => 'Device ID is required.',
-            'device_id.string' => 'Device ID must be a string.',
             'anomaly_type.required' => 'Anomaly type is required.',
             'anomaly_type.in' => 'Anomaly type must be sound_anomaly or anti_tampering.',
             'image.image' => 'The file must be an image.',
@@ -68,12 +67,15 @@ class IoTBoxController extends BaseApiController
                 return $this->sendError('Device token is missing.', null, 401);
             }
 
+            // Cast device_id to string for consistency (IoT box may send as integer or string)
+            $deviceId = (string) $request->device_id;
+
             // use service to verify and update heartbeat
-            $iotBox = $this->uwDeviceService->verifyAndHeartbeat($request->device_id, $token);
+            $iotBox = $this->uwDeviceService->verifyAndHeartbeat($deviceId, $token);
 
             if (! $iotBox) {
                 Log::warning('Unregistered, inactive, or invalid token IoT box attempted to send data', [
-                    'device_id' => $request->device_id,
+                    'device_id' => $deviceId,
                     'ip' => $request->ip(),
                 ]);
 
@@ -103,7 +105,7 @@ class IoTBoxController extends BaseApiController
 
             // Create anomaly log
             $anomalyLog = AnomalyLog::create([
-                'device_id' => $request->device_id, // Store the device_id sent by IoT box
+                'device_id' => $deviceId, // Store the device_id sent by IoT box
                 'iot_box_id' => $iotBox->id,
                 'anomaly_type' => $request->anomaly_type,
                 'image' => $imagePath,
@@ -116,7 +118,7 @@ class IoTBoxController extends BaseApiController
             Log::info('Anomaly log created from IoT box', [
                 'anomaly_log_id' => $anomalyLog->id,
                 'iot_box_id' => $iotBox->id,
-                'device_id' => $request->device_id,
+                'device_id' => $deviceId,
                 'anomaly_type' => $request->anomaly_type,
                 'is_duplicate' => $isDuplicate,
                 'parent_anomaly_id' => $parentAnomaly?->id,
