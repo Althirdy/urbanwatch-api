@@ -141,7 +141,7 @@ class PublicPostController extends Controller
             'delete_image' => $requestData['delete_image'] ?? null,
         ];
         // Filter out null values that weren't explicitly set
-        $data = array_filter($data, fn($value, $key) => array_key_exists($key, $requestData), ARRAY_FILTER_USE_BOTH);
+        $data = array_filter($data, fn ($value, $key) => array_key_exists($key, $requestData), ARRAY_FILTER_USE_BOTH);
 
         $post = $this->publicPostService->updatePublicPost($publicPost, $data, $image);
 

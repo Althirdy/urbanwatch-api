@@ -23,7 +23,7 @@ class ActiveAccidentService
         $accidents = Accident::whereIn('status', ['In Progress', 'Ongoing'])
             ->whereHas('publicPost', function ($query) {
                 $query->whereNotNull('published_at')
-                      ->where('published_at', '<=', now());
+                    ->where('published_at', '<=', now());
             })
             ->select(['id', 'latitude', 'longitude', 'accident_type', 'severity'])
             ->orderBy('occurred_at', 'desc')
@@ -54,7 +54,7 @@ class ActiveAccidentService
             ->whereIn('status', ['In Progress', 'Ongoing'])
             ->whereHas('publicPost', function ($query) {
                 $query->whereNotNull('published_at')
-                      ->where('published_at', '<=', now());
+                    ->where('published_at', '<=', now());
             });
 
         // Load relationships based on role
@@ -95,7 +95,7 @@ class ActiveAccidentService
         $accidents = Accident::whereIn('status', ['In Progress', 'Ongoing'])
             ->whereHas('publicPost', function ($query) {
                 $query->whereNotNull('published_at')
-                      ->where('published_at', '<=', now());
+                    ->where('published_at', '<=', now());
             })
             ->with(['cctvDevice', 'media'])
             ->orderBy('occurred_at', 'desc')

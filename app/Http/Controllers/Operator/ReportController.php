@@ -429,7 +429,7 @@ class ReportController extends Controller
                 return back()->with('error', 'Report is already resolved.');
             }
 
-            if (!in_array($currentStatus, ['in progress', 'ongoing'])) {
+            if (! in_array($currentStatus, ['in progress', 'ongoing'])) {
                 return back()->with('error', 'Only ongoing reports can be resolved.');
             }
 
@@ -449,7 +449,7 @@ class ReportController extends Controller
                     $publicPost->update([
                         'title' => str_contains($publicPost->title, '[RESOLVED]')
                             ? $publicPost->title
-                            : '[RESOLVED] ' . $publicPost->title,
+                            : '[RESOLVED] '.$publicPost->title,
                     ]);
                 }
 

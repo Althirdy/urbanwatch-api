@@ -14,9 +14,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { users_T } from '@/types/user-types';
 import { useForm } from '@inertiajs/react';
-import { Archive, User } from 'lucide-react';
+import { Archive, User, MapPin, Mail } from 'lucide-react';
 import { useState } from 'react';
-import { getRoleColorClass, getStatusColorClass } from '@/lib/badgeStyles';
+import { baseBadgeClasses, getRoleColorClass, getStatusColorClass } from '@/lib/badgeStyles';
 
 type ArchiveUserProps = {
     user: users_T;
@@ -68,37 +68,47 @@ function ArchiveUser({ user, children }: ArchiveUserProps) {
                     {/* User info card */}
                     <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                         <div className="flex items-center gap-3">
-                            <div className="h-fit w-fit rounded-md bg-muted p-2 text-muted-foreground">
-                                <User className="h-6 w-6" />
-                            </div>
-                            <div className="flex flex-1 flex-col min-w-0">
-                                <h3 className="text-lg font-bold truncate text-foreground">
+
+                            <div className="flex flex-col gap-2">
+                                <h3 className="text-lg font-semibold truncate text-foreground">
                                     {getUserFullName(user)}
                                 </h3>
-                                <div className="flex items-center gap-2">
+                                <div className="flex gap-2 items-center">
                                     <Badge
-                                        className={`capitalize ${getRoleColorClass(user.role?.name || 'citizen')}`}
+                                        variant="outline"
+                                        className={`${baseBadgeClasses} ${getRoleColorClass(user.role?.name || '')}`}
                                     >
-                                        {user.role?.name || 'Citizen'}
+                                        {user.role?.name || 'N/A'}
                                     </Badge>
-                                    <Badge
-                                        className={getStatusColorClass(user.status || 'inactive')}
-                                    >
-                                        {user.status || 'Inactive'}
-                                    </Badge>
+                                    {user.role?.name?.toLowerCase() !== 'citizen' && (
+                                        <Badge
+                                            variant="outline"
+                                            className={`shrink-0 ${baseBadgeClasses} capitalize ${getStatusColorClass(user.official_details?.status || user.citizen_details?.status || 'inactive')}`}
+                                        >
+                                            {user.official_details?.status || user.citizen_details?.status}
+                                        </Badge>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="space-y-1 border-t border-border pt-2 text-sm">
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Username:</span>
-                                <span className="font-medium text-foreground">{user.name}</span>
+                        {/* User Info */}
+                        <div className="space-y-0 flex flex-col">
+                            {/* Location */}
+                            <div className="flex items-center gap-2 p-2 ">
+                                <MapPin className="h-4 w-auto text-muted-foreground shrink-0" />
+                                <span className="truncate text-xs text-zinc-600 dark:text-zinc-400 font-medium">
+                                    {user.official_details?.purok?.name
+                                        ? `Purok: ${user.official_details.purok.name}`
+                                        : user.citizen_details?.barangay || user.official_details?.assigned_brgy || 'N/A'}
+                                </span>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Mobile:</span>
-                                <span className="font-medium text-foreground">
-                                    {user.official_details?.contact_number || user.citizen_details?.phone_number || 'N/A'}
+
+                            {/* Email */}
+                            <div className="flex items-center gap-2 p-2 ">
+                                <Mail className="h-4 w-auto text-muted-foreground shrink-0" />
+                                <span className="truncate text-xs text-zinc-600 dark:text-zinc-400 font-medium">
+                                    {user.email}
                                 </span>
                             </div>
                         </div>

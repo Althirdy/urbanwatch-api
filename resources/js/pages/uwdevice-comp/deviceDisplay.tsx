@@ -25,7 +25,7 @@ import {
     MapPin,
     Search,
     SquarePen,
-    Wifi,
+    Locate,
     X,
 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
@@ -105,21 +105,6 @@ function UWDeviceDisplay({
         );
     }
 
-    // Get status icon
-    const getStatusIcon = (status: string) => {
-        if (!status) return null;
-
-        switch (status.toLowerCase()) {
-            case 'active':
-                return <Activity className="h-3 w-3" />;
-            case 'inactive':
-                return <Wifi className="h-3 w-3" />;
-            case 'maintenance':
-                return <SquarePen className="h-3 w-3" />;
-            default:
-                return null;
-        }
-    };
 
     return (
         <div className="space-y-4">
@@ -208,26 +193,19 @@ function UWDeviceDisplay({
                         <div className="flex flex-col h-full">
                             <CardContent className="p-6 flex-grow">
                                 {/* Header Row */}
-                                <div className="flex items-start justify-between gap-2 mb-3">
+                                <div className="flex items-center justify-between gap-4 mb-3">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
                                         <div className="min-w-0 flex flex-col gap-1">
                                             <div className="flex items-center gap-2">
-                                                <h3 className="truncate font-semibold leading-tight">
+                                                <h3 className="truncate text-sm font-semibold">
                                                     {device.device_name}
                                                 </h3>
-                                                {/* Online/Offline indicator */}
-                                                <div
-                                                    className={`h-2 w-2 rounded-full shrink-0 ${device.is_online ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                                                    title={device.is_online ? 'Online' : 'Offline'}
-                                                />
+
                                             </div>
-                                            <div className="flex items-center gap-1.5 text-[10px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700 w-fit font-mono text-muted-foreground">
-                                                <span>Device ID: {device.device_id}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                                                <MapPin className="h-4 w-4 shrink-0" />
+
+                                            <div className="flex items-center gap-1 text-xs text-muted-foreground ">
                                                 <span className="truncate">
-                                                    {device.custom_address || 'No location'}
+                                                    Device ID: {device.device_id}
                                                 </span>
                                             </div>
                                         </div>
@@ -236,25 +214,28 @@ function UWDeviceDisplay({
                                         variant="outline"
                                         className={`shrink-0 gap-1 text-xs font-medium px-1.5 py-0.5 capitalize ${getStatusColorClass(device.status)}`}
                                     >
-                                        {getStatusIcon(device.status)}
                                         {device.status}
                                     </Badge>
                                 </div>
 
                                 {/* Location Details - Compact */}
-                                <div className="mb-3 text-xs p-1.5">
-                                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Location</p>
+                                <div className="mb-4 text-xs ">
                                     {device.custom_address ? (
-                                        <div className="space-y-0.5">
-                                            <p className="font-medium truncate">
-                                                {device.custom_address}
-                                            </p>
-                                            {device.custom_latitude && device.custom_longitude && (
-                                                <p className="text-muted-foreground text-xs">
-                                                    {Number(device.custom_latitude).toFixed(4)},{' '}
-                                                    {Number(device.custom_longitude).toFixed(4)}
-                                                </p>
-                                            )}
+                                        <div className="space-y-2">
+                                            <div className="text-xs flex gap-1 text-muted-foreground ">
+                                                <MapPin className="inline h-4 w-auto " />
+                                                <p>{device.custom_address}</p>
+                                            </div>
+                                            <div className="text-xs flex gap-1 text-muted-foreground ">
+                                                <Locate className="inline h-4 w-auto " />
+                                                {device.custom_latitude && device.custom_longitude && (
+                                                    <p className="text-muted-foreground text-xs">
+                                                        {Number(device.custom_latitude).toFixed(4)},{' '}
+                                                        {Number(device.custom_longitude).toFixed(4)}
+                                                    </p>
+                                                )}
+                                            </div>
+
                                         </div>
                                     ) : (
                                         <p className="text-muted-foreground italic">
@@ -264,39 +245,21 @@ function UWDeviceDisplay({
                                 </div>
 
                                 {/* Anomaly Count Metric */}
-                                <div className="mb-4">
-                                    <div className="flex items-center justify-between rounded-md bg-zinc-50 p-2 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800">
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-                                                <Activity className="h-4 w-4 text-red-600 dark:text-red-400" />
-                                            </div>
-                                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-tight">Anomalies Detected</span>
-                                        </div>
-                                        <span className="text-sm font-bold text-foreground">
-                                            {device.anomaly_count || 0}
-                                        </span>
+
+                                <div className="flex items-center justify-between rounded-[var(--radius)] bg-zinc-50 px-4 py-2 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-medium text-muted-foreground capitalize">Anomalies Detected</span>
                                     </div>
+                                    <span className="text-sm font-bold text-foreground">
+                                        {device.anomaly_count || 0}
+                                    </span>
                                 </div>
+
                             </CardContent>
                             <CardFooter className="px-6 pb-6 pt-0">
                                 {/* Action Buttons - Premium Footer */}
-                                <div className="flex items-center justify-end gap-1.5 pt-2 w-full mt-auto border-t dark:border-zinc-800">
-                                    <Tooltip>
-                                        <ViewUWDevice device={device}>
-                                            <TooltipTrigger asChild>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                                                >
-                                                    <ExternalLink className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                                                </Button>
-                                            </TooltipTrigger>
-                                        </ViewUWDevice>
-                                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
-                                            <p>View Details</p>
-                                        </TooltipContent>
-                                    </Tooltip>
+                                <div className="flex items-center justify-end gap-1.5  w-full mt-auto border-t dark:border-zinc-800">
+
                                     <Tooltip>
                                         <EditUWDevice device={device}>
                                             <TooltipTrigger asChild>
@@ -333,32 +296,35 @@ function UWDeviceDisplay({
                             </CardFooter>
                         </div>
                     </Card>
-                ))}
-            </div>
+                ))
+                }
+            </div >
 
             {/* Empty State */}
-            {filteredDevices.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Cpu className="h-12 w-12 text-muted-foreground/50 mb-3" />
-                    <h3 className="text-sm font-medium text-foreground">No devices found</h3>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        {hasActiveFilters
-                            ? 'Try adjusting your search or filters'
-                            : 'No UW devices have been added yet'}
-                    </p>
-                    {hasActiveFilters && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={clearFilters}
-                            className="mt-3 text-xs"
-                        >
-                            Clear all filters
-                        </Button>
-                    )}
-                </div>
-            )}
-        </div>
+            {
+                filteredDevices.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <Cpu className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                        <h3 className="text-sm font-medium text-foreground">No devices found</h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            {hasActiveFilters
+                                ? 'Try adjusting your search or filters'
+                                : 'No UW devices have been added yet'}
+                        </p>
+                        {hasActiveFilters && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={clearFilters}
+                                className="mt-3 text-xs"
+                            >
+                                Clear all filters
+                            </Button>
+                        )}
+                    </div>
+                )
+            }
+        </div >
     );
 }
 

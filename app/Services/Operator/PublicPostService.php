@@ -402,7 +402,7 @@ class PublicPostService
         }
 
         // Check if status is ongoing or in progress
-        if (!in_array($currentStatus, ['ongoing', 'in progress'])) {
+        if (! in_array($currentStatus, ['ongoing', 'in progress'])) {
             throw new UrbanWatchException('Only ongoing accidents can be resolved.');
         }
 

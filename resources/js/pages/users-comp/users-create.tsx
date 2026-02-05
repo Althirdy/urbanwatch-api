@@ -298,9 +298,9 @@ function CreateUsers({
                             information and role assignment.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex-1 space-y-6 overflow-y-auto px-6 py-2">
-                        <div className="grid flex-1 auto-rows-min gap-4">
-                            <div className="grid pb-2">
+                    <div className="flex-1 space-y-4 overflow-y-auto px-6 py-2">
+                        <div className="grid flex-1 auto-rows-min gap-2">
+                            <div className="grid">
                                 <p className="text-sm font-medium text-muted-foreground">
                                     Personal Information
                                 </p>
@@ -311,7 +311,7 @@ function CreateUsers({
                                     <Label htmlFor="first-name">
                                         First Name
                                     </Label>
-                                    <div className="relative">
+                                    <div>
                                         <Input
                                             id="first-name"
                                             value={data.first_name}
@@ -329,20 +329,22 @@ function CreateUsers({
                                                     : ''
                                             }
                                         />
-                                        {(errors.first_name ||
-                                            clientErrors.first_name) && (
-                                                <span className="absolute -bottom-5 left-0 text-xs text-[var(--destructive)]">
-                                                    {errors.first_name ||
-                                                        clientErrors.first_name}
-                                                </span>
-                                            )}
+                                        <div className="h-5">
+                                            {(errors.first_name ||
+                                                clientErrors.first_name) && (
+                                                    <span className="mt-1 block text-xs text-[var(--destructive)]">
+                                                        {errors.first_name ||
+                                                            clientErrors.first_name}
+                                                    </span>
+                                                )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="col-span-2 grid gap-2">
                                     <Label htmlFor="middle-name">
                                         Middle Name
                                     </Label>
-                                    <div className="relative">
+                                    <div>
                                         <Input
                                             id="middle-name"
                                             value={data.middle_name}
@@ -359,11 +361,13 @@ function CreateUsers({
                                                     : ''
                                             }
                                         />
-                                        {clientErrors.middle_name && (
-                                            <span className="absolute -bottom-5 left-0 text-xs text-red-500">
-                                                {clientErrors.middle_name}
-                                            </span>
-                                        )}
+                                        <div className="h-5">
+                                            {clientErrors.middle_name && (
+                                                <span className="mt-1 block text-xs text-red-500">
+                                                    {clientErrors.middle_name}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -371,7 +375,7 @@ function CreateUsers({
                             <div className="grid w-full grid-cols-4 gap-4">
                                 <div className="col-span-3 grid gap-2">
                                     <Label htmlFor="last-name">Last Name</Label>
-                                    <div className="relative">
+                                    <div>
                                         <Input
                                             id="last-name"
                                             value={data.last_name}
@@ -389,27 +393,32 @@ function CreateUsers({
                                                     : ''
                                             }
                                         />
-                                        {(errors.last_name ||
-                                            clientErrors.last_name) && (
-                                                <span className="absolute -bottom-5 left-0 text-xs text-red-500">
-                                                    {errors.last_name ||
-                                                        clientErrors.last_name}
-                                                </span>
-                                            )}
+                                        <div className="h-5">
+                                            {(errors.last_name ||
+                                                clientErrors.last_name) && (
+                                                    <span className="mt-1 block text-xs text-red-500">
+                                                        {errors.last_name ||
+                                                            clientErrors.last_name}
+                                                    </span>
+                                                )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="col-span-1 grid gap-2">
                                     <Label htmlFor="suffix">
                                         Suffix (Optional)
                                     </Label>
-                                    <Input
-                                        id="suffix"
-                                        value={data.suffix}
-                                        onChange={(e) =>
-                                            setData('suffix', e.target.value)
-                                        }
-                                        placeholder="Jr., Sr., III, etc."
-                                    />
+                                    <div>
+                                        <Input
+                                            id="suffix"
+                                            value={data.suffix}
+                                            onChange={(e) =>
+                                                setData('suffix', e.target.value)
+                                            }
+                                            placeholder="Jr., Sr., III, etc."
+                                        />
+                                        <div className="h-5"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -442,13 +451,15 @@ function CreateUsers({
                                                     : ''
                                             }
                                         />
-                                        {(errors.email ||
-                                            clientErrors.email) && (
-                                                <span className="mt-1 block text-xs text-red-500">
-                                                    {errors.email ||
-                                                        clientErrors.email}
-                                                </span>
-                                            )}
+                                        <div className="h-5">
+                                            {(errors.email ||
+                                                clientErrors.email) && (
+                                                    <span className="mt-1 block text-xs text-red-500">
+                                                        {errors.email ||
+                                                            clientErrors.email}
+                                                    </span>
+                                                )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="grid gap-2">
@@ -473,13 +484,15 @@ function CreateUsers({
                                                     : ''
                                             }
                                         />
-                                        {(errors.phone_number ||
-                                            clientErrors.phone_number) && (
-                                                <span className="mt-1 block text-xs text-red-500">
-                                                    {errors.phone_number ||
-                                                        clientErrors.phone_number}
-                                                </span>
-                                            )}
+                                        <div className="h-5">
+                                            {(errors.phone_number ||
+                                                clientErrors.phone_number) && (
+                                                    <span className="mt-1 block text-xs text-red-500">
+                                                        {errors.phone_number ||
+                                                            clientErrors.phone_number}
+                                                    </span>
+                                                )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -540,13 +553,15 @@ function CreateUsers({
                                                     ))}
                                             </SelectContent>
                                         </Select>
-                                        {(errors.role_id ||
-                                            clientErrors.role_id) && (
-                                                <span className="mt-1 block text-xs text-red-500">
-                                                    {errors.role_id ||
-                                                        clientErrors.role_id}
-                                                </span>
-                                            )}
+                                        <div className="h-5">
+                                            {(errors.role_id ||
+                                                clientErrors.role_id) && (
+                                                    <span className="mt-1 block text-xs text-red-500">
+                                                        {errors.role_id ||
+                                                            clientErrors.role_id}
+                                                    </span>
+                                                )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="grid flex-1 gap-2">
@@ -603,13 +618,15 @@ function CreateUsers({
                                                 </SelectContent>
                                             </Select>
                                         )}
-                                        {(errors.assigned_brgy ||
-                                            clientErrors.assigned_brgy) && (
-                                                <span className="mt-1 block text-xs text-red-500">
-                                                    {errors.assigned_brgy ||
-                                                        clientErrors.assigned_brgy}
-                                                </span>
-                                            )}
+                                        <div className="h-5">
+                                            {(errors.assigned_brgy ||
+                                                clientErrors.assigned_brgy) && (
+                                                    <span className="mt-1 block text-xs text-red-500">
+                                                        {errors.assigned_brgy ||
+                                                            clientErrors.assigned_brgy}
+                                                    </span>
+                                                )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -671,13 +688,15 @@ function CreateUsers({
                                                 : ''
                                         }
                                     />
-                                    {(errors.password ||
-                                        clientErrors.password) && (
-                                            <span className="mt-1 block text-xs text-red-500">
-                                                {errors.password ||
-                                                    clientErrors.password}
-                                            </span>
-                                        )}
+                                    <div className="h-5">
+                                        {(errors.password ||
+                                            clientErrors.password) && (
+                                                <span className="mt-1 block text-xs text-red-500">
+                                                    {errors.password ||
+                                                        clientErrors.password}
+                                                </span>
+                                            )}
+                                    </div>
                                 </div>
                             </div>
                             <div className="grid gap-2">
@@ -705,13 +724,15 @@ function CreateUsers({
                                                 : ''
                                         }
                                     />
-                                    {(errors.password_confirmation ||
-                                        clientErrors.password_confirmation) && (
-                                            <span className="mt-1 block text-xs text-red-500">
-                                                {errors.password_confirmation ||
-                                                    clientErrors.password_confirmation}
-                                            </span>
-                                        )}
+                                    <div className="h-5">
+                                        {(errors.password_confirmation ||
+                                            clientErrors.password_confirmation) && (
+                                                <span className="mt-1 block text-xs text-red-500">
+                                                    {errors.password_confirmation ||
+                                                        clientErrors.password_confirmation}
+                                                </span>
+                                            )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
