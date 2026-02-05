@@ -18,6 +18,9 @@ Route::prefix('iot-box')->group(function () {
     Route::post('verify', [IoTBoxController::class, 'verifyDevice']);
 });
 
+// Public image proxy endpoint (no auth required)
+Route::get('/anomaly-logs/{id}/image', [IoTBoxController::class, 'serveImage']);
+
 // Authenticated routes for operators/purok leaders
 Route::middleware(['auth:sanctum', 'ability.access'])->group(function () {
     Route::prefix('anomaly-logs')->group(function () {

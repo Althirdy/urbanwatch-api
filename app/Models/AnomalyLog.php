@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class AnomalyLog extends Model
 {
@@ -27,6 +28,30 @@ class AnomalyLog extends Model
         'is_duplicate' => 'boolean',
         'details' => 'array',
     ];
+
+    /**
+     * Append custom attributes to JSON.
+     */
+    protected $appends = ['image_url'];
+
+    /**
+     * Get the full URL for the image via API proxy (bypasses ngrok browser warning).
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        if (!$this->image) {
+            return null;
+        }
+
+        // If already a full URL, return as-is
+        if (filter_var($this->image, FILTER_VALIDATE_URL)) {
+            return $this->image;
+        }
+
+        // Return API proxy URL instead of direct storage URL
+        // This bypasses ngrok's browser warning for mobile apps
+        return url("/api/v1/anomaly-logs/{$this->id}/image");
+    }
 
     /**
      * Get the IoT box (UwDevice) that owns this anomaly log.

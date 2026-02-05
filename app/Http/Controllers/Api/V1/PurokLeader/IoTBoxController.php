@@ -173,41 +173,43 @@ class IoTBoxController extends BaseApiController
                 ->withCount('relatedAnomalies') // Include count of related/duplicate anomalies
                 ->orderBy('created_at', 'desc');
 
+            // Territory filtering temporarily disabled for testing
+            // TODO: Re-enable when IoT devices have proper location assignments
             // If user is a purok leader (role_id = 2), filter by their territory
-            if ($user->role_id === 2) {
-                // Get the purok leader's assigned purok
-                $purokId = $user->officialDetails?->purok_id;
+            // if ($user->role_id === 2) {
+            //     // Get the purok leader's assigned purok
+            //     $purokId = $user->officialDetails?->purok_id;
 
-                if ($purokId) {
-                    // Get the purok boundary
-                    $purok = Purok::find($purokId);
+            //     if ($purokId) {
+            //         // Get the purok boundary
+            //         $purok = Purok::find($purokId);
 
-                    if ($purok) {
-                        // Filter anomaly logs where IoT box is within the purok boundary
-                        $query->whereHas('iotBox', function ($q) use ($purok) {
-                            // Check if device has a location relation with coordinates
-                            $q->where(function ($subQ) use ($purok) {
-                                // Check devices with location_id (use location's coordinates)
-                                $subQ->whereHas('location', function ($locQ) use ($purok) {
-                                    $locQ->whereRaw(
-                                        'ST_Contains((SELECT boundary FROM puroks WHERE id = ?), POINT(longitude, latitude))',
-                                        [$purok->id]
-                                    );
-                                });
-                            })->orWhere(function ($subQ) use ($purok) {
-                                // Check devices with custom coordinates (no location_id)
-                                $subQ->whereNull('location_id')
-                                    ->whereNotNull('custom_latitude')
-                                    ->whereNotNull('custom_longitude')
-                                    ->whereRaw(
-                                        'ST_Contains((SELECT boundary FROM puroks WHERE id = ?), POINT(custom_longitude, custom_latitude))',
-                                        [$purok->id]
-                                    );
-                            });
-                        });
-                    }
-                }
-            }
+            //         if ($purok) {
+            //             // Filter anomaly logs where IoT box is within the purok boundary
+            //             $query->whereHas('iotBox', function ($q) use ($purok) {
+            //                 // Check if device has a location relation with coordinates
+            //                 $q->where(function ($subQ) use ($purok) {
+            //                     // Check devices with location_id (use location's coordinates)
+            //                     $subQ->whereHas('location', function ($locQ) use ($purok) {
+            //                         $locQ->whereRaw(
+            //                             'ST_Contains((SELECT boundary FROM puroks WHERE id = ?), POINT(longitude, latitude))',
+            //                             [$purok->id]
+            //                         );
+            //                     });
+            //                 })->orWhere(function ($subQ) use ($purok) {
+            //                     // Check devices with custom coordinates (no location_id)
+            //                     $subQ->whereNull('location_id')
+            //                         ->whereNotNull('custom_latitude')
+            //                         ->whereNotNull('custom_longitude')
+            //                         ->whereRaw(
+            //                             'ST_Contains((SELECT boundary FROM puroks WHERE id = ?), POINT(custom_longitude, custom_latitude))',
+            //                             [$purok->id]
+            //                         );
+            //                 });
+            //             });
+            //         }
+            //     }
+            // }
 
             // Filter by anomaly type if provided
             if ($request->has('anomaly_type')) {
@@ -270,6 +272,40 @@ class IoTBoxController extends BaseApiController
             ]);
 
             return $this->sendError('Failed to retrieve anomaly log');
+        }
+    }
+
+    /**
+     * Serve anomaly image directly (bypasses ngrok browser warning).
+     */
+    public function serveImage(string $id)
+    {
+        try {
+            $anomalyLog = AnomalyLog::find($id);
+
+            if (! $anomalyLog || ! $anomalyLog->image) {
+                abort(404, 'Image not found');
+            }
+
+            $disk = \Illuminate\Support\Facades\Storage::disk('public');
+            
+            if (! $disk->exists($anomalyLog->image)) {
+                abort(404, 'Image file not found');
+            }
+
+            $file = $disk->get($anomalyLog->image);
+            $mimeType = $disk->mimeType($anomalyLog->image);
+
+            return response($file, 200)
+                ->header('Content-Type', $mimeType)
+                ->header('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+
+        } catch (\Exception $e) {
+            Log::error('Error serving anomaly image', [
+                'error' => $e->getMessage(),
+                'id' => $id,
+            ]);
+            abort(500, 'Failed to serve image');
         }
     }
 
