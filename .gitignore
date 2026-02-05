@@ -28,3 +28,7 @@ yarn-error.log
 /.zed
 
 /docs
+deploy-staging.sh
+fix-location-category.sh
+setup.sh
+.ddev/commands/host/phpmyadmin
