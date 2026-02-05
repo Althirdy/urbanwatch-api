@@ -363,59 +363,106 @@ class NotificationService
             ->delete();
     }
 
-    // ========================================
-    // ANOMALY LOG NOTIFICATIONS (IoT Box)
-    // ========================================
-
     /**
      * Create notification for the purok leader whose territory contains the IoT box location.
-     * Uses spatial query to find the correct purok based on device coordinates.
+     * Strategy:
+     * 1. Try to find purok leaders via IoT device's location relationship
+     * 2. Fall back to spatial query using device coordinates
+     * 3. As last resort, notify all active purok leaders
      */
     public function notifyAnomalyDetected(AnomalyLog $anomalyLog, UwDevice $iotBox): int
     {
         $count = 0;
 
         try {
-            $latitude = $iotBox->latitude;
-            $longitude = $iotBox->longitude;
+            // Load the location relationship if not already loaded
+            $iotBox->load('location');
 
-            if (! $latitude || ! $longitude) {
-                Log::warning('IoT box has no coordinates, cannot determine purok for notification', [
+            $purokLeaders = collect();
+
+            // Strategy 1: Try to find purok leaders via device's location
+            if ($iotBox->location_id && $iotBox->location) {
+                Log::info('Attempting to find purok leaders via location relationship', [
+                    'anomaly_log_id' => $anomalyLog->id,
+                    'iot_box_id' => $iotBox->id,
+                    'location_id' => $iotBox->location_id,
+                    'location_name' => $iotBox->location->location_name ?? 'Unknown',
+                ]);
+
+                // Try to find purok based on location's coordinates using spatial query
+                $latitude = $iotBox->location->latitude;
+                $longitude = $iotBox->location->longitude;
+
+                if ($latitude && $longitude) {
+                    $purok = Purok::whereRaw('ST_Contains(boundary, POINT(?, ?))', [$longitude, $latitude])
+                        ->first();
+
+                    if ($purok) {
+                        $purokLeaders = User::where('role_id', 2)
+                            ->whereHas('officialDetails', function ($query) use ($purok) {
+                                $query->where('status', 'active')
+                                    ->where('purok_id', $purok->id);
+                            })
+                            ->get();
+
+                        Log::info('Found purok leaders via location coordinates', [
+                            'purok_id' => $purok->id,
+                            'purok_name' => $purok->name,
+                            'leader_count' => $purokLeaders->count(),
+                        ]);
+                    }
+                }
+            }
+
+            // Strategy 2: Fall back to device's direct coordinates if Strategy 1 failed
+            if ($purokLeaders->isEmpty()) {
+                $latitude = $iotBox->latitude;
+                $longitude = $iotBox->longitude;
+
+                if ($latitude && $longitude) {
+                    Log::info('Attempting to find purok via device coordinates', [
+                        'anomaly_log_id' => $anomalyLog->id,
+                        'latitude' => $latitude,
+                        'longitude' => $longitude,
+                    ]);
+
+                    $purok = Purok::whereRaw('ST_Contains(boundary, POINT(?, ?))', [$longitude, $latitude])
+                        ->first();
+
+                    if ($purok) {
+                        $purokLeaders = User::where('role_id', 2)
+                            ->whereHas('officialDetails', function ($query) use ($purok) {
+                                $query->where('status', 'active')
+                                    ->where('purok_id', $purok->id);
+                            })
+                            ->get();
+
+                        Log::info('Found purok leaders via device coordinates', [
+                            'purok_id' => $purok->id,
+                            'purok_name' => $purok->name,
+                            'leader_count' => $purokLeaders->count(),
+                        ]);
+                    }
+                }
+            }
+
+            // Strategy 3: Last resort - notify ALL active purok leaders
+            if ($purokLeaders->isEmpty()) {
+                Log::warning('Could not determine specific purok, notifying all active purok leaders', [
                     'anomaly_log_id' => $anomalyLog->id,
                     'iot_box_id' => $iotBox->id,
                 ]);
 
-                return 0;
+                $purokLeaders = User::where('role_id', 2)
+                    ->whereHas('officialDetails', function ($query) {
+                        $query->where('status', 'active');
+                    })
+                    ->get();
             }
-
-            // Find the purok that contains this IoT box location using spatial query
-            $purok = Purok::whereRaw('ST_Contains(boundary, POINT(?, ?))', [$longitude, $latitude])
-                ->first();
-
-            if (! $purok) {
-                Log::warning('IoT box location is not within any purok boundary', [
-                    'anomaly_log_id' => $anomalyLog->id,
-                    'iot_box_id' => $iotBox->id,
-                    'latitude' => $latitude,
-                    'longitude' => $longitude,
-                ]);
-
-                return 0;
-            }
-
-            // Find active purok leader(s) assigned to this purok
-            $purokLeaders = User::where('role_id', 2)
-                ->whereHas('officialDetails', function ($query) use ($purok) {
-                    $query->where('status', 'active')
-                        ->where('purok_id', $purok->id);
-                })
-                ->get();
 
             if ($purokLeaders->isEmpty()) {
-                Log::warning('No active purok leaders found for this purok', [
+                Log::warning('No active purok leaders found at all', [
                     'anomaly_log_id' => $anomalyLog->id,
-                    'purok_id' => $purok->id,
-                    'purok_name' => $purok->name,
                 ]);
 
                 return 0;
@@ -442,12 +489,11 @@ class NotificationService
                         'iot_box_id' => $iotBox->id,
                         'device_name' => $iotBox->device_name,
                         'location' => $locationName,
+                        'location_id' => $iotBox->location_id,
                         'latitude' => $iotBox->latitude,
                         'longitude' => $iotBox->longitude,
                         'image' => $anomalyLog->image,
                         'details' => $anomalyLog->details,
-                        'purok_id' => $purok->id,
-                        'purok_name' => $purok->name,
                     ]),
                     'read_at' => null,
                     'created_at' => $now,

@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\NewSafetyPostPublished;
 use App\Models\Notification;
 use App\Models\PublicPost;
 use App\Models\User;
@@ -83,9 +84,14 @@ class SendPublicPostNotificationsJob implements ShouldQueue
                 }
             }
 
+            // Broadcast the event via Pusher for real-time notifications
+            // This allows mobile apps to receive instant push notifications
+            event(new NewSafetyPostPublished($post));
+
             Log::info('Public post notifications job completed', [
                 'post_id' => $post->id,
                 'total_users' => count($this->userIds),
+                'broadcast_sent' => true,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to process public post notifications job', [

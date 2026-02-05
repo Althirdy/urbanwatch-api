@@ -29,7 +29,7 @@ class AuthUserResource extends JsonResource
                 'profilePhotoUrl' => $this->profile_photo_path
                     ? (filter_var($this->profile_photo_path, FILTER_VALIDATE_URL)
                         ? $this->profile_photo_path
-                        : \Illuminate\Support\Facades\Storage::disk('public')->url($this->profile_photo_path))
+                        : \Illuminate\Support\Facades\Storage::disk('s3')->url($this->profile_photo_path))
                     : null,
                 'firstName' => $officialDetails->first_name,
                 'lastName' => $officialDetails->last_name,
@@ -53,7 +53,7 @@ class AuthUserResource extends JsonResource
                 'profilePhotoUrl' => $this->profile_photo_path
                     ? (filter_var($this->profile_photo_path, FILTER_VALIDATE_URL)
                         ? $this->profile_photo_path
-                        : \Illuminate\Support\Facades\Storage::disk('public')->url($this->profile_photo_path))
+                        : \Illuminate\Support\Facades\Storage::disk('s3')->url($this->profile_photo_path))
                     : null,
                 'firstName' => $citizenDetails->first_name,
                 'lastName' => $citizenDetails->last_name,
