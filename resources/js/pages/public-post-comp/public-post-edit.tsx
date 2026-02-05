@@ -91,6 +91,7 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
         !!post.published_at && new Date(post.published_at) > new Date(),
     );
     const [publishNow, setPublishNow] = useState(false);
+    const [unpublish, setUnpublish] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(post.image_path || null);
     const [isOpen, setIsOpen] = useState(false);
 
@@ -124,25 +125,42 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
         let finalPublishedAt = data.published_at;
         let finalStatus = post.status;
 
-        if (publishNow) {
+        if (unpublish) {
+            // User wants to unpublish
+            finalPublishedAt = '';
+            finalStatus = 'draft';
+        } else if (publishNow) {
+            // User wants to publish immediately
             finalPublishedAt = new Date().toISOString();
             finalStatus = 'published';
         } else if (scheduleMode) {
+            // User wants to schedule for later
             finalStatus = 'scheduled';
         } else if (!isPublished) {
+            // Keep as draft
             finalPublishedAt = '';
             finalStatus = 'draft';
         }
 
+        // Update form data before submission
+        setData('published_at', finalPublishedAt);
+
         postRequest(`/public-post/${post.id}`, {
+            data: {
+                ...data,
+                published_at: finalPublishedAt,
+                status: finalStatus,
+            },
             onSuccess: () => {
                 router.flushAll(); // Clear prefetch cache to prevent stale data
                 toast({
                     title: "Success",
-                    description: "Public post updated successfully.",
+                    description: unpublish ? "Public post unpublished successfully." : "Public post updated successfully.",
                     variant: "default",
                 });
                 setIsOpen(false);
+                // Force reload to get fresh data from server
+                router.reload({ only: ['data'] });
             },
             onError: () => {
                 toast({
@@ -304,7 +322,7 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                             </div>
 
                             {/* Publication Settings */}
-                            {!isPublished && (
+                            {!isPublished ? (
                                 <div className="flex w-full flex-col gap-4 p-4 rounded-lg bg-muted/30 border border-dashed">
                                     <p className="text-sm font-semibold">Publication Settings</p>
 
@@ -370,6 +388,34 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
                                                 )}
                                             </div>
                                         )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex w-full flex-col gap-4 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900">
+                                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Publication Status</p>
+
+                                    <div className="grid gap-4">
+                                        <div className="flex items-start space-x-2">
+                                            <Checkbox
+                                                id="unpublish"
+                                                checked={unpublish}
+                                                onCheckedChange={(checked: boolean) => {
+                                                    setUnpublish(checked);
+                                                }}
+                                            />
+                                            <div className="grid gap-1.5">
+                                                <Label
+                                                    htmlFor="unpublish"
+                                                    className="flex cursor-pointer items-center gap-2 text-sm font-medium text-amber-900 dark:text-amber-200"
+                                                >
+                                                    <Globe className="h-4 w-4" />
+                                                    Unpublish this post
+                                                </Label>
+                                                <p className="text-xs text-amber-700 dark:text-amber-400">
+                                                    This will remove the post from the citizen app and change its status to draft.
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}

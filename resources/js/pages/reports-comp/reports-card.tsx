@@ -87,10 +87,27 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
             {
                 preserveState: false, // Force reload to show updated status
                 onSuccess: (page) => {
-                    console.log('Successfully resolved');
-                    // Show success message from backend
-                    if (page.props.flash?.success) {
-                        alert(`✅ ${page.props.flash.success}`);
+                    // Check for error flash first
+                    const flash = page.props.flash as { success?: string; error?: string } | undefined;
+                    if (flash?.error) {
+                        console.error('Resolve error:', flash.error);
+                        alert(`❌ ${flash.error}`);
+                        return;
+                    }
+
+                    // Check for validation errors
+                    const errors = page.props.errors as Record<string, string> | undefined;
+                    if (errors && Object.keys(errors).length > 0) {
+                        const errorMsg = errors.message || Object.values(errors)[0] || 'Unknown error';
+                        console.error('Resolve error:', errorMsg);
+                        alert(`❌ ${errorMsg}`);
+                        return;
+                    }
+
+                    // Show success message
+                    if (flash?.success) {
+                        console.log('Successfully resolved');
+                        alert(`✅ ${flash.success}`);
                     }
                 },
                 onError: (errors) => {

@@ -14,7 +14,7 @@ import PublicPostsTable from './public-post-comp/public-post-table';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Public Posts',
+        title: 'Barangay Updates',
         href: publicPosts().url,
     },
 ];

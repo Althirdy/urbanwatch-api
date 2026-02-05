@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Log;
 /**
  * ActiveAccidentController
  *
- * Handles HTTP requests for retrieving active (In Progress) accidents.
+ * Handles HTTP requests for retrieving active (In Progress/Ongoing) accidents.
+ * Only shows accidents with published PublicPost.
  *
  * Optimized for map/heatmap usage (like Waze):
  * - Index: Returns minimal data for markers (id, coordinates, type, severity) - FAST
@@ -35,7 +36,8 @@ class ActiveAccidentController extends BaseApiController
     }
 
     /**
-     * Get all accidents with "In Progress" status for map markers.
+     * Get all accidents with "In Progress" or "Ongoing" status for map markers.
+     * Only returns accidents with published PublicPost.
      *
      * Returns minimal data optimized for initial map load:
      * - id, latitude, longitude, accident_type, severity
@@ -85,7 +87,8 @@ class ActiveAccidentController extends BaseApiController
     }
 
     /**
-     * Get a specific accident with "In Progress" status.
+     * Get a specific accident with "In Progress" or "Ongoing" status.
+     * Only returns if associated PublicPost is published.
      *
      * Returns full details when user clicks on a marker.
      * Data returned depends on user role:
@@ -134,6 +137,62 @@ class ActiveAccidentController extends BaseApiController
             ]);
 
             return $this->sendError('An error occurred while retrieving accident details: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Get a paginated list of active accidents using cursor pagination.
+     * Only returns accidents with published PublicPost.
+     *
+     * Returns full accident data with relationships for list view.
+     * Optimized for infinite scroll implementations.
+     */
+    public function list(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            if (! $user) {
+                return $this->sendUnauthorized('User not authenticated');
+            }
+
+            $roleId = $user->role_id;
+
+            // Validate that user has role 2 or 3
+            if (! in_array($roleId, [2, 3])) {
+                return $this->sendForbidden('You do not have permission to access this resource');
+            }
+
+            $perPage = $request->input('per_page', 10);
+            $accidents = $this->activeAccidentService->getInProgressAccidentsCursor($perPage);
+
+            Log::info('ActiveAccidentController: Retrieved paginated active accidents', [
+                'user_id' => $user->id,
+                'role_id' => $roleId,
+                'per_page' => $perPage,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Active accidents retrieved successfully',
+                'data' => [
+                    'accidents' => ActiveAccidentResource::collection($accidents),
+                    'meta' => [
+                        'next_cursor' => $accidents->nextCursor()?->encode(),
+                        'prev_cursor' => $accidents->previousCursor()?->encode(),
+                        'per_page' => $accidents->perPage(),
+                        'has_more' => $accidents->hasMorePages(),
+                    ],
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('ActiveAccidentController: Error retrieving paginated accidents', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return $this->sendError('An error occurred while retrieving accidents: '.$e->getMessage());
         }
     }
 }

@@ -14,6 +14,7 @@ Route::middleware(['auth:sanctum', 'ability.access'])->group(function () {
 
     // Active (In Progress) Accidents - Role-based access (Role 2: full data, Role 3: limited data)
     Route::prefix('active-accidents')->group(function () {
+        Route::get('/list', [ActiveAccidentController::class, 'list']);
         Route::get('/', [ActiveAccidentController::class, 'index']);
         Route::get('/{id}', [ActiveAccidentController::class, 'show']);
     });

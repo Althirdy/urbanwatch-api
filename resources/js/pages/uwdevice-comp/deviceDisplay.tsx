@@ -15,7 +15,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { getStatusColorClass } from '@/lib/badgeStyles';
-import { locations } from '@/lib/packages';
+import { getPackageDropdownOptions } from '@/lib/geojson-packages';
 import {
     Activity,
     Archive,
@@ -164,9 +164,9 @@ function UWDeviceDisplay({
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Locations</SelectItem>
-                                {locations.map((loc) => (
-                                    <SelectItem key={loc.id} value={loc.name}>
-                                        {loc.name}
+                                {getPackageDropdownOptions().map((pkg) => (
+                                    <SelectItem key={pkg.id} value={pkg.name}>
+                                        {pkg.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
