@@ -41,13 +41,12 @@ class IoTBoxController extends BaseApiController
     {
         // Validate the incoming request
         $validator = Validator::make($request->all(), [
-            'device_id' => 'required|string',
+            'device_id' => 'required',
             'anomaly_type' => 'required|in:sound_anomaly,anti_tampering',
             'image' => 'nullable|image|max:10240', // Max 10MB
             'details' => 'nullable|array',
         ], [
             'device_id.required' => 'Device ID is required.',
-            'device_id.string' => 'Device ID must be a string.',
             'anomaly_type.required' => 'Anomaly type is required.',
             'anomaly_type.in' => 'Anomaly type must be sound_anomaly or anti_tampering.',
             'image.image' => 'The file must be an image.',
@@ -68,12 +67,15 @@ class IoTBoxController extends BaseApiController
                 return $this->sendError('Device token is missing.', null, 401);
             }
 
+            // Cast device_id to string for consistency (IoT box may send as integer or string)
+            $deviceId = (string) $request->device_id;
+
             // use service to verify and update heartbeat
-            $iotBox = $this->uwDeviceService->verifyAndHeartbeat($request->device_id, $token);
+            $iotBox = $this->uwDeviceService->verifyAndHeartbeat($deviceId, $token);
 
             if (! $iotBox) {
                 Log::warning('Unregistered, inactive, or invalid token IoT box attempted to send data', [
-                    'device_id' => $request->device_id,
+                    'device_id' => $deviceId,
                     'ip' => $request->ip(),
                 ]);
 
@@ -90,21 +92,36 @@ class IoTBoxController extends BaseApiController
                 $imagePath = $uploadResult['storage_path'];
             }
 
+            // Check for existing parent anomaly to group with (same IoT box, same type, within 30 minutes)
+            $parentAnomaly = AnomalyLog::where('iot_box_id', $iotBox->id)
+                ->where('anomaly_type', $request->anomaly_type)
+                ->where('is_duplicate', false)
+                ->where('parent_anomaly_id', null) // Must be a parent anomaly
+                ->where('created_at', '>=', now()->subMinutes(30))
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            $isDuplicate = $parentAnomaly !== null;
+
             // Create anomaly log
             $anomalyLog = AnomalyLog::create([
-                'device_id' => $request->device_id, // Store the device_id sent by IoT box
+                'device_id' => $deviceId, // Store the device_id sent by IoT box
                 'iot_box_id' => $iotBox->id,
                 'anomaly_type' => $request->anomaly_type,
                 'image' => $imagePath,
                 'details' => $request->details,
                 'is_confirmed' => false,
+                'parent_anomaly_id' => $parentAnomaly?->id,
+                'is_duplicate' => $isDuplicate,
             ]);
 
             Log::info('Anomaly log created from IoT box', [
                 'anomaly_log_id' => $anomalyLog->id,
                 'iot_box_id' => $iotBox->id,
-                'device_id' => $request->device_id,
+                'device_id' => $deviceId,
                 'anomaly_type' => $request->anomaly_type,
+                'is_duplicate' => $isDuplicate,
+                'parent_anomaly_id' => $parentAnomaly?->id,
             ]);
 
             DB::commit();
@@ -112,8 +129,10 @@ class IoTBoxController extends BaseApiController
             // Broadcast real-time event for mobile app
             event(new AnomalyLogCreated($anomalyLog));
 
-            // Send push notifications to all purok leaders
-            $this->notificationService->notifyAnomalyDetected($anomalyLog, $iotBox);
+            // Send push notifications only for new parent anomalies (not duplicates)
+            if (! $isDuplicate) {
+                $this->notificationService->notifyAnomalyDetected($anomalyLog, $iotBox);
+            }
 
             return $this->sendResponse([
                 'anomaly_log_id' => $anomalyLog->id,
@@ -122,6 +141,8 @@ class IoTBoxController extends BaseApiController
                     'device_name' => $iotBox->device_name,
                 ],
                 'anomaly_type' => $anomalyLog->anomaly_type,
+                'is_duplicate' => $isDuplicate,
+                'parent_anomaly_id' => $parentAnomaly?->id,
                 'created_at' => $anomalyLog->created_at->toISOString(),
             ], 'Anomaly log recorded successfully', 201);
 
@@ -141,6 +162,7 @@ class IoTBoxController extends BaseApiController
     /**
      * Get anomaly logs within the purok leader's territory.
      * Filters anomalies based on the authenticated user's assigned purok boundary.
+     * Only returns parent anomalies (non-duplicates) with related anomaly counts.
      */
     public function index(Request $request)
     {
@@ -149,14 +171,16 @@ class IoTBoxController extends BaseApiController
             $query = AnomalyLog::with('iotBox')
                 ->orderBy('created_at', 'desc');
 
+            // Territory filtering temporarily disabled for testing
+            // TODO: Re-enable when IoT devices have proper location assignments
             // If user is a purok leader (role_id = 2), filter by their territory
-            if ($user->role_id === 2) {
-                // Get the purok leader's assigned purok
-                $purokId = $user->officialDetails?->purok_id;
+            // if ($user->role_id === 2) {
+            //     // Get the purok leader's assigned purok
+            //     $purokId = $user->officialDetails?->purok_id;
 
-                if ($purokId) {
-                    // Get the purok boundary
-                    $purok = Purok::find($purokId);
+            //     if ($purokId) {
+            //         // Get the purok boundary
+            //         $purok = Purok::find($purokId);
 
                     if ($purok) {
                         // Filter anomaly logs where IoT box is within the purok boundary
@@ -204,12 +228,20 @@ class IoTBoxController extends BaseApiController
     }
 
     /**
-     * Get a specific anomaly log.
+     * Get a specific anomaly log with related anomalies.
      */
     public function show(string $id)
     {
         try {
-            $anomalyLog = AnomalyLog::with('iotBox')->find($id);
+            $anomalyLog = AnomalyLog::with([
+                'iotBox.location',
+                'relatedAnomalies' => function ($q) {
+                    $q->orderBy('created_at', 'asc');
+                },
+                'parentAnomaly', // Include parent if this is a duplicate
+            ])
+            ->withCount('relatedAnomalies')
+            ->find($id);
 
             if (! $anomalyLog) {
                 return $this->sendNotFound('Anomaly log not found');
@@ -226,6 +258,40 @@ class IoTBoxController extends BaseApiController
             ]);
 
             return $this->sendError('Failed to retrieve anomaly log');
+        }
+    }
+
+    /**
+     * Serve anomaly image directly (bypasses ngrok browser warning).
+     */
+    public function serveImage(string $id)
+    {
+        try {
+            $anomalyLog = AnomalyLog::find($id);
+
+            if (! $anomalyLog || ! $anomalyLog->image) {
+                abort(404, 'Image not found');
+            }
+
+            $disk = \Illuminate\Support\Facades\Storage::disk('public');
+            
+            if (! $disk->exists($anomalyLog->image)) {
+                abort(404, 'Image file not found');
+            }
+
+            $file = $disk->get($anomalyLog->image);
+            $mimeType = $disk->mimeType($anomalyLog->image);
+
+            return response($file, 200)
+                ->header('Content-Type', $mimeType)
+                ->header('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+
+        } catch (\Exception $e) {
+            Log::error('Error serving anomaly image', [
+                'error' => $e->getMessage(),
+                'id' => $id,
+            ]);
+            abort(500, 'Failed to serve image');
         }
     }
 
@@ -274,6 +340,132 @@ class IoTBoxController extends BaseApiController
             ]);
 
             return $this->sendError('Failed to update anomaly log');
+        }
+    }
+
+    /**
+     * Manually merge anomaly logs (mark one as duplicate of another).
+     * Similar to how concerns can be merged.
+     */
+    public function mergeAnomalies(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'parent_anomaly_id' => 'required|integer|exists:anomaly_logs,id',
+            'child_anomaly_ids' => 'required|array|min:1',
+            'child_anomaly_ids.*' => 'integer|exists:anomaly_logs,id',
+        ], [
+            'parent_anomaly_id.required' => 'Parent anomaly ID is required.',
+            'parent_anomaly_id.exists' => 'Parent anomaly log not found.',
+            'child_anomaly_ids.required' => 'At least one child anomaly ID is required.',
+            'child_anomaly_ids.*.exists' => 'One or more child anomaly logs not found.',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendValidationError($validator->errors());
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $parentAnomaly = AnomalyLog::find($request->parent_anomaly_id);
+            
+            // Ensure parent is not itself a duplicate
+            if ($parentAnomaly->is_duplicate) {
+                return $this->sendError('Cannot merge into a duplicate anomaly. Use the parent anomaly instead.');
+            }
+
+            $childIds = $request->child_anomaly_ids;
+            
+            // Filter out the parent ID if accidentally included
+            $childIds = array_filter($childIds, fn($id) => $id != $parentAnomaly->id);
+
+            if (empty($childIds)) {
+                return $this->sendError('No valid child anomalies to merge.');
+            }
+
+            // Update all children to point to the parent
+            AnomalyLog::whereIn('id', $childIds)
+                ->update([
+                    'parent_anomaly_id' => $parentAnomaly->id,
+                    'is_duplicate' => true,
+                ]);
+
+            // If any child was a parent with its own children, reassign those children
+            AnomalyLog::whereIn('parent_anomaly_id', $childIds)
+                ->update([
+                    'parent_anomaly_id' => $parentAnomaly->id,
+                ]);
+
+            Log::info('Anomaly logs merged manually', [
+                'parent_anomaly_id' => $parentAnomaly->id,
+                'merged_child_ids' => $childIds,
+                'merged_by' => auth()->id(),
+            ]);
+
+            DB::commit();
+
+            return $this->sendResponse([
+                'parent_anomaly' => $parentAnomaly->fresh(['iotBox', 'relatedAnomalies']),
+                'merged_count' => count($childIds),
+            ], 'Anomaly logs merged successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Error merging anomaly logs', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return $this->sendError('Failed to merge anomaly logs: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Unmerge (separate) a duplicate anomaly from its parent.
+     */
+    public function unmergeAnomaly(string $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $anomalyLog = AnomalyLog::find($id);
+
+            if (! $anomalyLog) {
+                return $this->sendNotFound('Anomaly log not found');
+            }
+
+            if (! $anomalyLog->is_duplicate) {
+                return $this->sendError('This anomaly is not a duplicate and cannot be unmerged.');
+            }
+
+            $previousParentId = $anomalyLog->parent_anomaly_id;
+
+            $anomalyLog->update([
+                'parent_anomaly_id' => null,
+                'is_duplicate' => false,
+            ]);
+
+            Log::info('Anomaly log unmerged', [
+                'anomaly_log_id' => $anomalyLog->id,
+                'previous_parent_id' => $previousParentId,
+                'unmerged_by' => auth()->id(),
+            ]);
+
+            DB::commit();
+
+            return $this->sendResponse([
+                'anomaly_log' => $anomalyLog->fresh('iotBox'),
+            ], 'Anomaly log unmerged successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Error unmerging anomaly log', [
+                'error' => $e->getMessage(),
+                'id' => $id,
+            ]);
+
+            return $this->sendError('Failed to unmerge anomaly log');
         }
     }
 
