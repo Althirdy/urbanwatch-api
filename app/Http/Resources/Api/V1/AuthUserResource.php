@@ -57,6 +57,7 @@ class AuthUserResource extends JsonResource
                 'province' => $citizenDetails->province,
                 'postalCode' => $citizenDetails->postal_code,
                 'isVerified' => $citizenDetails->is_verified,
+                'lastSensitiveUpdateAt' => $this->last_sensitive_update_at,
             ];
         }
 
