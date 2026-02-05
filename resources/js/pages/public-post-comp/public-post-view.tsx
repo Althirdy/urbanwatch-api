@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getCategoryBadgeClass } from '@/lib/badgeStyles';
 import {
     Dialog,
     DialogClose,
@@ -41,9 +42,9 @@ function renderDetailItems(items: DetailItem[]) {
     return items.map(({ icon: Icon, text }, index) => (
         <div
             key={index}
-            className="flex flex-row items-center gap-2 text-muted-foreground"
+            className="flex flex-row text-sm items-center gap-2 text-muted-foreground"
         >
-            <Icon className="h-5 w-5" />
+            <Icon className="h-auto w-4" />
             <span>{text}</span>
         </div>
     ));
@@ -64,14 +65,14 @@ function getStatusBadge(publishedAt: string | null) {
     if (publishDate > now) {
         return (
             <span className="inline-flex items-center rounded-md border bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400">
-                SCHEDULED
+                Scheduled
             </span>
         );
     }
 
     return (
         <span className="inline-flex items-center rounded-md border bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400">
-            PUBLISHED
+            Published
         </span>
     );
 }
@@ -125,17 +126,33 @@ function ViewPublicPostDetails({ post, children }: ViewPublicPostDetailsProps) {
                 className="flex max-h-[90vh] max-w-none flex-col overflow-hidden p-0 sm:max-w-2xl"
                 showCloseButton={false}
             >
-                <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4 border-b dark:border-zinc-800">
+                <DialogHeader className="flex-shrink-0 px-6 pt-6  dark:border-zinc-800">
                     <DialogTitle className="text-xl font-bold">Public Post Details</DialogTitle>
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2 ">
                         <span className="text-sm font-medium text-muted-foreground mr-2">Post ID: #{post.id}</span>
                         {getStatusBadge(post.published_at)}
+                        <Badge className={`${getCategoryBadgeClass(post.category)} capitalize`}>
+                            {post.category}
+                        </Badge>
                     </div>
                 </DialogHeader>
                 <div className="flex w-full flex-1 flex-col justify-start gap-4 overflow-y-auto px-6 py-4">
+                    {/* Post Content */}
+                    <div className="flex flex-col gap-2">
+                        <div className="rounded-lg border bg-muted/30 p-3">
+                            <div className="mb-2 flex items-center justify-between">
+                                <p className="text-sm font-bold capitalize tracking-wide">
+                                    Title: {post.title}
+                                </p>
+
+                            </div>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                {post.content}
+                            </p>
+                        </div>
+                    </div>
                     {/* Post Preview Image */}
                     <div className="flex flex-col gap-2">
-                        <p className="text-md font-medium">Post Image</p>
                         <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-muted/20 flex flex-col items-center justify-center">
                             {post.image_path ? (
                                 <img
@@ -155,30 +172,14 @@ function ViewPublicPostDetails({ post, children }: ViewPublicPostDetailsProps) {
                         </div>
                     </div>
 
-                    {/* Post Content */}
-                    <div className="flex flex-col gap-2">
-                        <p className="text-md font-medium">Post Content</p>
-                        <div className="rounded-lg border bg-muted/30 p-3">
-                            <div className="mb-2 flex items-center justify-between">
-                                <p className="text-sm font-bold uppercase tracking-wide">
-                                    {post.title}
-                                </p>
-                                <Badge variant="outline" className="uppercase">
-                                    {post.category}
-                                </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                {post.content}
-                            </p>
-                        </div>
-                    </div>
+
 
                     {/* Publication Details */}
                     <div className="flex flex-col gap-3">
-                        <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        <p className="text-sm font-semibold  text-muted-foreground">
                             Publication Details
                         </p>
-                        <div className="grid gap-3 p-4 rounded-xl border bg-zinc-50 dark:bg-zinc-900/50">
+                        <div className="grid gap-3 p-4 rounded-[var(--radius)] border bg-zinc-50 dark:bg-zinc-900/50">
                             {renderDetailItems([
                                 {
                                     icon: User,

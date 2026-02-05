@@ -7,7 +7,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Contact } from '@/types/contacts-types';
-import { Archive, ExternalLink, MapPin, Phone, SquarePen, } from 'lucide-react';
+import { Archive, ExternalLink, Dot, Phone, SquarePen, User, MapPin } from 'lucide-react';
 
 import { getResponderTypeCardColorClass, getStatusCardColorClass } from '@/lib/badgeStyles';
 import DeleteContacts from './contacts-delete';
@@ -34,26 +34,31 @@ const ContactCard = ({ contacts }: { contacts: Contact[] }) => {
                 >
                     <CardContent >
                         {/* Header Row */}
-                        <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className="flex items-center justify-between gap-2 mb-3">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
 
-                                <div className="min-w-0 flex flex-col gap-1">
-                                    <h3 className="truncate font-semibold leading-tight">
+                                <div className="min-w-0 flex flex-col gap-2">
+                                    <span className="truncate text-sm font-semibold ">
                                         {contact.branch_unit_name}
-                                    </h3>
+                                    </span>
+                                    <div className="text-xs flex gap-1 text-muted-foreground ">
+                                        <MapPin className="inline h-4 w-auto " />
+                                        <p className="truncate text-xs text-foreground/70 dark:text-zinc-400 "  >   {contact.location}</p>
+                                    </div>
+
 
                                 </div>
                             </div>
                             <div className='flex flex-col items-end gap-2'>
                                 <Badge
                                     variant="outline"
-                                    className={`shrink-0 text-xs font-medium px-1.5 py-0.5 ${getStatusCardColorClass(contact.active)}`}
+                                    className={`shrink-0 text-xs font-medium px-1.5 ${getStatusCardColorClass(contact.active)}`}
                                 >
                                     {contact.active ? 'Active' : 'Inactive'}
                                 </Badge>
                                 <Badge
                                     variant="outline"
-                                    className={`text-xs font-medium px-1.5 py-0.5 ${getResponderTypeCardColorClass(contact.responder_type)}`}
+                                    className={`text-xs font-medium px-1.5 ${getResponderTypeCardColorClass(contact.responder_type)}`}
                                 >
                                     {contact.responder_type}
                                 </Badge>
@@ -61,33 +66,40 @@ const ContactCard = ({ contacts }: { contacts: Contact[] }) => {
 
                         </div>
 
-
                         {/* Contact Info - Compact */}
-                        <div className="space-y-1 ">
+                        <div className="space-y-2 flex flex-col">
                             {/* Contact Person */}
                             {contact.contact_person && (
-                                <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-md border border-zinc-100 dark:border-zinc-800/80">
-                                    <div className="flex flex-col min-w-0">
-                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Contact Person</p>
+                                <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50  rounded-md border border-zinc-100 dark:border-zinc-800/80">
+                                    <div className="flex gap-2 min-w-0 items-center">
+                                        <User className="h-4 w-auto text-muted-foreground shrink-0" />
                                         <p className="font-medium text-xs text-zinc-600 dark:text-zinc-400 truncate">{contact.contact_person}</p>
                                     </div>
                                 </div>
                             )}
 
                             {/* Phone Numbers */}
-                            <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-md border border-zinc-100 dark:border-zinc-800/80">
-                                <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <div className="flex items-center  bg-zinc-50 dark:bg-zinc-800/50 rounded-md border border-zinc-100 dark:border-zinc-800/80">
+                                <Phone className="h-4 mr-2 w-auto text-muted-foreground shrink-0" />
                                 <div className="flex flex-col min-w-0">
-                                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Primary</p>
                                     <span className="font-medium text-xs text-zinc-600 dark:text-zinc-400 family-mono">{contact.primary_mobile}</span>
                                 </div>
+
+                                {contact.backup_mobile && (
+                                    <>
+                                        <Dot className="h-4 w-auto text-muted-foreground shrink-0" />
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="font-medium text-xs text-zinc-600 dark:text-zinc-400 family-mono">{contact.backup_mobile}</span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </CardContent>
 
                     <CardFooter>
                         {/* Action Buttons - Premium Footer */}
-                        <div className="flex w-full justify-end gap-2 pt-2 border-t dark:border-zinc-800">
+                        <div className="flex w-full justify-end gap-2 border-t dark:border-zinc-800">
                             <Tooltip>
                                 <ViewContacts contact={contact}>
                                     <TooltipTrigger asChild>

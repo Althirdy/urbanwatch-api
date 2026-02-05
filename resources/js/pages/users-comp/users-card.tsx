@@ -78,10 +78,7 @@ const UserCard = ({
                     <CardContent className="p-4 flex flex-col h-full">
                         {/* Header Row */}
                         <div className='flex flex-row gap-2 items-center px-2 mb-4'>
-                            <div className="flex items-center justify-center gap-2  bg-zinc-100 dark:bg-zinc-800">
-                                <User className="h-auto  w-8 shrink-0  text-zinc-600 dark:text-zinc-400" />
 
-                            </div>
                             <div className='flex flex-col gap-1'>
                                 <h3 className="truncate text-sm font-semibold leading-tight">
                                     {getFullName(user)}
@@ -112,13 +109,13 @@ const UserCard = ({
                         <div className="space-y-2 mb-2 flex-grow">
                             <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 px-2 border border-zinc-100 dark:border-zinc-800/80">
                                 <MapPin className="h-4 w-auto text-muted-foreground shrink-0" />
-                                <span className="truncate text-sm text-zinc-600 dark:text-zinc-400 font-medium ">
+                                <span className="truncate text-xs text-zinc-600 dark:text-zinc-400 font-medium ">
                                     {getBarangay(user)}</span>
                             </div>
                             {/* Email */}
                             <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 px-2 border border-zinc-100 dark:border-zinc-800/80">
                                 <Mail className="h-4 w-auto text-muted-foreground shrink-0" />
-                                <span className="truncate text-sm text-zinc-600 dark:text-zinc-400 font-medium">
+                                <span className="truncate text-xs text-zinc-600 dark:text-zinc-400 font-medium">
                                     {user.email}
                                 </span>
                             </div>

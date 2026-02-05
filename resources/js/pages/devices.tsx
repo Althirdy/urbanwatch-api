@@ -41,8 +41,8 @@ export default function Devices({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Devices" />
 
-            <div className="space-y-2 p-4">
-                <div className="flex items-center  gap-2">
+            <div className="space-y-4 p-4">
+                <div className="flex items-center  gap-4">
                     {viewMode === 'cctv' ? (
                         <AddCCTVDevice />
                     ) : (

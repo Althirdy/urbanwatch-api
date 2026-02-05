@@ -14,7 +14,7 @@ import PublicPostsTable from './public-post-comp/public-post-table';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Public Posts',
+        title: 'Barangay Updates',
         href: publicPosts().url,
     },
 ];
@@ -54,7 +54,7 @@ export default function PublicPost({ data }: PublicPostPageProps) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Public Posts" />
+            <Head title="Barangay Updates" />
             <div className="space-y-4 p-4">
                 <div className="flex items-center justify-between gap-4">
                     <CreatePublicPost />

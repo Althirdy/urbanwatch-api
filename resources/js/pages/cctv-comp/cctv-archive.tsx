@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/components/use-toast';
 import { getDeviceStatusColorClass } from '@/lib/badgeStyles';
 import { router, useForm } from '@inertiajs/react';
-import { Activity, Archive, Camera, Settings, Wifi } from 'lucide-react';
+import { Activity, Archive, Camera, Settings, Wifi, MapPin, Locate } from 'lucide-react';
 import { useState } from 'react';
 import { cctv_T } from '../../types/cctv-location-types';
 
@@ -103,41 +103,36 @@ function ArchiveCCTV({ cctv, onArchiveSuccess, children }: ArchiveCCTVProps) {
 
                 {/* Device Information Card */}
                 <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="h-fit w-fit rounded-md bg-muted p-2 text-muted-foreground">
-                            <Camera className="h-6 w-auto" />
-                        </div>
-                        <div className="flex min-w-0 flex-1 items-center">
-                            <h3 className="text-lg font-semibold text-foreground">
-                                {cctv.location_name}
-                            </h3>
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+
+                            <div className="min-w-0 flex flex-col gap-2">
+                                <h3 className="text-lg font-semibold text-foreground truncate">
+                                    {cctv.location_name}
+                                </h3>
+                                {cctv.package && (
+                                    <div className="text-xs flex gap-1 text-muted-foreground">
+                                        <MapPin className="inline h-4 w-auto shrink-0" />
+                                        <p>{cctv.package}</p>
+                                    </div>
+                                )}
+                                {cctv.latitude && cctv.longitude && (
+                                    <div className="text-xs flex gap-1 text-muted-foreground">
+                                        <Locate className="inline h-4 w-auto shrink-0" />
+                                        <p className="font-mono">
+                                            {Number(cctv.latitude).toFixed(4)},{' '}
+                                            {Number(cctv.longitude).toFixed(4)}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <Badge
-                            className={`gap-1 capitalize ${getDeviceStatusColorClass(cctv.status)}`}
+                            variant="outline"
+                            className={`shrink-0 gap-1 text-xs font-medium px-1.5 py-0.5 capitalize ${getDeviceStatusColorClass(cctv.status)}`}
                         >
-                            {getStatusIcon(cctv.status)}
                             {cctv.status}
                         </Badge>
-                    </div>
-
-                    {/* Coordinate Details */}
-                    <div className="space-y-1 border-t border-border pt-2 text-sm">
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                                Latitude:
-                            </span>
-                            <span className="font-medium text-foreground">
-                                {cctv.latitude || 'N/A'}
-                            </span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                                Longitude:
-                            </span>
-                            <span className="font-medium text-foreground">
-                                {cctv.longitude || 'N/A'}
-                            </span>
-                        </div>
                     </div>
                 </div>
 

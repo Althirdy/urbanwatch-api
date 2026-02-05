@@ -13,13 +13,27 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MoveLeft } from 'lucide-react';
+import { MoveLeft, Dot } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 import { useIdentifyNumber } from '@/hooks/use-identify-number';
 import { baseBadgeClasses, getStatusColorClass } from '@/lib/badgeStyles';
 import { AvailablePunishmentsData, users_T } from '@/types/user-types';
 import { cn } from '@/lib/utils';
+
+// Leaflet marker icon
+const markerIcon = L.icon({
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
 
 // Network provider color configurations
 const networkColors: Record<
@@ -147,6 +161,18 @@ function ViewUser({ user, children }: ViewUserProps) {
         return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
     };
 
+    const getUserCoordinates = (user: users_T) => {
+        if (user.official_details?.latitude && user.official_details?.longitude) {
+            return {
+                lat: parseFloat(user.official_details.latitude),
+                lng: parseFloat(user.official_details.longitude),
+            };
+        }
+        return null;
+    };
+
+    const coordinates = getUserCoordinates(user);
+
     return (
         <Dialog>
             <DialogTrigger asChild>{children}</DialogTrigger>
@@ -161,7 +187,7 @@ function ViewUser({ user, children }: ViewUserProps) {
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex w-full flex-1 flex-col justify-start gap-10 overflow-y-auto px-6">
+                <div className="flex w-full flex-1 flex-col justify-start gap-8 overflow-y-auto px-6 pb-6">
                     {/* Active Suspension Alert */}
                     {!loadingSuspension &&
                         suspensionData?.is_suspended &&
@@ -201,7 +227,7 @@ function ViewUser({ user, children }: ViewUserProps) {
                         )}
 
                     {/* Basic Information */}
-                    <div className="flex flex-row items-center gap-4">
+                    <div className="flex flex-row items-center gap-2">
                         <Avatar className="h-16 w-16">
                             <AvatarFallback className="bg-primary text-2xl font-semibold text-primary-foreground">
                                 {getInitials(user)}
@@ -212,10 +238,21 @@ function ViewUser({ user, children }: ViewUserProps) {
                                 <h3 className="text-xl font-semibold">
                                     {getUserFullName(user)}
                                 </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    {user.email}
-                                </p>
+                                <div className='flex gap-1 justify-start items-center'>
+                                    <p className="text-sm text-muted-foreground">
+                                        {user.email}
+                                    </p>
+                                    <Dot className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                    <p className="text-sm text-muted-foreground">
+                                        {user.role
+                                            ? user.role.name
+                                            : 'N/A'}
+                                    </p>
+                                </div>
+
+
                             </div>
+
                             {user.role?.name?.toLowerCase() !== 'citizen' && (
                                 <Badge
                                     variant="outline"
@@ -230,13 +267,9 @@ function ViewUser({ user, children }: ViewUserProps) {
                         </div>
                     </div>
                     {/* Contact Information & Role */}
-                    <div className="flex w-full flex-col gap-6">
+                    <div className="flex w-full flex-col gap-4">
                         <div className="flex flex-col gap-2">
-                            <div className="grid">
-                                <p className="text-sm font-medium text-muted-foreground">
-                                    Contact Information
-                                </p>
-                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
                                     <Label htmlFor="email">Email</Label>
@@ -270,56 +303,139 @@ function ViewUser({ user, children }: ViewUserProps) {
                                 </div>
                             </div>
                         </div>
-                        <div className="flex flex-col gap-2">
+
+                    </div>
+
+                    {/* Coordinates Section - For Officials */}
+                    {coordinates && (
+                        <div className="flex w-full flex-col gap-2">
                             <div className="grid">
                                 <p className="text-sm font-medium text-muted-foreground">
-                                    Role & Location
+                                    Location Coordinates
                                 </p>
                             </div>
-                            <div className="flex w-full flex-row gap-4">
-                                <div className="grid flex-1 gap-2">
-                                    <Label htmlFor="role">Role</Label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="latitude">Latitude</Label>
                                     <div className="relative">
                                         <Input
-                                            id="role"
-                                            type="role"
-                                            value={
-                                                user.role
-                                                    ? user.role.name
-                                                    : 'N/A'
-                                            }
+                                            id="latitude"
+                                            type="text"
+                                            value={coordinates.lat.toFixed(6)}
                                             readOnly
                                             tabIndex={-1}
-                                            placeholder="Enter role address"
                                             className="border-none bg-muted select-none focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
                                         />
                                     </div>
                                 </div>
-                                <div className="grid flex-1 gap-2">
-                                    <Label htmlFor="location">
-                                        Assigned Location
-                                    </Label>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="longitude">Longitude</Label>
                                     <div className="relative">
                                         <Input
-                                            id="location"
+                                            id="longitude"
                                             type="text"
-                                            value={
-                                                user.citizen_details
-                                                    ?.barangay ||
-                                                user.official_details
-                                                    ?.assigned_brgy ||
-                                                'N/A'
-                                            }
+                                            value={coordinates.lng.toFixed(6)}
                                             readOnly
                                             tabIndex={-1}
-                                            placeholder="Assigned location"
                                             className="border-none bg-muted select-none focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
                                         />
                                     </div>
+                                </div>
+                            </div>
+                            {/* Map Preview */}
+                            <div className="mt-2">
+                                <Label className="mb-2 block">Map Location</Label>
+                                <div className="h-[200px] w-full rounded-md overflow-hidden border">
+                                    <MapContainer
+                                        center={[coordinates.lat, coordinates.lng]}
+                                        zoom={16}
+                                        style={{ height: '100%', width: '100%' }}
+                                        zoomControl={true}
+                                        dragging={true}
+                                        scrollWheelZoom={false}
+                                        doubleClickZoom={true}
+                                        attributionControl={false}
+                                    >
+                                        <TileLayer
+                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        />
+                                        <Marker position={[coordinates.lat, coordinates.lng]} icon={markerIcon} />
+                                    </MapContainer>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    )}
+
+                    {/* Address Section - For Citizens */}
+                    {user.citizen_details && (
+                        <div className="flex w-full flex-col gap-2">
+
+                            <div className="grid gap-4">
+                                {user.citizen_details.address && (
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="street-address">Street Address</Label>
+                                        <div className="relative">
+                                            <Input
+                                                id="street-address"
+                                                type="text"
+                                                value={user.citizen_details.address}
+                                                readOnly
+                                                tabIndex={-1}
+                                                className="border-none bg-muted select-none focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="grid grid-cols-2 gap-4">
+                                    {user.citizen_details.city && (
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="city">City</Label>
+                                            <div className="relative">
+                                                <Input
+                                                    id="city"
+                                                    type="text"
+                                                    value={user.citizen_details.city}
+                                                    readOnly
+                                                    tabIndex={-1}
+                                                    className="border-none bg-muted select-none focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                    {user.citizen_details.province && (
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="province">Province</Label>
+                                            <div className="relative">
+                                                <Input
+                                                    id="province"
+                                                    type="text"
+                                                    value={user.citizen_details.province}
+                                                    readOnly
+                                                    tabIndex={-1}
+                                                    className="border-none bg-muted select-none focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                {user.citizen_details.postal_code && (
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="postal-code">Postal Code</Label>
+                                        <div className="relative">
+                                            <Input
+                                                id="postal-code"
+                                                type="text"
+                                                value={user.citizen_details.postal_code}
+                                                readOnly
+                                                tabIndex={-1}
+                                                className="border-none bg-muted select-none focus:ring-0 focus:ring-offset-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <DialogFooter className="flex-shrink-0 px-6 pb-4">

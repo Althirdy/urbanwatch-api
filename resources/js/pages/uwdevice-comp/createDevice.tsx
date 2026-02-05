@@ -217,7 +217,7 @@ function AddUWDevice(): React.JSX.Element {
                     <TooltipProvider>
                         <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
                             <DialogTitle>
-                                {generatedToken ? 'Device Registered!' : 'Add New IoT Sensor'}
+                                {generatedToken ? 'Device Registered!' : 'Add New IoT Box'}
                             </DialogTitle>
                             <DialogDescription>
                                 {generatedToken
@@ -399,15 +399,29 @@ function AddUWDevice(): React.JSX.Element {
                                     </div>
                                 </div>
 
-                                <DialogFooter className="flex-shrink-0 px-6 py-4">
+                                <DialogFooter className="flex-shrink-0 bg-background px-6 py-4">
                                     <div className="flex w-full gap-2">
                                         <DialogClose asChild>
-                                            <Button variant="outline" type="button" className="flex-1">
-                                                <MoveLeft className="mr-2 h-4 w-4" /> Cancel
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                data-dialog-close
+                                                className="flex-1"
+                                            >
+                                                <MoveLeft className="inline h-4 w-4" />
+                                                Close
                                             </Button>
                                         </DialogClose>
-                                        <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                                            {isSubmitting ? <Spinner className="mr-2 h-4 w-4" /> : <CircuitBoard className="mr-2 h-4 w-4" />}
+                                        <Button
+                                            type="submit"
+                                            disabled={isSubmitting}
+                                            className="flex-2"
+                                        >
+                                            {isSubmitting ? (
+                                                <Spinner className="inline h-4 w-4" />
+                                            ) : (
+                                                <CircuitBoard className="inline h-4 w-4" />
+                                            )}
                                             {isSubmitting ? 'Creating...' : 'Add Device'}
                                         </Button>
                                     </div>

@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/components/use-toast';
 import { getDeviceStatusColorClass } from '@/lib/badgeStyles';
 import { router } from '@inertiajs/react';
-import { Activity, Archive, Camera, Cpu, Wifi } from 'lucide-react';
+import { Activity, Archive, Camera, Cpu, Wifi, MapPin, Locate } from 'lucide-react';
 import React, { useState } from 'react';
 import { uwDevice_T } from '../../types/cctv-location-types';
 
@@ -117,81 +117,59 @@ function ArchiveUWDevice({
                 {/* Device Information Card */}
                 <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                     <div className="flex items-center gap-3">
-                        <div className="h-fit w-fit rounded-md bg-muted p-2 text-muted-foreground">
-                            <Cpu className="h-6 w-auto" />
-                        </div>
-                        <div className="flex min-w-0 flex-1 items-center">
+
+                        <div className="flex min-w-0 flex-1 flex-col gap-1">
                             <h3 className="text-lg font-semibold text-foreground truncate">
                                 {device.device_name}
                             </h3>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <span className="truncate">
+                                    Device ID: {device.device_id}
+                                </span>
+                            </div>
                         </div>
                         <Badge
                             variant="outline"
-                            className={`gap-1 capitalize rounded-full py-0.5 ${getDeviceStatusColorClass(device.status)}`}
+                            className={`gap-1 shrink-0 capitalize text-xs font-medium px-1.5 py-0.5 ${getDeviceStatusColorClass(device.status)}`}
                         >
-                            {getStatusIcon(device.status)}
                             {device.status}
                         </Badge>
                     </div>
 
                     {/* Location Details */}
-                    <div className="space-y-1 border-t border-border pt-2 text-sm">
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                                Location:
-                            </span>
-                            <span className="font-medium text-foreground">
-                                {device.location?.location_name || 'N/A'}
-                            </span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                                Barangay:
-                            </span>
-                            <span className="font-medium text-foreground">
-                                {device.location?.barangay || 'N/A'}
-                            </span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                                Landmark:
-                            </span>
-                            <span className="font-medium text-foreground">
-                                {device.location?.landmark || 'N/A'}
-                            </span>
-                        </div>
+                    <div className="space-y-2 text-xs">
+                        {device.custom_address ? (
+                            <div className="space-y-2">
+                                <div className="flex gap-1 text-muted-foreground">
+                                    <MapPin className="inline h-4 w-auto shrink-0" />
+                                    <p>{device.custom_address}</p>
+                                </div>
+                                {device.custom_latitude && device.custom_longitude && (
+                                    <div className="flex gap-1 text-muted-foreground">
+                                        <Locate className="inline h-4 w-auto shrink-0" />
+                                        <p className="font-mono">
+                                            {Number(device.custom_latitude).toFixed(4)},{' '}
+                                            {Number(device.custom_longitude).toFixed(4)}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-muted-foreground italic">
+                                No location assigned
+                            </p>
+                        )}
                     </div>
 
-                    {/* Device Specifications */}
-                    <div className="grid grid-cols-2 gap-4 border-t border-border pt-2">
-                        <div className="text-sm">
-                            <span className="block text-xs text-muted-foreground">
-                                Device ID:
-                            </span>
-                            <span className="text-foreground font-medium font-mono">
-                                {device.device_id}
-                            </span>
+                    {/* Anomaly Count */}
+                    <div className="flex items-center justify-between rounded-[var(--radius)] bg-zinc-50 px-4 py-2 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-muted-foreground capitalize">Anomalies Detected</span>
                         </div>
-                        <div className="text-sm">
-                            <span className="block text-xs text-muted-foreground">
-                                AI Detection:
-                            </span>
-                            <span className="text-foreground font-medium">Active</span>
-                        </div>
+                        <span className="text-sm font-bold text-foreground">
+                            {device.anomaly_count || 0}
+                        </span>
                     </div>
-
-                    {/* Linked Cameras */}
-                    {device.cctv_cameras && device.cctv_cameras.length > 0 && (
-                        <div className="flex items-center gap-2 border-t border-border pt-2 text-sm">
-                            <Camera className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">
-                                Linked Cameras:{' '}
-                            </span>
-                            <span className="font-medium text-foreground">
-                                {device.cctv_cameras.length}
-                            </span>
-                        </div>
-                    )}
                 </div>
 
                 {/* Confirmation Input */}
