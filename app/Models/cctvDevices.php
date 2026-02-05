@@ -10,17 +10,15 @@ class cctvDevices extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'location_id',
-        'device_name',
+        'location_name',
+        'package',
+        'latitude',
+        'longitude',
         'primary_rtsp_url',
         'backup_rtsp_url',
         'rtsp_username',
         'rtsp_password',
         'status',
-        'brand',
-        'model',
-        'resolution',
-        'fps',
         'yolo_enabled',
         'installation_date',
     ];
@@ -71,11 +69,6 @@ class cctvDevices extends Model
         }
 
         return $baseUrl;
-    }
-
-    public function location()
-    {
-        return $this->belongsTo(Locations::class, 'location_id');
     }
 
     /**

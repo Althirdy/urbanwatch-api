@@ -19,11 +19,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
-require __DIR__.'/Operator/location.php';
 require __DIR__.'/Operator/user.php';
 require __DIR__.'/Operator/report.php';
 require __DIR__.'/Operator/role.php';
 require __DIR__.'/Operator/public-post.php';
 require __DIR__.'/Operator/devices.php';
 require __DIR__.'/Operator/contacts.php';
-require __DIR__.'/Operator/user.php';

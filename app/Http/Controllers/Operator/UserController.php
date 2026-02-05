@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Operator;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Operator\UserRequest;
 use App\Models\CitizenDetails;
-use App\Models\Locations;
 use App\Models\OfficialsDetails;
 use App\Models\Roles;
 use App\Models\User;
@@ -60,7 +59,6 @@ class UserController extends Controller
             ->withQueryString();
 
         $roles = Roles::all();
-        $locations = Locations::select('id', 'location_name', 'barangay')->get();
 
         // Fetch Puroks with geometry and status
         $puroksRaw = \App\Models\Purok::select('id', 'name', DB::raw('ST_AsGeoJSON(boundary) as geometry'))->get();
@@ -83,7 +81,6 @@ class UserController extends Controller
         return Inertia::render('users', [
             'users' => $users,
             'roles' => $roles,
-            'locations' => $locations,
             'puroks' => $puroks,
             'filters' => $request->only(['search', 'role_id', 'barangay']),
         ]);

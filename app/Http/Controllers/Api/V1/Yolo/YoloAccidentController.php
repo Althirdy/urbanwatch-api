@@ -115,7 +115,7 @@ class YoloAccidentController extends BaseApiController
             $deviceId = $request->input('device_id');
 
             // Base query
-            $query = FalseAlarm::with('cctvDevice.location');
+            $query = FalseAlarm::with('cctvDevice');
 
             // Filter by device if specified
             if ($deviceId) {
@@ -152,7 +152,7 @@ class YoloAccidentController extends BaseApiController
                 });
 
             // Get recent false alarms (last 20)
-            $recentFalseAlarms = FalseAlarm::with('cctvDevice.location')
+            $recentFalseAlarms = FalseAlarm::with('cctvDevice')
                 ->when($deviceId, fn ($q) => $q->where('cctv_device_id', $deviceId))
                 ->orderByDesc('created_at')
                 ->limit(20)
@@ -161,7 +161,7 @@ class YoloAccidentController extends BaseApiController
                     return [
                         'id' => $falseAlarm->id,
                         'device_name' => $falseAlarm->cctvDevice?->device_name ?? 'Unknown',
-                        'location_name' => $falseAlarm->cctvDevice?->location?->location_name ?? 'Unknown',
+                        'location_name' => $falseAlarm->cctvDevice?->location_name ?? 'Unknown',
                         'attempted_accident_type' => $falseAlarm->attempted_accident_type,
                         'gemini_reasoning' => $falseAlarm->gemini_reasoning,
                         'confidence_score' => $falseAlarm->confidence_score,
@@ -215,7 +215,7 @@ class YoloAccidentController extends BaseApiController
                 return $this->sendError('Validation failed', $validator->errors(), 422);
             }
 
-            $query = FalseAlarm::with('cctvDevice.location')
+            $query = FalseAlarm::with('cctvDevice')
                 ->orderByDesc('created_at');
 
             // Apply filters
@@ -239,7 +239,7 @@ class YoloAccidentController extends BaseApiController
                 return [
                     'id' => $falseAlarm->id,
                     'device_name' => $falseAlarm->cctvDevice?->device_name ?? 'Unknown',
-                    'location_name' => $falseAlarm->cctvDevice?->location?->location_name ?? 'Unknown',
+                    'location_name' => $falseAlarm->cctvDevice?->location_name ?? 'Unknown',
                     'attempted_accident_type' => $falseAlarm->attempted_accident_type,
                     'gemini_reasoning' => $falseAlarm->gemini_reasoning,
                     'confidence_score' => $falseAlarm->confidence_score,

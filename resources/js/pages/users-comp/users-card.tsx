@@ -10,7 +10,7 @@ import { SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { Archive, BadgeAlert, ExternalLink, KeyRound, Mail, MapPin, SquarePen, User } from 'lucide-react';
 
-import { location_T } from '@/types/location-types';
+import { baseBadgeClasses, getRoleColorClass, getStatusColorClass } from '@/lib/badgeStyles';
 import { roles_T } from '@/types/role-types';
 import { users_T } from '@/types/user-types';
 import ArchiveUser from './users-archive';
@@ -19,47 +19,13 @@ import OperatorDetails from './operator-details';
 import SuspensionUser from './users-suspension';
 import ViewUser from './users-view';
 
-// Role badge styles
-const getRoleBadgeStyles = (roleName?: string) => {
-    switch (roleName?.toLowerCase()) {
-        case 'operator':
-            return 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-500/30';
-        case 'citizen':
-            return 'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-500/30';
-        case 'purok leader':
-            return 'bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/30';
-        case 'admin':
-            return 'bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-400 border-red-500/30';
-        default:
-            return 'bg-zinc-500/15 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 border-zinc-500/30';
-    }
-};
-
-// Status badge styles
-const getStatusBadgeStyles = (status?: string) => {
-    switch (status?.toLowerCase()) {
-        case 'active':
-            return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20';
-        case 'inactive':
-            return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
-        case 'suspended':
-            return 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20';
-        case 'maintenance':
-            return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
-        default:
-            return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
-    }
-};
-
 const UserCard = ({
     users,
     roles,
-    locations,
     puroks = [],
 }: {
     users: users_T[];
     roles: roles_T[];
-    locations: location_T[];
     puroks?: any[];
 }) => {
     const { auth } = usePage<SharedData>().props;
@@ -106,54 +72,56 @@ const UserCard = ({
                 >
                     <CardContent className="p-4 flex flex-col h-full">
                         {/* Header Row */}
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-800">
-                                    <User className=" text-zinc-600 dark:text-zinc-400" />
-                                </div>
-                                <div className="min-w-0 gap-1 flex flex-col justify-between">
-                                    <h3 className="truncate text-sm font-semibold leading-tight">
-                                        {getFullName(user)}
-                                    </h3>
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                        <MapPin className="h-3 w-3 shrink-0" />
-                                        <span className="truncate">{getBarangay(user)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className='flex flex-col gap-2 items-end'>
+                        <div className='flex flex-row gap-2 items-center px-2 mb-4'>
+                            <div className="flex items-center justify-center gap-2  bg-zinc-100 dark:bg-zinc-800">
+                                <User className="h-auto  w-8 shrink-0  text-zinc-600 dark:text-zinc-400" />
 
-                                <Badge
-                                    variant="outline"
-                                    className={`text-[10px] font-medium px-1.5 py-0.5 ${getRoleBadgeStyles(user.role?.name)}`}
-                                >
-                                    {user.role?.name || 'N/A'}
-                                </Badge>
-                                {user.role?.name?.toLowerCase() !== 'citizen' && (
+                            </div>
+                            <div className='flex flex-col gap-1'>
+                                <h3 className="truncate text-sm font-semibold leading-tight">
+                                    {getFullName(user)}
+                                </h3>
+                                <div className='flex  gap-2 items-center'>
+
                                     <Badge
                                         variant="outline"
-                                        className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 capitalize ${getStatusBadgeStyles(user.official_details?.status || user.citizen_details?.status)}`}
+                                        className={`${baseBadgeClasses} ${getRoleColorClass(user.role?.name || '')}`}
                                     >
-                                        {user.official_details?.status || user.citizen_details?.status}
+                                        {user.role?.name || 'N/A'}
                                     </Badge>
-                                )}
+                                    {user.role?.name?.toLowerCase() !== 'citizen' && (
+                                        <Badge
+                                            variant="outline"
+                                            className={`shrink-0 ${baseBadgeClasses} capitalize ${getStatusColorClass(user.official_details?.status || user.citizen_details?.status || 'inactive')}`}
+                                        >
+                                            {user.official_details?.status || user.citizen_details?.status}
+                                        </Badge>
+                                    )}
+                                </div>
                             </div>
-
                         </div>
 
+
+
                         {/* User Info - Compact */}
-                        <div className="space-y-2 mb-3 px-4 flex-grow">
+                        <div className="space-y-2 mb-2 flex-grow">
+                            <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 px-2 border border-zinc-100 dark:border-zinc-800/80">
+                                <MapPin className="h-4 w-auto text-muted-foreground shrink-0" />
+                                <span className="truncate text-sm text-zinc-600 dark:text-zinc-400 font-medium ">
+                                    {getBarangay(user)}</span>
+                            </div>
                             {/* Email */}
-                            <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-md border border-zinc-100 dark:border-zinc-800/80">
-                                <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                <span className="truncate text-xs text-zinc-600 dark:text-zinc-400 font-medium">
+                            <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 px-2 border border-zinc-100 dark:border-zinc-800/80">
+                                <Mail className="h-4 w-auto text-muted-foreground shrink-0" />
+                                <span className="truncate text-sm text-zinc-600 dark:text-zinc-400 font-medium">
                                     {user.email}
                                 </span>
                             </div>
+
                         </div>
 
                         {/* Action Buttons - Premium Footer */}
-                        <div className="flex items-center justify-end gap-1.5 pt-2 mt-auto border-t dark:border-zinc-800">
+                        <div className="flex items-center justify-end gap-1.5 pt-1.5 mt-auto dark:border-zinc-800">
                             <Tooltip>
                                 <ViewUser user={user}>
                                     <TooltipTrigger asChild>
@@ -173,7 +141,7 @@ const UserCard = ({
                             {/* Edit button only for Purok Leader */}
                             {user.role?.name?.toLowerCase() === 'purok leader' && (
                                 <Tooltip>
-                                    <EditUser user={user} roles={roles} locations={locations} puroks={puroks}>
+                                    <EditUser user={user} roles={roles} puroks={puroks}>
                                         <TooltipTrigger asChild>
                                             <Button
                                                 variant="outline"

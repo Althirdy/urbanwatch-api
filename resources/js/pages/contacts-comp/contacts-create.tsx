@@ -29,6 +29,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/use-toast';
 import { cn } from '@/lib/utils';
+import { getPackageLocation } from '@/lib/geojson-packages';
 import { router, useForm, usePage } from '@inertiajs/react';
 import { Check, ChevronsUpDown, MoveLeft, Phone, Plus } from 'lucide-react';
 import React, { useState } from 'react';
@@ -140,7 +141,29 @@ function AddContacts() {
             value: selected,
             open: false,
         });
-        setData('location', selected ? selected.name : '');
+
+        // Auto-fill coordinates from GeoJSON when package is selected
+        if (selected) {
+            const packageLocation = getPackageLocation(selected.name);
+            if (packageLocation) {
+                const coords = {
+                    latitude: packageLocation.centroid.latitude.toString(),
+                    longitude: packageLocation.centroid.longitude.toString(),
+                };
+                setCoordinates(coords);
+                // Update all fields at once to avoid state batching issues
+                setData({
+                    ...data,
+                    location: selected.name,
+                    latitude: coords.latitude,
+                    longitude: coords.longitude,
+                });
+            } else {
+                setData('location', selected.name);
+            }
+        } else {
+            setData('location', '');
+        }
     };
 
     const handleMapLocationSelect = (location: {

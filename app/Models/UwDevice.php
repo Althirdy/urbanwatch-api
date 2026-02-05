@@ -14,7 +14,6 @@ class UwDevice extends Model
     protected $fillable = [
         'device_id',
         'device_name',
-        'location_id',
         'status',
         'api_token',
         'last_seen_at',
@@ -46,14 +45,6 @@ class UwDevice extends Model
     ];
 
     /**
-     * Get the location that owns the UW device.
-     */
-    public function location()
-    {
-        return $this->belongsTo(Locations::class, 'location_id');
-    }
-
-    /**
      * Get the anomaly logs for this IoT box.
      */
     public function anomalyLogs()
@@ -62,38 +53,26 @@ class UwDevice extends Model
     }
 
     /**
-     * Get the display location (either from location relationship or custom).
+     * Get the display location from custom address.
      */
     public function getDisplayLocationAttribute()
     {
-        if ($this->location) {
-            return $this->location->location_name.', '.$this->location->barangay;
-        }
-
         return $this->custom_address ?? 'No location specified';
     }
 
     /**
-     * Get the latitude (either from location relationship or custom).
+     * Get the latitude from custom location.
      */
     public function getLatitudeAttribute()
     {
-        if ($this->location) {
-            return $this->location->latitude;
-        }
-
         return $this->custom_latitude;
     }
 
     /**
-     * Get the longitude (either from location relationship or custom).
+     * Get the longitude from custom location.
      */
     public function getLongitudeAttribute()
     {
-        if ($this->location) {
-            return $this->location->longitude;
-        }
-
         return $this->custom_longitude;
     }
 

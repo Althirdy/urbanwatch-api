@@ -14,6 +14,7 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { baseBadgeClasses, getStatusColorClass } from '@/lib/badgeStyles';
 import { formatRelativeTime } from '@/lib/utils';
 import { router } from '@inertiajs/react';
 import {
@@ -155,7 +156,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                     </CardTitle>
                                     <div className="flex items-center gap-2">
 
-                                        <Badge variant="outline" className="text-[10px] font-medium px-1.5 py-0.5 text-muted-foreground">
+                                        <Badge variant="outline" className={`${baseBadgeClasses} text-muted-foreground`}>
 
                                             #{report.id}
 
@@ -164,14 +165,14 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                         {report.status === 'False Alarm' ? (
                                             <Badge
                                                 variant="outline"
-                                                className="text-[10px] font-medium px-1.5 py-0.5 capitalize border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+                                                className={`${baseBadgeClasses} capitalize ${getStatusColorClass('pending')}`}
                                             >
                                                 False Alarm
                                             </Badge>
                                         ) : (
                                             <Badge
-                                                variant={report.status === 'Resolved' ? 'default' : 'secondary'}
-                                                className="text-[10px] font-medium px-1.5 py-0.5 capitalize"
+                                                variant="outline"
+                                                className={`${baseBadgeClasses} capitalize ${getStatusColorClass(report.status)}`}
                                             >
                                                 {report.status}
                                             </Badge>

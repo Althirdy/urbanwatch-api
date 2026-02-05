@@ -1,12 +1,12 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
+import { locations } from '@/lib/packages';
 import { users } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import { LayoutGrid, Table } from 'lucide-react';
 import { useState } from 'react';
 
-import { location_T } from '@/types/location-types';
 import { roles_T } from '@/types/role-types';
 import { PaginatedUsers, users_T } from '@/types/user-types';
 import UserCard from './users-comp/users-card';
@@ -24,12 +24,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function Users({
     users,
     roles,
-    locations,
     puroks,
 }: {
     users: PaginatedUsers;
     roles: roles_T[];
-    locations: location_T[];
     puroks: any[];
 }) {
     const [filtered_users, setFilteredUsers] = useState<users_T[]>(users.data);
@@ -40,7 +38,7 @@ export default function Users({
             <Head title="Users" />
             <div className="space-y-4 p-4">
                 <div className="flex items-center justify-between gap-4">
-                    <CreateUsers roles={roles} locations={locations} puroks={puroks} />
+                    <CreateUsers roles={roles} puroks={puroks} />
 
                     {/* View Toggle */}
                     <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'card')}>
@@ -67,7 +65,6 @@ export default function Users({
                 <UserActionTab
                     users={users}
                     roles={roles}
-                    locations={locations}
                     setFilteredUsers={setFilteredUsers}
                 />
 
@@ -76,14 +73,12 @@ export default function Users({
                     <UserTable
                         users={filtered_users}
                         roles={roles}
-                        locations={locations}
                         puroks={puroks}
                     />
                 ) : (
                     <UserCard
                         users={filtered_users}
                         roles={roles}
-                        locations={locations}
                         puroks={puroks}
                     />
                 )}

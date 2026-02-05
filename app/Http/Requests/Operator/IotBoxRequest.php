@@ -37,11 +37,10 @@ class IotBoxRequest extends FormRequest
                 'max:255',
                 Rule::unique('iot_box', 'device_name')->ignore($iotBoxId),
             ],
-            'location_id' => 'nullable|exists:locations,id',
             'status' => 'required|in:active,inactive,maintenance',
-            'custom_address' => 'nullable|string|max:500',
-            'custom_latitude' => 'nullable|numeric|between:-90,90',
-            'custom_longtitide' => 'nullable|numeric|between:-180,180',
+            'custom_address' => 'required|string|max:500',
+            'custom_latitude' => 'required|numeric|between:-90,90',
+            'custom_longtitide' => 'required|numeric|between:-180,180',
         ];
     }
 
@@ -56,7 +55,6 @@ class IotBoxRequest extends FormRequest
             'device_name.required' => 'Device name is required.',
             'device_name.unique' => 'This device name is already taken.',
             'device_name.max' => 'Device name cannot exceed 255 characters.',
-            'location_id.exists' => 'The selected location does not exist.',
             'status.required' => 'Status is required.',
             'status.in' => 'Status must be one of: active, inactive, maintenance.',
             'custom_latitude.numeric' => 'Latitude must be a valid number.',
@@ -71,11 +69,6 @@ class IotBoxRequest extends FormRequest
      */
     public function withValidator($validator)
     {
-        $validator->after(function ($validator) {
-            // If no location_id, custom location fields should be provided
-            if (! $this->location_id && (! $this->custom_address || ! $this->custom_latitude || ! $this->custom_longtitide)) {
-                $validator->errors()->add('custom_location', 'Custom location details are required when no location is selected.');
-            }
-        });
+        // Location fields are now always required, no need for custom validation
     }
 }

@@ -12,7 +12,6 @@ import {
 import {
     contacts,
     devices,
-    locations,
     publicPosts,
     reports,
     users,
@@ -24,7 +23,6 @@ import {
     FlagTriangleRight,
     Folder,
     LayoutDashboard,
-    MapPin,
     User,
     Users,
 } from 'lucide-react';
@@ -51,11 +49,6 @@ const mainNavItems: NavItem[] = [
         title: 'Incidents',
         href: reports().url,
         icon: File,
-    },
-    {
-        title: 'Locations',
-        href: locations().url,
-        icon: MapPin,
     },
     {
         title: 'Devices',
