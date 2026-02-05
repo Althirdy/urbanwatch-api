@@ -48,7 +48,7 @@ const mainNavItems: NavItem[] = [
         icon: FlagTriangleRight,
     },
     {
-        title: 'Concerns',
+        title: 'Incidents',
         href: reports().url,
         icon: File,
     },

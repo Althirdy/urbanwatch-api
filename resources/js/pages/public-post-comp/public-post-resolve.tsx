@@ -32,6 +32,7 @@ export default function ResolvePublicPost({ post, children }: ResolvePublicPostP
             {
                 preserveScroll: true,
                 onSuccess: () => {
+                    router.flushAll(); // Clear prefetch cache to prevent stale data
                     setOpen(false);
                 },
                 onFinish: () => {
@@ -42,8 +43,8 @@ export default function ResolvePublicPost({ post, children }: ResolvePublicPostP
     };
 
     // Check if the post can be resolved
-    const canResolve = 
-        post.postable && 
+    const canResolve =
+        post.postable &&
         post.postable.status === 'ongoing' &&
         post.postable_type === 'App\\Models\\Accident';
 

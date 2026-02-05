@@ -56,7 +56,10 @@ class CCTVController extends BaseApiController
 
     public function getActiveCCTVs()
     {
-        $cctvDevices = cctvDevices::where('status', 'active')->get();
+        $cacheKey = 'cctv_devices_active';
+        $cctvDevices = \Illuminate\Support\Facades\Cache::tags(['cctv_devices'])->remember($cacheKey, now()->addHours(1), function () {
+            return cctvDevices::where('status', 'active')->get();
+        });
 
         return $this->sendResponse(CCTVResource::collection($cctvDevices), 'Active CCTV devices retrieved successfully.');
     }
@@ -68,10 +71,13 @@ class CCTVController extends BaseApiController
      */
     public function getYoloEnabledCCTVs()
     {
-        $cctvDevices = cctvDevices::where('yolo_enabled', true)
-            ->where('status', 'active')
-            ->with('location:id,location_name,landmark,barangay')
-            ->get();
+        $cacheKey = 'cctv_devices_yolo_active';
+        $cctvDevices = \Illuminate\Support\Facades\Cache::tags(['cctv_devices'])->remember($cacheKey, now()->addHours(1), function () {
+            return cctvDevices::where('yolo_enabled', true)
+                ->where('status', 'active')
+                ->with('location:id,location_name,landmark,barangay')
+                ->get();
+        });
 
         return $this->sendResponse(CCTVResource::collection($cctvDevices), 'YOLO-enabled CCTV devices retrieved successfully.');
     }
@@ -121,6 +127,11 @@ class CCTVController extends BaseApiController
 
             // Log the validated data
             Log::info('CCTV Data to be updated:', $validated);
+
+            // If rtsp_password is empty, remove it from update to keep the existing one
+            if (empty($validated['rtsp_password'])) {
+                unset($validated['rtsp_password']);
+            }
 
             // Update the CCTV device
             $cctv->update($validated);

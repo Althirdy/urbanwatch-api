@@ -5,6 +5,7 @@ import {
     ExternalLink as Open,
     SquarePen,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -26,11 +27,61 @@ const reportTypeColors: Record<string, string> = {
     Announcement: 'bg-yellow-800',
 };
 
+// Real-time status badge component that updates automatically
+function StatusBadge({ publishedAt }: { publishedAt: string | null }) {
+    const [now, setNow] = useState(new Date());
+
+    useEffect(() => {
+        if (publishedAt) {
+            const publishDate = new Date(publishedAt);
+            const currentTime = new Date();
+
+            // Only set up timer if the post is scheduled (future date)
+            if (publishDate > currentTime) {
+                // Calculate exact milliseconds until publication
+                const msUntilPublish = publishDate.getTime() - currentTime.getTime();
+
+                // Set a timeout to update exactly when the post should be published
+                // Add a small buffer (100ms) to ensure we're past the publish time
+                const timeout = setTimeout(() => {
+                    setNow(new Date());
+                }, msUntilPublish + 100);
+
+                return () => clearTimeout(timeout);
+            }
+        }
+    }, [publishedAt, now]);
+
+    if (!publishedAt) {
+        return (
+            <span className="inline-flex items-center rounded-md border bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400">
+                Draft
+            </span>
+        );
+    }
+
+    const publishDate = new Date(publishedAt);
+
+    if (publishDate > now) {
+        return (
+            <span className="inline-flex items-center rounded-md border bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400">
+                Scheduled
+            </span>
+        );
+    }
+
+    return (
+        <span className="inline-flex items-center rounded-md border bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400">
+            Published
+        </span>
+    );
+}
+
 function getStatusBadge(publishedAt: string | null) {
     if (!publishedAt) {
         return (
             <span className="inline-flex items-center rounded-md border bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400">
-                DRAFT
+                Draft
             </span>
         );
     }
@@ -41,14 +92,14 @@ function getStatusBadge(publishedAt: string | null) {
     if (publishDate > now) {
         return (
             <span className="inline-flex items-center rounded-md border bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400">
-                SCHEDULED
+                Scheduled
             </span>
         );
     }
 
     return (
-        <span className="inline-flex items-center rounded-md border bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400">
-            PUBLISHED
+        <span className="inline-flex items-center  rounded-md border bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400">
+            Published
         </span>
     );
 }
@@ -111,7 +162,7 @@ export const columns = (): ColumnDef<PublicPost_T>[] => [
             return (
                 <div className="max-w-xs text-left">
                     <div className="ellipsis flex flex-col truncate">
-                        <span className="text-md font-semibold">
+                        <span className="">
                             {post.title}
                         </span>
                         <span
@@ -136,7 +187,7 @@ export const columns = (): ColumnDef<PublicPost_T>[] => [
             const post = row.original;
             return (
                 <div className="flex flex-col items-center">
-                    <span className="text-sm font-medium">
+                    <span className="text-sm ">
                         {post.publishedBy?.name || 'Barangay Office'}
                     </span>
                 </div>
@@ -148,7 +199,7 @@ export const columns = (): ColumnDef<PublicPost_T>[] => [
         header: 'Status',
         cell: ({ row }) => {
             const post = row.original;
-            return getStatusBadge(post.published_at);
+            return <StatusBadge publishedAt={post.published_at} />;
         },
     },
     {
@@ -184,20 +235,20 @@ export const columns = (): ColumnDef<PublicPost_T>[] => [
             const post = row.original;
 
             return (
-                <div className="flex justify-center gap-2">
+                <div className="flex justify-center gap-1.5">
                     <Tooltip>
                         <ViewPublicPostDetails post={post}>
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="cursor-pointer"
+                                    className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                 >
-                                    <Open className="h-4 w-4" />
+                                    <Open className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                 </Button>
                             </TooltipTrigger>
                         </ViewPublicPostDetails>
-                        <TooltipContent>
+                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                             <p>View Details</p>
                         </TooltipContent>
                     </Tooltip>
@@ -207,13 +258,13 @@ export const columns = (): ColumnDef<PublicPost_T>[] => [
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="cursor-pointer"
+                                    className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                 >
-                                    <SquarePen className="h-4 w-4" />
+                                    <SquarePen className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                 </Button>
                             </TooltipTrigger>
                         </EditPublicPost>
-                        <TooltipContent>
+                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                             <p>Edit Post</p>
                         </TooltipContent>
                     </Tooltip>
@@ -223,13 +274,13 @@ export const columns = (): ColumnDef<PublicPost_T>[] => [
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="cursor-pointer"
+                                    className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 group"
                                 >
-                                    <Archive className="h-4 w-4 text-[var(--destructive)]" />
+                                    <Archive className="h-4 w-4 text-zinc-400 group-hover:text-red-500 transition-colors" />
                                 </Button>
                             </TooltipTrigger>
                         </ArchivePublicPost>
-                        <TooltipContent>
+                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                             <p>Archive Post</p>
                         </TooltipContent>
                     </Tooltip>

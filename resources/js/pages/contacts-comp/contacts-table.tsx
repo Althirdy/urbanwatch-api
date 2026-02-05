@@ -84,24 +84,24 @@ const ContactTable = ({
 
     return (
         <div className="w-full">
-            <div className="overflow-hidden rounded-lg border bg-card dark:border-zinc-800">
+            <div className="overflow-hidden rounded-[var(--radius)] border">
                 <Table>
-                    <TableHeader className="bg-zinc-50 dark:bg-zinc-800/50">
+                    <TableHeader className="bg-muted">
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => {
                                     return (
                                         <TableHead
                                             key={header.id}
-                                            className="border-r px-2 py-2 text-center font-semibold last:border-r-0"
+                                            className="border-r px-2 py-2 text-center text-sm font-semibold last:border-r-0"
                                         >
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
-                                                      header.column.columnDef
-                                                          .header,
-                                                      header.getContext(),
-                                                  )}
+                                                    header.column.columnDef
+                                                        .header,
+                                                    header.getContext(),
+                                                )}
                                         </TableHead>
                                     );
                                 })}
@@ -115,7 +115,7 @@ const ContactTable = ({
                                     colSpan={columns().length}
                                     className="h-48 text-center"
                                 >
-                                    <div className="text-md flex items-center justify-center gap-2 text-muted-foreground">
+                                    <div className="text-sm flex items-center justify-center gap-2 text-muted-foreground">
                                         <Spinner className="h-6 w-6" />
                                         <span>Processing...</span>
                                     </div>
@@ -132,7 +132,7 @@ const ContactTable = ({
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell
                                             key={cell.id}
-                                            className="text-center"
+                                            className="text-center text-sm"
                                         >
                                             {flexRender(
                                                 cell.column.columnDef.cell,

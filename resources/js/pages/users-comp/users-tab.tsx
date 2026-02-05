@@ -1,30 +1,43 @@
 import { Button } from '@/components/ui/button';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { Filter, Search, X } from 'lucide-react';
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { Check, ChevronsUpDown, Filter, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+import { location_T } from '@/types/location-types';
 import { roles_T } from '@/types/role-types';
 import { PaginatedUsers, users_T } from '@/types/user-types';
 
 const UserActionTab = ({
     users,
     roles,
+    locations,
     setFilteredUsers,
 }: {
     users: PaginatedUsers;
     roles: roles_T[];
+    locations: location_T[];
     setFilteredUsers: (users: users_T[]) => void;
 }) => {
-    const [roleFilter, setRoleFilter] = useState<string>('all');
-    const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [barangayFilter, setBarangayFilter] = useState<string>('all');
+    const [roleOpen, setRoleOpen] = useState(false);
+    const [statusOpen, setStatusOpen] = useState(false);
+    const [locationOpen, setLocationOpen] = useState(false);
+    const [roleFilter, setRoleFilter] = useState<string | null>(null);
+    const [statusFilter, setStatusFilter] = useState<string | null>(null);
+    const [locationFilter, setLocationFilter] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
 
     // Extract unique roles from users data
@@ -39,47 +52,47 @@ const UserActionTab = ({
             .sort();
     }, [users.data]);
 
-    // Extract unique barangays from users data
-    const searchableBarangays = useMemo(() => {
-        return users.data
-            .map(
-                (user: users_T) =>
-                    user.citizen_details?.barangay ||
-                    user.official_details?.assigned_brgy,
-            )
-            .filter((barangay): barangay is string => Boolean(barangay))
-            .filter(
-                (value: string, index: number, self: string[]) =>
-                    self.indexOf(value) === index,
-            )
-            .sort();
-    }, [users.data]);
+    // Sort locations alphabetically by location_name
+    const sortedLocations = useMemo(() => {
+        return [...locations].sort((a, b) =>
+            a.location_name.localeCompare(b.location_name)
+        );
+    }, [locations]);
+
+    const statusOptions = [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' },
+        { value: 'suspended', label: 'Suspended' },
+    ];
 
     // Filter displayed users based on selected filters
     useEffect(() => {
         let filteredResults = users.data;
 
         // Filter by role
-        if (roleFilter !== 'all') {
+        if (roleFilter) {
             filteredResults = filteredResults.filter(
                 (user: users_T) => user.role?.name === roleFilter,
             );
         }
 
-        // Filter by status
-        if (statusFilter !== 'all') {
+        // Filter by status (compare lowercase since backend returns capitalized values)
+        if (statusFilter) {
             filteredResults = filteredResults.filter(
-                (user: users_T) => user.status === statusFilter,
+                (user: users_T) => user.status?.toLowerCase() === statusFilter.toLowerCase(),
             );
         }
 
-        // Filter by barangay
-        if (barangayFilter !== 'all') {
-            filteredResults = filteredResults.filter(
-                (user: users_T) =>
-                    user.citizen_details?.barangay === barangayFilter ||
-                    user.official_details?.assigned_brgy === barangayFilter,
-            );
+        // Filter by location
+        if (locationFilter) {
+            const selectedLocation = locations.find(loc => loc.id.toString() === locationFilter);
+            if (selectedLocation) {
+                filteredResults = filteredResults.filter(
+                    (user: users_T) =>
+                        user.citizen_details?.barangay === selectedLocation.barangay ||
+                        user.official_details?.assigned_brgy === selectedLocation.barangay,
+                );
+            }
         }
 
         // Filter by search query (name or email)
@@ -103,39 +116,40 @@ const UserActionTab = ({
         }
 
         setFilteredUsers(filteredResults);
-    }, [roleFilter, statusFilter, barangayFilter, searchQuery, users.data, setFilteredUsers]);
+    }, [roleFilter, statusFilter, locationFilter, searchQuery, users.data, locations, setFilteredUsers]);
 
     // Clear all filters
     const clearFilters = () => {
         setSearchQuery('');
-        setRoleFilter('all');
-        setStatusFilter('all');
-        setBarangayFilter('all');
+        setRoleFilter(null);
+        setStatusFilter(null);
+        setLocationFilter(null);
     };
 
     const hasActiveFilters =
         searchQuery !== '' ||
-        roleFilter !== 'all' ||
-        statusFilter !== 'all' ||
-        barangayFilter !== 'all';
+        roleFilter !== null ||
+        statusFilter !== null ||
+        locationFilter !== null;
 
     // Count filtered results
     const filteredCount = useMemo(() => {
-        let count = users.data.length;
-        
         let filtered = users.data;
-        if (roleFilter !== 'all') {
+        if (roleFilter) {
             filtered = filtered.filter((user) => user.role?.name === roleFilter);
         }
-        if (statusFilter !== 'all') {
-            filtered = filtered.filter((user) => user.status === statusFilter);
+        if (statusFilter) {
+            filtered = filtered.filter((user) => user.status?.toLowerCase() === statusFilter.toLowerCase());
         }
-        if (barangayFilter !== 'all') {
-            filtered = filtered.filter(
-                (user) =>
-                    user.citizen_details?.barangay === barangayFilter ||
-                    user.official_details?.assigned_brgy === barangayFilter,
-            );
+        if (locationFilter) {
+            const selectedLocation = locations.find(loc => loc.id.toString() === locationFilter);
+            if (selectedLocation) {
+                filtered = filtered.filter(
+                    (user) =>
+                        user.citizen_details?.barangay === selectedLocation.barangay ||
+                        user.official_details?.assigned_brgy === selectedLocation.barangay,
+                );
+            }
         }
         if (searchQuery.trim()) {
             filtered = filtered.filter((user) => {
@@ -150,7 +164,7 @@ const UserActionTab = ({
             });
         }
         return filtered.length;
-    }, [users.data, roleFilter, statusFilter, barangayFilter, searchQuery]);
+    }, [users.data, roleFilter, statusFilter, locationFilter, searchQuery, locations]);
 
     return (
         <div className="flex flex-col gap-3 rounded-[var(--radius)] border bg-card p-3 dark:border-zinc-800">
@@ -174,47 +188,189 @@ const UserActionTab = ({
                     </div>
 
                     {/* Role Filter */}
-                    <Select value={roleFilter} onValueChange={setRoleFilter}>
-                        <SelectTrigger className="h-8 w-[120px] text-xs">
-                            <SelectValue placeholder="Role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Roles</SelectItem>
-                            {searchableRoles.map((role) => (
-                                <SelectItem key={role} value={role}>
-                                    {role}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <Popover open={roleOpen} onOpenChange={setRoleOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={roleOpen}
+                                className="h-8 w-[120px] justify-between text-xs cursor-pointer"
+                            >
+                                {roleFilter || 'Role'}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[150px] p-0">
+                            <Command>
+                                <CommandInput placeholder="Search role..." className="h-9" />
+                                <CommandList>
+                                    <CommandEmpty>No role found.</CommandEmpty>
+                                    <CommandGroup>
+                                        <CommandItem
+                                            key="all-roles"
+                                            value=""
+                                            onSelect={() => {
+                                                setRoleFilter(null);
+                                                setRoleOpen(false);
+                                            }}
+                                        >
+                                            All Roles
+                                            <Check
+                                                className={cn(
+                                                    'ml-auto h-4 w-4',
+                                                    roleFilter === null ? 'opacity-100' : 'opacity-0',
+                                                )}
+                                            />
+                                        </CommandItem>
+                                        {searchableRoles.map((role) => (
+                                            <CommandItem
+                                                key={role}
+                                                value={role}
+                                                onSelect={(currentValue) => {
+                                                    setRoleFilter(currentValue === roleFilter ? null : currentValue);
+                                                    setRoleOpen(false);
+                                                }}
+                                            >
+                                                {role}
+                                                <Check
+                                                    className={cn(
+                                                        'ml-auto h-4 w-4',
+                                                        roleFilter === role ? 'opacity-100' : 'opacity-0',
+                                                    )}
+                                                />
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
 
                     {/* Status Filter */}
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="h-8 w-[110px] text-xs">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                            <SelectItem value="suspended">Suspended</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <Popover open={statusOpen} onOpenChange={setStatusOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={statusOpen}
+                                className="h-8 w-[120px] justify-between text-xs cursor-pointer"
+                            >
+                                {statusFilter ? statusOptions.find((s) => s.value === statusFilter)?.label : 'Status'}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[150px] p-0">
+                            <Command>
+                                <CommandInput placeholder="Search status..." className="h-9" />
+                                <CommandList>
+                                    <CommandEmpty>No status found.</CommandEmpty>
+                                    <CommandGroup>
+                                        <CommandItem
+                                            key="all-status"
+                                            value=""
+                                            onSelect={() => {
+                                                setStatusFilter(null);
+                                                setStatusOpen(false);
+                                            }}
+                                        >
+                                            All Status
+                                            <Check
+                                                className={cn(
+                                                    'ml-auto h-4 w-4',
+                                                    statusFilter === null ? 'opacity-100' : 'opacity-0',
+                                                )}
+                                            />
+                                        </CommandItem>
+                                        {statusOptions.map((status) => (
+                                            <CommandItem
+                                                key={status.value}
+                                                value={status.value}
+                                                onSelect={(currentValue) => {
+                                                    setStatusFilter(currentValue === statusFilter ? null : currentValue);
+                                                    setStatusOpen(false);
+                                                }}
+                                            >
+                                                {status.label}
+                                                <Check
+                                                    className={cn(
+                                                        'ml-auto h-4 w-4',
+                                                        statusFilter === status.value ? 'opacity-100' : 'opacity-0',
+                                                    )}
+                                                />
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
 
-                    {/* Barangay Filter */}
-                    <Select value={barangayFilter} onValueChange={setBarangayFilter}>
-                        <SelectTrigger className="h-8 w-[130px] text-xs">
-                            <SelectValue placeholder="Barangay" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Barangays</SelectItem>
-                            {searchableBarangays.map((barangay) => (
-                                <SelectItem key={barangay} value={barangay}>
-                                    {barangay}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    {/* Location Filter */}
+                    <Popover open={locationOpen} onOpenChange={setLocationOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={locationOpen}
+                                className="h-8 w-[150px] justify-between text-xs cursor-pointer"
+                            >
+                                {locationFilter
+                                    ? sortedLocations.find((l) => l.id.toString() === locationFilter)?.location_name
+                                    : 'Location'}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[180px] p-0">
+                            <Command>
+                                <CommandInput placeholder="Search location..." className="h-9" />
+                                <CommandList>
+                                    <CommandEmpty>No location found.</CommandEmpty>
+                                    <CommandGroup>
+                                        <CommandItem
+                                            key="all-locations"
+                                            value=""
+                                            onSelect={() => {
+                                                setLocationFilter(null);
+                                                setLocationOpen(false);
+                                            }}
+                                        >
+                                            All Locations
+                                            <Check
+                                                className={cn(
+                                                    'ml-auto h-4 w-4',
+                                                    locationFilter === null ? 'opacity-100' : 'opacity-0',
+                                                )}
+                                            />
+                                        </CommandItem>
+                                        {sortedLocations.map((location) => (
+                                            <CommandItem
+                                                key={location.id}
+                                                value={location.location_name}
+                                                onSelect={() => {
+                                                    setLocationFilter(
+                                                        location.id.toString() === locationFilter
+                                                            ? null
+                                                            : location.id.toString()
+                                                    );
+                                                    setLocationOpen(false);
+                                                }}
+                                            >
+                                                {location.location_name}
+                                                <Check
+                                                    className={cn(
+                                                        'ml-auto h-4 w-4',
+                                                        locationFilter === location.id.toString()
+                                                            ? 'opacity-100'
+                                                            : 'opacity-0',
+                                                    )}
+                                                />
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
 
                     {/* Clear Filters */}
                     {hasActiveFilters && (

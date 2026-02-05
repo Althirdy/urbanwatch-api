@@ -30,6 +30,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 
+import { SharedData } from '@/types';
+import { usePage } from '@inertiajs/react';
 import { location_T } from '@/types/location-types';
 import { roles_T } from '@/types/role-types';
 import { users_T } from '@/types/user-types';
@@ -48,6 +50,12 @@ const UserTable = ({
     puroks?: any[];
     isLoading?: boolean;
 }) => {
+    const { auth } = usePage<SharedData>().props;
+    const currentUserId = auth.user.id;
+
+    // Filter out the current logged-in user
+    const filteredUsers = users.filter((user) => user.id !== currentUserId);
+
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] =
         React.useState<ColumnFiltersState>([]);
@@ -56,7 +64,7 @@ const UserTable = ({
     const [isPageChanging, setIsPageChanging] = React.useState(false);
 
     const table = useReactTable({
-        data: users,
+        data: filteredUsers,
         columns: columns(roles, locations, puroks),
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
@@ -101,15 +109,15 @@ const UserTable = ({
                                     return (
                                         <TableHead
                                             key={header.id}
-                                            className="border-r px-2 py-2 text-center font-semibold last:border-r-0"
+                                            className="border-r px-2 py-2 text-center text-sm font-semibold last:border-r-0"
                                         >
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
-                                                      header.column.columnDef
-                                                          .header,
-                                                      header.getContext(),
-                                                  )}
+                                                    header.column.columnDef
+                                                        .header,
+                                                    header.getContext(),
+                                                )}
                                         </TableHead>
                                     );
                                 })}
@@ -123,7 +131,7 @@ const UserTable = ({
                                     colSpan={columns(roles, locations, puroks).length}
                                     className="h-48 text-center"
                                 >
-                                    <div className="text-md flex items-center justify-center gap-2 text-muted-foreground">
+                                    <div className="text-sm flex items-center justify-center gap-2 text-muted-foreground">
                                         <Spinner className="h-6 w-6" />
                                         <span>Processing...</span>
                                     </div>
@@ -140,7 +148,7 @@ const UserTable = ({
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell
                                             key={cell.id}
-                                            className="text-center"
+                                            className="text-center text-sm"
                                         >
                                             {flexRender(
                                                 cell.column.columnDef.cell,

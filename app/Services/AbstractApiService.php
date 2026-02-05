@@ -55,9 +55,9 @@ class AbstractApiService
     {
         $status = $response['email_deliverability']['status'] ?? 'unknown';
         $isDeliverable = ($status === 'deliverable');
-        $isDisposable = $data['email_quality']['is_disposable'] ?? false;
-        $isFormatValid = $data['email_deliverability']['is_format_valid'] ?? true;
-        $qualityScore = (float) ($data['email_quality']['score'] ?? 0.5);
+        $isDisposable = $response['email_quality']['is_disposable'] ?? false;
+        $isFormatValid = $response['email_deliverability']['is_format_valid'] ?? true;
+        $qualityScore = (float) ($response['email_quality']['score'] ?? 0.5);
         $isValid = $isDeliverable && ! $isDisposable && $isFormatValid;
         $suggestion = null;
 

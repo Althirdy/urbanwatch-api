@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/use-toast';
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { Activity, Archive, Camera, Settings, Wifi } from 'lucide-react';
 import { useState } from 'react';
 import { cctv_T } from '../../types/cctv-location-types';
@@ -63,6 +63,7 @@ function ArchiveCCTV({ cctv, onArchiveSuccess, children }: ArchiveCCTVProps) {
 
         deleteRequest(`/devices/cctv/${cctv.id}`, {
             onSuccess: () => {
+                router.flushAll(); // Clear prefetch cache to prevent stale data
                 toast({
                     title: 'CCTV Device Archived',
                     description: `${cctv.device_name} has been successfully archived.`,

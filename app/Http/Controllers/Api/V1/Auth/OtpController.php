@@ -37,11 +37,26 @@ class OtpController extends Controller
 
         $phone = $request->phone;
 
+        // Check if phone is globally locked from too many failed verification attempts
+        $verifyKey = 'otp:verify:'.$phone;
+        if (RateLimiter::tooManyAttempts($verifyKey, 5)) {
+            $seconds = RateLimiter::availableIn($verifyKey);
+
+            return response()->json([
+                'success' => false,
+                'message' => "Too many failed attempts. Please try again in $seconds seconds.",
+                'lock_type' => 'rate_limit',
+                'seconds' => $seconds,
+            ], 429);
+        }
+
         // Rate limiting: 60 seconds between requests
         if (Cache::has('otp_lock_'.$phone)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Please wait 60 seconds before requesting again.',
+                'message' => 'Please wait before requesting again.',
+                'lock_type' => 'cooldown',
+                'seconds' => 60,
             ], 429);
         }
 
@@ -79,6 +94,30 @@ class OtpController extends Controller
                 'message' => 'Validation failed',
                 'errors' => $validator->errors(),
             ], 422);
+        }
+
+        // Check lock FIRST before calling Abstract API (save resources)
+        $phone = $request->phone;
+        $verifyKey = 'otp:verify:'.$phone;
+        if (RateLimiter::tooManyAttempts($verifyKey, 5)) {
+            $seconds = RateLimiter::availableIn($verifyKey);
+
+            return response()->json([
+                'success' => false,
+                'message' => "Too many failed attempts. Please try again in $seconds seconds.",
+                'lock_type' => 'rate_limit',
+                'seconds' => $seconds,
+            ], 429);
+        }
+
+        // Check resend lock (60-second cooldown between OTP requests)
+        if (Cache::has('otp_lock_'.$phone)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please wait before requesting again.',
+                'lock_type' => 'cooldown',
+                'seconds' => 60,
+            ], 429);
         }
 
         $emailReputationResult = $this->abstractApiService->validateEmail($request->email);
@@ -120,9 +159,13 @@ class OtpController extends Controller
         // Rate limiting: 5 attempts per phone per 5 minutes
         $key = 'otp:verify:'.$phone;
         if (RateLimiter::tooManyAttempts($key, 5)) {
+            $seconds = RateLimiter::availableIn($key);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Too many verification attempts. Please request a new OTP.',
+                'message' => "Too many verification attempts. Please try again in $seconds seconds.",
+                'lock_type' => 'rate_limit',
+                'seconds' => $seconds,
             ], 429);
         }
 
@@ -184,13 +227,26 @@ class OtpController extends Controller
 
         $phone = $request->phone;
 
-        // Rate limiting: 60 seconds between resend requests
-        if (Cache::has('otp_lock_'.$phone)) {
-            $remainingTime = Cache::get('otp_lock_'.$phone);
+        // Check if phone is globally locked from too many failed verification attempts
+        $verifyKey = 'otp:verify:'.$phone;
+        if (RateLimiter::tooManyAttempts($verifyKey, 5)) {
+            $seconds = RateLimiter::availableIn($verifyKey);
 
             return response()->json([
                 'success' => false,
+                'message' => "Too many failed attempts. Please try again in $seconds seconds.",
+                'lock_type' => 'rate_limit',
+                'seconds' => $seconds,
+            ], 429);
+        }
+
+        // Rate limiting: 60 seconds between resend requests
+        if (Cache::has('otp_lock_'.$phone)) {
+            return response()->json([
+                'success' => false,
                 'message' => 'Please wait before requesting another OTP.',
+                'lock_type' => 'cooldown',
+                'seconds' => 60,
             ], 429);
         }
 

@@ -56,26 +56,26 @@ function LocationCardView({
                     locations.map((loc: location_T) => (
                         <Card
                             key={loc.id}
-                            className="group relative overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700"
+                            className="group relative overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700 flex flex-col"
                         >
                             <CardHeader className="flex-row items-center">
                                 <div className="flex flex-1 items-center justify-between">
                                     <div>
-                                        <h3 className="text-lg font-bold">
+                                        <h3 className="text-md font-bold truncate">
                                             {loc.location_name}
                                         </h3>
                                         <p className="text-base text-muted-foreground">
                                             {loc.landmark}
                                         </p>
-                                        <p className="flex items-center gap-2 text-base text-muted-foreground mt-1">
-                                            <Cctv size={20} />
+                                        <p className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                                            <Cctv size={16} />
                                             <span>
                                                 {loc.cctv_count} camera/s
                                             </span>
                                         </p>
                                         <div className="mt-1 flex flex-wrap gap-1">
                                             {loc.category && (
-                                                <Badge variant="outline" className={cn("text-[10px] font-medium", getCategoryColor(loc.category.name))}>
+                                                <Badge variant="outline" className={cn("text-xs font-medium", getCategoryColor(loc.category.name))}>
                                                     {loc.category.name}
                                                 </Badge>
                                             )}
@@ -84,11 +84,19 @@ function LocationCardView({
 
                                 </div>
                             </CardHeader>
-                            <CardContent className="text-sm px-4 py-2">
-                                <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 p-2 rounded-md border border-zinc-100 dark:border-zinc-800/80">
-                                    <span className="text-[11px] text-muted-foreground uppercase tracking-wider font-bold">Barangay</span>
-                                    <span className="font-semibold text-sm text-zinc-700 dark:text-zinc-300">{loc.barangay}</span>
+                            <CardContent className="px-6 py-0 flex-1">
+                                <div className="flex flex-col ">
+
+                                    <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/80">
+                                        <span className="text-sm text-muted-foreground ">Longitude:  </span>
+                                        <span className=" text-sm font-semibold text-zinc-700 dark:text-zinc-300">{loc.longitude}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/80">
+                                        <span className="text-sm text-muted-foreground ">Latitude:  </span>
+                                        <span className=" text-sm font-semibold text-zinc-700 dark:text-zinc-300">{loc.latitude}</span>
+                                    </div>
                                 </div>
+
                             </CardContent>
                             <CardFooter>
                                 <div className="flex w-full justify-end gap-2 pt-2 border-t dark:border-zinc-800">
@@ -140,7 +148,7 @@ function LocationCardView({
                                                 </Button>
                                             </TooltipTrigger>
                                         </DeleteLocation>
-                                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
+                                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                                             <p>Archive Location</p>
                                         </TooltipContent>
                                     </Tooltip>

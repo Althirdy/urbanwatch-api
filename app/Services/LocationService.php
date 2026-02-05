@@ -97,13 +97,28 @@ class LocationService
      */
     public function getLocations(array $filters = []): Collection
     {
+        if (! empty($filters)) {
+            return $this->buildLocationsQuery($filters)->get();
+        }
+
+        $cacheKey = 'locations_list_latest';
+
+        return \Illuminate\Support\Facades\Cache::tags(['locations'])->remember($cacheKey, now()->addHours(24), function () {
+            return $this->buildLocationsQuery()->get();
+        });
+    }
+
+    /**
+     * Build the locations query.
+     */
+    protected function buildLocationsQuery(array $filters = [])
+    {
         $query = Locations::query();
 
-        // Add filters if needed
         if (isset($filters['barangay'])) {
             $query->where('barangay', $filters['barangay']);
         }
 
-        return $query->get();
+        return $query;
     }
 }

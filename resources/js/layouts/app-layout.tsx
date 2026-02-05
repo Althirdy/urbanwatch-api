@@ -3,6 +3,7 @@ import { type BreadcrumbItem } from '@/types';
 import { type ReactNode } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { useOperatorRealtime } from '@/hooks/use-operator-realtime';
+import { usePageVisibilityRefresh } from '@/hooks/use-page-visibility-refresh';
 import { usePage } from '@inertiajs/react';
 import { SharedData } from '@/types';
 
@@ -17,6 +18,9 @@ export default ({ children, breadcrumbs, ...props }: AppLayoutProps) => {
 
     // Initialize real-time listeners for operators
     useOperatorRealtime(isOperator);
+
+    // Refresh page data when tab becomes visible again
+    usePageVisibilityRefresh();
 
     return (
         <AppLayoutTemplate breadcrumbs={breadcrumbs} {...props}>

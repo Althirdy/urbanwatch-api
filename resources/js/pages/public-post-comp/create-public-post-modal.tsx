@@ -25,7 +25,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { router } from '@inertiajs/react';
-import { format } from 'date-fns';
+import { format, set } from 'date-fns';
 import { CalendarIcon, ImagePlus, Loader2, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -47,6 +47,7 @@ export default function CreatePublicPostModal() {
     const [open, setOpen] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [scheduledTime, setScheduledTime] = useState('12:00');
     const { toast } = useToast();
 
     const form = useForm<PublicPostFormData>({
@@ -85,8 +86,15 @@ export default function CreatePublicPostModal() {
             formData.append('status', data.status);
 
             if (data.status === 'scheduled' && data.published_at) {
-                // Format date as YYYY-MM-DD HH:mm:ss for Laravel
-                formData.append('published_at', format(data.published_at, 'yyyy-MM-dd HH:mm:ss'));
+                // Combine date with scheduled time
+                const [hours, minutes] = scheduledTime.split(':');
+                const dateWithTime = set(data.published_at, {
+                    hours: parseInt(hours),
+                    minutes: parseInt(minutes),
+                    seconds: 0,
+                });
+                // Send as ISO string so Laravel can properly handle timezone conversion
+                formData.append('published_at', dateWithTime.toISOString());
             }
 
             if (data.image) {
@@ -106,6 +114,7 @@ export default function CreatePublicPostModal() {
             setOpen(false);
             form.reset();
             setPreview(null);
+            router.flushAll(); // Clear prefetch cache to prevent stale data
             router.reload(); // Refresh the page data
         } catch (error: any) {
             console.error(error);
@@ -275,44 +284,66 @@ export default function CreatePublicPostModal() {
                             </div>
                         </div>
 
-                        {/* Scheduled Date - Only show if status is scheduled */}
+                        {/* Scheduled Date & Time - Only show if status is scheduled */}
                         {form.watch('status') === 'scheduled' && (
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                    Publication Date
-                                </label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant={"outline"}
-                                            className={cn(
-                                                "w-full justify-start text-left font-normal",
-                                                !form.watch('published_at') && "text-muted-foreground"
-                                            )}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {form.watch('published_at') ? (
-                                                format(form.watch('published_at')!, "PPP")
-                                            ) : (
-                                                <span>Pick a date</span>
-                                            )}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <Calendar
-                                            mode="single"
-                                            selected={form.watch('published_at')}
-                                            onSelect={(date) => form.setValue('published_at', date)}
-                                            initialFocus
-                                            disabled={(date) => date < new Date()}
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                                {form.formState.errors.published_at && (
-                                    <p className="text-sm font-medium text-destructive">
-                                        {form.formState.errors.published_at.message}
-                                    </p>
-                                )}
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                        Publication Date
+                                    </label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant={"outline"}
+                                                className={cn(
+                                                    "w-full justify-start text-left font-normal",
+                                                    !form.watch('published_at') && "text-muted-foreground"
+                                                )}
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {form.watch('published_at') ? (
+                                                    format(form.watch('published_at')!, "PPP")
+                                                ) : (
+                                                    <span>Pick a date</span>
+                                                )}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                            <Calendar
+                                                mode="single"
+                                                selected={form.watch('published_at')}
+                                                onSelect={(date) => form.setValue('published_at', date)}
+                                                initialFocus
+                                                disabled={(date) => {
+                                                    const today = new Date();
+                                                    today.setHours(0, 0, 0, 0);
+                                                    return date < today;
+                                                }}
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                    {form.formState.errors.published_at && (
+                                        <p className="text-sm font-medium text-destructive">
+                                            {form.formState.errors.published_at.message}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                        Publication Time
+                                    </label>
+                                    <Input
+                                        type="time"
+                                        value={scheduledTime}
+                                        onChange={(e) => setScheduledTime(e.target.value)}
+                                        className="w-full cursor-pointer rounded-[var(--radius)] text-base font-medium [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-60 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
+                                        onClick={(e) => {
+                                            // Ensure the time picker opens when clicking anywhere on the input
+                                            const input = e.currentTarget;
+                                            input.showPicker?.();
+                                        }}
+                                    />
+                                </div>
                             </div>
                         )}
                     </div>

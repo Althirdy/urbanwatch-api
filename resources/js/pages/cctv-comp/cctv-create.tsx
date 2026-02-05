@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { toast } from '@/components/use-toast';
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { Select } from '@radix-ui/react-select';
 import { format } from 'date-fns'; // Add this import
 import { Camera, ChevronDownIcon, MoveLeft, Plus } from 'lucide-react';
@@ -40,6 +40,8 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
         device_name: '',
         primary_rtsp_url: '',
         backup_rtsp_url: '',
+        rtsp_username: '',
+        rtsp_password: '',
         location_id: '',
         status: '',
         model: '',
@@ -60,6 +62,7 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
 
         post('/devices/cctv', {
             onSuccess: () => {
+                router.flushAll(); // Clear prefetch cache to prevent stale data
                 console.log('CCTV device created successfully');
                 toast({
                     title: 'Success!',
@@ -85,7 +88,7 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
     return (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-               <Button className="cursor-pointer px-4 py-2">
+                <Button className="cursor-pointer px-4 py-2">
                     <Plus /> Add CCTV
                 </Button>
             </DialogTrigger>
@@ -124,12 +127,49 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
                                 )}
                             </div>
 
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="rtsp-username">RTSP Username</Label>
+                                    <Input
+                                        id="rtsp-username"
+                                        placeholder="admin"
+                                        value={data.rtsp_username}
+                                        onChange={(e) =>
+                                            setData('rtsp_username', e.target.value)
+                                        }
+                                    />
+                                    {errors.rtsp_username && (
+                                        <p className="mt-1 text-sm text-red-500">
+                                            {errors.rtsp_username}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="rtsp-password">RTSP Password</Label>
+                                    <Input
+                                        id="rtsp-password"
+                                        type="password"
+                                        placeholder="••••••••"
+                                        value={data.rtsp_password}
+                                        onChange={(e) =>
+                                            setData('rtsp_password', e.target.value)
+                                        }
+                                    />
+                                    {errors.rtsp_password && (
+                                        <p className="mt-1 text-sm text-red-500">
+                                            {errors.rtsp_password}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
                             <div className="flex flex-col gap-2">
                                 <Label htmlFor="primary-rtsp-url">
-                                    Primary RTSP URL
+                                    Primary Base RTSP URL
                                 </Label>
                                 <Input
                                     id="primary-rtsp-url"
+                                    placeholder="192.168.1.100:554/stream1"
                                     value={data.primary_rtsp_url}
                                     onChange={(e) =>
                                         setData(
@@ -147,7 +187,7 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
 
                             <div className="flex flex-col gap-2">
                                 <Label htmlFor="backup-rtsp-url">
-                                    Backup RTSP URL
+                                    Backup Base RTSP URL (Optional)
                                 </Label>
                                 <Input
                                     id="backup-rtsp-url"
@@ -367,9 +407,9 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
                                                     'installation_date',
                                                     date
                                                         ? format(
-                                                              date,
-                                                              'yyyy-MM-dd',
-                                                          )
+                                                            date,
+                                                            'yyyy-MM-dd',
+                                                        )
                                                         : '',
                                                 );
                                                 setDate(date);

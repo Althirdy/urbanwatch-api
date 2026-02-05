@@ -28,7 +28,7 @@ export default function Locations({
     const [filteredLocations, setFilteredLocations] = useState<location_T[]>(
         locations || [],
     );
-        const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
+    const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
 
 
     return (
@@ -37,8 +37,8 @@ export default function Locations({
             <div className="space-y-4 p-4">
 
                 <div className="flex items-center justify-between gap-4">
-                <CreateLocation packages={packages} />
-                    
+                    <CreateLocation packages={packages} />
+
                     {/* View Toggle */}
                     <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'card')}>
                         <TabsList className="h-9 p-1">
@@ -69,7 +69,7 @@ export default function Locations({
                 ) : (
                     <LocationCardView locations={filteredLocations} />
                 )}
-                
+
             </div>
         </AppLayout>
     );

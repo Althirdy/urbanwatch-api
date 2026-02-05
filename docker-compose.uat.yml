@@ -20,6 +20,11 @@ services:
       - DB_DATABASE=urbanwatch_uat 
       - DB_USERNAME=urban_user
       - DB_PASSWORD=urban_password
+      - CACHE_STORE=redis
+      - REDIS_HOST=uat-redis
+    depends_on:
+      - uat-db
+      - uat-redis
 
   uat-queue:
     build: .
@@ -29,8 +34,12 @@ services:
       - ./:/var/www/html
       - /var/www/html/vendor
     command: php artisan queue:work --verbose --tries=3 --timeout=90
+    environment:
+      - CACHE_STORE=redis
+      - REDIS_HOST=uat-redis
     depends_on:
       - uat-db
+      - uat-redis
 
   uat-db:
     image: mysql:8.0
@@ -43,6 +52,11 @@ services:
       MYSQL_ROOT_PASSWORD: root
     volumes:
       - uat_db_data:/var/lib/mysql
+
+  uat-redis:
+    image: redis:7-alpine
+    container_name: urbanwatch-uat-redis
+    restart: always
 
 volumes:
   uat_db_data:

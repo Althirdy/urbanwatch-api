@@ -135,6 +135,7 @@ function EditUWDevice({
 
         router.put(`/devices/uwdevice/${device.id}`, formData, {
             onSuccess: () => {
+                router.flushAll(); // Clear prefetch cache to prevent stale data
                 toast({ title: 'Success!', description: 'UW Device updated successfully.' });
                 setDialogOpen(false);
             },

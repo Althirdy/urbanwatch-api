@@ -25,6 +25,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 
+import { toast } from '@/components/use-toast';
 import { router } from '@inertiajs/react';
 import {
     Activity,
@@ -83,7 +84,18 @@ function CCTVDisplay({
             {},
             {
                 preserveScroll: true,
-                onFinish: () => setTogglingYolo(null),
+                preserveState: false, // Force refresh of page data
+                onSuccess: () => {
+                    router.flushAll(); // Clear prefetch cache to prevent stale data
+                    toast({
+                        title: 'Success!',
+                        description: `YOLO detection ${device.yolo_enabled ? 'disabled' : 'enabled'} for ${device.device_name}.`,
+                        variant: 'default',
+                    });
+                },
+                onFinish: () => {
+                    setTogglingYolo(null);
+                },
             }
         );
     };
@@ -372,14 +384,14 @@ function CCTVDisplay({
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="cursor-pointer"
+                                                className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                             >
-                                                <SquarePen className="h-4 w-4" />
+                                                <SquarePen className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                             </Button>
                                         </TooltipTrigger>
                                     </EditCCTVDevice>
-                                    <TooltipContent side="bottom">
-                                        <p className="text-xs">Edit CCTV</p>
+                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                        <p>Edit CCTV</p>
                                     </TooltipContent>
                                 </Tooltip>
                                 <Tooltip>
@@ -388,14 +400,14 @@ function CCTVDisplay({
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="cursor-pointer"
+                                                className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 group"
                                             >
-                                                <Archive className="h-4 w-4 text-red-500 dark:text-red-400" />
+                                                <Archive className="h-4 w-4 text-zinc-400 group-hover:text-red-500 transition-colors" />
                                             </Button>
                                         </TooltipTrigger>
                                     </ArchiveCCTV>
-                                    <TooltipContent side="bottom">
-                                        <p className="text-xs">Archive CCTV</p>
+                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                        <p>Archive CCTV</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </div>

@@ -16,19 +16,39 @@ class ContactController extends Controller
      */
     public function index(Request $request)
     {
+        $hasFilters = $request->filled('search') || $request->filled('responder_type') || $request->filled('active');
+
+        if ($hasFilters) {
+            return $this->getFilteredContacts($request);
+        }
+
+        $page = $request->get('page', 1);
+        $cacheKey = "contacts_list_page_{$page}";
+
+        $cachedData = \Illuminate\Support\Facades\Cache::tags(['contacts'])->remember($cacheKey, now()->addHours(1), function () use ($request) {
+            return $this->getFilteredContacts($request);
+        });
+
+        return Inertia::render('contacts', array_merge($cachedData, [
+            'filters' => $request->only(['search', 'responder_type', 'active']),
+        ]));
+    }
+
+    /**
+     * Helper to get filtered contacts and metadata.
+     */
+    protected function getFilteredContacts(Request $request)
+    {
         $query = Contact::query();
 
-        // Search functionality
         if ($request->filled('search')) {
             $query->search($request->search);
         }
 
-        // Filter by responder type
         if ($request->filled('responder_type')) {
             $query->byResponderType($request->responder_type);
         }
 
-        // Filter by status
         if ($request->filled('active')) {
             if ($request->active === '1') {
                 $query->where('active', true);
@@ -39,48 +59,33 @@ class ContactController extends Controller
 
         $contacts = $query->latest()->paginate(10);
 
-        // Fetch distinct responder types from contacts table
+        // Fetch distinct responder types
         $responderTypes = Contact::select('responder_type')
             ->distinct()
             ->whereNotNull('responder_type')
             ->orderBy('responder_type')
             ->get()
-            ->map(function ($contact, $index) {
-                return [
-                    'id' => $index + 1,
-                    'name' => $contact->responder_type,
-                ];
-            })
+            ->map(fn ($contact, $index) => ['id' => $index + 1, 'name' => $contact->responder_type])
             ->values()
             ->toArray();
 
-        // Fetch distinct branch/unit names from contacts table
+        // Fetch distinct branch/unit names
         $branchUnitNames = Contact::select('branch_unit_name')
             ->distinct()
             ->whereNotNull('branch_unit_name')
             ->orderBy('branch_unit_name')
             ->get()
-            ->map(function ($contact, $index) {
-                return [
-                    'id' => $index + 1,
-                    'name' => $contact->branch_unit_name,
-                ];
-            })
+            ->map(fn ($contact, $index) => ['id' => $index + 1, 'name' => $contact->branch_unit_name])
             ->values()
             ->toArray();
 
-        // Fetch distinct locations from contacts table
+        // Fetch distinct locations
         $packageLocations = Contact::select('location')
             ->distinct()
             ->whereNotNull('location')
             ->orderBy('location')
             ->get()
-            ->map(function ($contact, $index) {
-                return [
-                    'id' => $index + 1,
-                    'name' => $contact->location,
-                ];
-            })
+            ->map(fn ($contact, $index) => ['id' => $index + 1, 'name' => $contact->location])
             ->values()
             ->toArray();
 
@@ -88,22 +93,19 @@ class ContactController extends Controller
         $statuses = Contact::select('active')
             ->distinct()
             ->get()
-            ->map(function ($contact) {
-                return [
-                    'value' => $contact->active ? '1' : '0',
-                    'label' => $contact->active ? 'Active' : 'Inactive',
-                ];
-            })
+            ->map(fn ($contact) => [
+                'value' => $contact->active ? '1' : '0',
+                'label' => $contact->active ? 'Active' : 'Inactive',
+            ])
             ->toArray();
 
-        return Inertia::render('contacts', [
+        return [
             'contacts' => $contacts,
-            'filters' => $request->only(['search', 'responder_type', 'active']),
             'responderTypes' => $responderTypes,
             'branchUnitNames' => $branchUnitNames,
             'packageLocations' => $packageLocations,
             'statuses' => $statuses,
-        ]);
+        ];
     }
 
     /**
