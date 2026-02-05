@@ -45,6 +45,9 @@ class YoloAccidentController extends BaseApiController
     /**
      * Process snapshot from YOLO detection system.
      *
+     * This endpoint now processes snapshots asynchronously.
+     * It stores the image temporarily and dispatches a job for processing.
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function ProcessSnapShot(Request $request)
@@ -66,29 +69,32 @@ class YoloAccidentController extends BaseApiController
             $deviceId = $request->input('device_id');
             $detectedAt = $request->input('detected_at');
 
-            Log::info('YOLO Snapshot received from Python', [
-                'device_id' => $deviceId,
-                'detected_at' => $detectedAt,
-                'file_size' => $file->getSize(),
+            // Store file temporarily for async processing
+            $tempPath = $file->store('temp_yolo', 'local');
+
+            Log::info('YOLO Snapshot received - dispatching async job', [
+                'deviceId' => $deviceId,
+                'detectedAt' => $detectedAt,
+                'tempPath' => $tempPath,
+                'fileSize' => $file->getSize(),
             ]);
 
-            // Delegate to service for business logic
-            $result = $this->yoloService->processDetection($file, $deviceId, $detectedAt);
-
-            // Format response based on result
-            if ($result['falseAlarm'] ?? false) {
-                return $this->sendResponse(
-                    $result,
-                    'Detection analyzed: False alarm (no emergency action needed)',
-                    200
-                );
-            }
-
-            return $this->sendResponse(
-                $result,
-                'Emergency verified and saved successfully',
-                201
+            // Dispatch the job for async processing
+            \App\Jobs\ProcessYoloSnapshotJob::dispatch(
+                $tempPath,
+                (int) $deviceId,
+                $detectedAt,
+                $file->getClientOriginalName(),
+                $file->getMimeType() ?? 'image/jpeg',
+                $file->getSize()
             );
+
+            // Return immediately with 202 Accepted
+            return $this->sendResponse([
+                'success' => true,
+                'message' => 'Snapshot received and queued for processing',
+                'deviceId' => $deviceId,
+            ], 'Snapshot queued for async processing', 202);
 
         } catch (\Exception $e) {
             Log::error('YoloAccidentController: Exception caught', [
@@ -97,7 +103,7 @@ class YoloAccidentController extends BaseApiController
             ]);
 
             return $this->sendError(
-                'Failed to process detection: '.$e->getMessage(),
+                'Failed to queue detection: '.$e->getMessage(),
                 null,
                 500
             );

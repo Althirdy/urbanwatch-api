@@ -13,8 +13,8 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { reportTypeColors } from '@/lib/badgeStyles';
-import { publicationStatusColors, categoryColors } from '@/lib/badgeStyles';
+
+import { publicationStatusColors, reportTypeColors } from '@/lib/badgeStyles';
 import { formatDateTime } from '@/lib/utils';
 import { PublicPost_T } from '@/types/public-post-types';
 import ArchivePublicPost from './public-post-archive';
@@ -135,15 +135,15 @@ export const columns = (): ColumnDef<PublicPost_T>[] => [
         },
         cell: ({ row }) => {
             const post = row.original;
-            const category = post.category || 'General';
+            const category = (post.category || 'general').toLowerCase();
             const colorClass =
-                categoryColors[category] || 'bg-gray-100 text-gray-800';
+                reportTypeColors[category as keyof typeof reportTypeColors] || reportTypeColors.other;
 
             return (
                 <span
                     className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium uppercase ${colorClass}`}
                 >
-                    {category}
+                    {post.category || 'General'}
                 </span>
             );
         },

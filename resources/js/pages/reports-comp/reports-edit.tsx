@@ -1,4 +1,3 @@
-import { MapModal } from '@/components/map-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,7 +30,7 @@ import {
     TriangleAlert,
     User,
 } from 'lucide-react';
-import { FormEvent, useState } from 'react';
+import { FormEvent } from 'react';
 
 type EditReportProps = {
     report: reports_T;
@@ -49,6 +48,16 @@ type EditReportForm = {
 };
 
 function EditReport({ report, reportTypes, children }: EditReportProps) {
+    // Normalize status: convert "In Progress" to "Ongoing" for backend compatibility
+    const normalizeStatus = (status: string | undefined): string => {
+        if (!status) return 'Pending';
+        if (status === 'In Progress') return 'Ongoing';
+        return status;
+    };
+
+    // Store normalized status for both form data and UI logic
+    const normalizedStatus = normalizeStatus(report.status);
+
     const { data, setData, put, processing, errors, reset } =
         useForm<EditReportForm>({
             report_type: report.report_type,
@@ -56,23 +65,8 @@ function EditReport({ report, reportTypes, children }: EditReportProps) {
             transcript: report.transcript || '',
             latitude: report.latitude,
             longtitude: report.longtitude,
-            status: report.status || 'Pending',
+            status: normalizedStatus,
         });
-
-    const [coordinates, setCoordinates] = useState({
-        latitude: report.latitude,
-        longitude: report.longtitude,
-    });
-
-    const handleLocationSelect = (location: { lat: number; lng: number }) => {
-        const coords = {
-            latitude: location.lat.toString(),
-            longitude: location.lng.toString(),
-        };
-        setCoordinates(coords);
-        setData('latitude', coords.latitude);
-        setData('longtitude', coords.longitude);
-    };
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
@@ -121,12 +115,12 @@ function EditReport({ report, reportTypes, children }: EditReportProps) {
                                         >
                                             PENDING
                                         </Badge>
-                                    ) : data.status === 'In Progress' ? (
+                                    ) : data.status === 'Ongoing' ? (
                                         <Badge
                                             variant="default"
                                             className="bg-blue-500 text-sm"
                                         >
-                                            IN PROGRESS
+                                            ONGOING
                                         </Badge>
                                     ) : (
                                         <Badge
@@ -236,18 +230,17 @@ function EditReport({ report, reportTypes, children }: EditReportProps) {
                                 </div>
                             </div>
 
-                            {/* GPS Coordinates */}
+                            {/* GPS Coordinates (Locked) */}
                             <div className="flex flex-col gap-4">
                                 <div className="grid">
                                     <p className="text-sm font-medium text-[var(--gray)]">
                                         GPS Coordinates
                                     </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Coordinates are locked and cannot be changed
+                                    </p>
                                 </div>
                                 <div className="space-y-2">
-                                    <MapModal
-                                        onLocationSelect={handleLocationSelect}
-                                        coordinates={coordinates}
-                                    />
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <Label htmlFor="latitude">
@@ -256,7 +249,7 @@ function EditReport({ report, reportTypes, children }: EditReportProps) {
                                             <div className="relative">
                                                 <Input
                                                     id="latitude"
-                                                    value={coordinates.latitude}
+                                                    value={report.latitude}
                                                     disabled
                                                     className={
                                                         errors.latitude
@@ -278,9 +271,7 @@ function EditReport({ report, reportTypes, children }: EditReportProps) {
                                             <div className="relative">
                                                 <Input
                                                     id="longitude"
-                                                    value={
-                                                        coordinates.longitude
-                                                    }
+                                                    value={report.longtitude}
                                                     disabled
                                                     className={
                                                         errors.longtitude
@@ -326,15 +317,15 @@ function EditReport({ report, reportTypes, children }: EditReportProps) {
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {/* Only show Pending if current status is Pending */}
-                                                    {report.status === 'Pending' && (
+                                                    {data.status === 'Pending' && (
                                                         <SelectItem value="Pending">
                                                             Pending
                                                         </SelectItem>
                                                     )}
-                                                    {/* Show In Progress if current status is Pending or In Progress */}
-                                                    {(report.status === 'Pending' || report.status === 'In Progress') && (
-                                                        <SelectItem value="In Progress">
-                                                            In Progress
+                                                    {/* Show Ongoing if current status is Pending or Ongoing */}
+                                                    {(data.status === 'Pending' || data.status === 'Ongoing') && (
+                                                        <SelectItem value="Ongoing">
+                                                            Ongoing
                                                         </SelectItem>
                                                     )}
                                                     {/* Resolved is always available */}
@@ -365,7 +356,7 @@ function EditReport({ report, reportTypes, children }: EditReportProps) {
                                         <User className="h-4 w-4" />
                                         <span>
                                             Reported by:{' '}
-                                            {report.user?.name || 'Unknown'}
+                                            {report.report_type === 'CCTV' ? 'CCTV' : (report.user?.name || 'Unknown')}
                                         </span>
                                     </div>
                                     <div className="flex flex-row items-center gap-2">

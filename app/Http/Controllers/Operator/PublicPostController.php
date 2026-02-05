@@ -103,7 +103,13 @@ class PublicPostController extends Controller
      */
     public function update(Request $request, PublicPost $publicPost)
     {
-        $validator = Validator::make($request->all(), [
+        // Convert empty string to null for published_at (handles unpublish from frontend)
+        $requestData = $request->all();
+        if (isset($requestData['published_at']) && $requestData['published_at'] === '') {
+            $requestData['published_at'] = null;
+        }
+
+        $validator = Validator::make($requestData, [
             'title' => 'nullable|string|max:255',
             'content' => 'nullable|string',
             'image' => 'nullable|image|max:5120',
@@ -126,14 +132,16 @@ class PublicPostController extends Controller
         }
 
         $image = $request->file('image');
-        $data = $request->only([
-            'title',
-            'content',
-            'category',
-            'published_at',
-            'status',
-            'delete_image',
-        ]);
+        $data = [
+            'title' => $requestData['title'] ?? null,
+            'content' => $requestData['content'] ?? null,
+            'category' => $requestData['category'] ?? null,
+            'published_at' => $requestData['published_at'] ?? null,
+            'status' => $requestData['status'] ?? null,
+            'delete_image' => $requestData['delete_image'] ?? null,
+        ];
+        // Filter out null values that weren't explicitly set
+        $data = array_filter($data, fn ($value, $key) => array_key_exists($key, $requestData), ARRAY_FILTER_USE_BOTH);
 
         $post = $this->publicPostService->updatePublicPost($publicPost, $data, $image);
 

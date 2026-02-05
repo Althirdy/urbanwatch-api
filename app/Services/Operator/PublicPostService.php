@@ -232,6 +232,24 @@ class PublicPostService
             }
 
             $publicPost->update($data);
+
+            // Sync with associated Accident if this PublicPost belongs to one
+            if ($publicPost->postable_type === Accident::class && $publicPost->postable_id) {
+                $accident = Accident::find($publicPost->postable_id);
+                if ($accident) {
+                    $accidentUpdates = [];
+                    if (isset($data['title'])) {
+                        $accidentUpdates['title'] = $data['title'];
+                    }
+                    if (isset($data['content'])) {
+                        $accidentUpdates['description'] = $data['content'];
+                    }
+                    if (! empty($accidentUpdates)) {
+                        $accident->update($accidentUpdates);
+                    }
+                }
+            }
+
             DB::commit();
 
             return $publicPost->load(['postable', 'publishedBy']);
@@ -376,14 +394,15 @@ class PublicPostService
         }
 
         $accident = $publicPost->postable;
+        $currentStatus = strtolower($accident->status);
 
         // Check if already resolved
-        if ($accident->status === 'resolved') {
+        if ($currentStatus === 'resolved') {
             throw new UrbanWatchException('This accident is already resolved.');
         }
 
-        // Check if status is ongoing
-        if ($accident->status !== 'ongoing') {
+        // Check if status is ongoing or in progress
+        if (! in_array($currentStatus, ['ongoing', 'in progress'])) {
             throw new UrbanWatchException('Only ongoing accidents can be resolved.');
         }
 
@@ -391,7 +410,7 @@ class PublicPostService
         try {
             // Update accident status to resolved
             $accident->update([
-                'status' => 'resolved',
+                'status' => 'Resolved',
             ]);
 
             // Update the public post title to indicate it's resolved

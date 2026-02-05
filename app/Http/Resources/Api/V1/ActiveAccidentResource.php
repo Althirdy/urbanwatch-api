@@ -29,6 +29,8 @@ class ActiveAccidentResource extends JsonResource
      * Role 2: Returns full accident data with coordinates from CCTV location and media
      * Role 3: Returns only coordinates, title, and description
      *
+     * Uses camelCase for consistency with frontend TypeScript conventions.
+     *
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
@@ -45,8 +47,8 @@ class ActiveAccidentResource extends JsonResource
             'longitude' => $coordinates['longitude'],
             'status' => $this->status,
             'severity' => $this->severity,
-            'accident_type' => $this->accident_type,
-            'occurred_at' => $this->occurred_at?->toIso8601String(),
+            'accidentType' => $this->accident_type,
+            'occurredAt' => $this->occurred_at?->toIso8601String(),
             'location' => $this->getLocationDetails(),
             'media' => MediaResource::collection($this->whenLoaded('media')),
         ];
@@ -56,7 +58,8 @@ class ActiveAccidentResource extends JsonResource
     }
 
     /**
-     * Get coordinates from the CCTV device's location.
+     * Get coordinates from the CCTV device.
+     * Location data is stored directly on the cctvDevices table.
      *
      * @return array{latitude: string|null, longitude: string|null}
      */
@@ -64,14 +67,15 @@ class ActiveAccidentResource extends JsonResource
     {
         $cctvDevice = $this->whenLoaded('cctvDevice');
 
-        if ($cctvDevice && $cctvDevice->location) {
+        // cctvDevices has latitude/longitude directly on the model
+        if ($cctvDevice && $cctvDevice->latitude && $cctvDevice->longitude) {
             return [
-                'latitude' => $cctvDevice->location->latitude,
-                'longitude' => $cctvDevice->location->longitude,
+                'latitude' => $cctvDevice->latitude,
+                'longitude' => $cctvDevice->longitude,
             ];
         }
 
-        // Fallback to accident's own coordinates if CCTV location not available
+        // Fallback to accident's own coordinates if CCTV device not available
         return [
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
@@ -80,23 +84,24 @@ class ActiveAccidentResource extends JsonResource
 
     /**
      * Get detailed location information from CCTV device.
+     * Location data is stored directly on the cctvDevices table.
+     * Uses camelCase for frontend consistency.
      */
     protected function getLocationDetails(): ?array
     {
         $cctvDevice = $this->whenLoaded('cctvDevice');
 
-        if (! $cctvDevice || ! $cctvDevice->location) {
+        if (! $cctvDevice) {
             return null;
         }
 
-        $location = $cctvDevice->location;
-
+        // cctvDevices stores location info directly on the model
         return [
-            'location_name' => $location->location_name,
-            'barangay' => $location->barangay,
-            'landmark' => $location->landmark,
-            'latitude' => $location->latitude,
-            'longitude' => $location->longitude,
+            'locationName' => $cctvDevice->location_name,
+            'barangay' => null, // Not available on cctvDevices table
+            'landmark' => null, // Not available on cctvDevices table
+            'latitude' => $cctvDevice->latitude,
+            'longitude' => $cctvDevice->longitude,
         ];
     }
 

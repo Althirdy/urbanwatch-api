@@ -41,15 +41,90 @@ class YoloAccidentService
      */
     public function processDetection(UploadedFile $file, int $deviceId, ?string $detectedAt = null): array
     {
+        $fileContent = file_get_contents($file->getRealPath());
+        $mimeType = $file->getMimeType() ?? 'image/jpeg';
+
+        return $this->processDetectionInternal(
+            $fileContent,
+            $mimeType,
+            $file,
+            $deviceId,
+            $detectedAt
+        );
+    }
+
+    /**
+     * Process detection from a stored file path (used by async Job).
+     *
+     * @param  string  $tempPath  Path to the stored temp file
+     * @param  int  $deviceId  ID of the CCTV device
+     * @param  string|null  $detectedAt  When the detection occurred
+     * @param  string  $originalFilename  Original filename
+     * @param  string  $mimeType  MIME type of the file
+     * @param  int  $fileSize  Size of the file in bytes
+     * @return array Processing result with success status and relevant data
+     *
+     * @throws \Exception If processing fails
+     */
+    public function processDetectionFromPath(
+        string $tempPath,
+        int $deviceId,
+        ?string $detectedAt,
+        string $originalFilename,
+        string $mimeType,
+        int $fileSize
+    ): array {
+        $fullPath = \Illuminate\Support\Facades\Storage::disk('local')->path($tempPath);
+
+        if (! file_exists($fullPath)) {
+            throw new \Exception("File not found at path: {$fullPath}");
+        }
+
+        $fileContent = file_get_contents($fullPath);
+
+        // Create a temporary UploadedFile for compatibility with existing logic
+        $tempFile = new UploadedFile(
+            $fullPath,
+            $originalFilename,
+            $mimeType,
+            null,
+            true // Mark as test file to skip validation
+        );
+
+        return $this->processDetectionInternal(
+            $fileContent,
+            $mimeType,
+            $tempFile,
+            $deviceId,
+            $detectedAt
+        );
+    }
+
+    /**
+     * Internal method for processing YOLO detections (DRY principle).
+     *
+     * @param  string  $fileContent  Raw binary content of the image
+     * @param  string  $mimeType  MIME type of the image
+     * @param  UploadedFile  $file  The file object for upload
+     * @param  int  $deviceId  ID of the CCTV device
+     * @param  string|null  $detectedAt  When the detection occurred
+     * @return array Processing result
+     *
+     * @throws \Exception If processing fails
+     */
+    protected function processDetectionInternal(
+        string $fileContent,
+        string $mimeType,
+        UploadedFile $file,
+        int $deviceId,
+        ?string $detectedAt
+    ): array {
         $startTime = microtime(true);
 
         // Step 1: Fetch CCTV device with location
         $cctvDevice = $this->getCctvDeviceWithLocation($deviceId);
 
         // Step 2: Verify with Gemini AI before uploading
-        $fileContent = file_get_contents($file->getRealPath());
-        $mimeType = $file->getMimeType() ?? 'image/jpeg';
-
         $aiAnalysis = $this->verifyEmergencyWithAI($fileContent, $mimeType, $cctvDevice);
 
         // Step 3: Handle false alarm (no upload, no storage)
@@ -309,7 +384,7 @@ class YoloAccidentService
     {
         return Accident::where('cctv_device_id', $deviceId)
             ->where('accident_type', $type)
-            ->whereIn('status', ['Pending', 'In Progress'])
+            ->whereIn('status', ['Pending', 'In Progress', 'pending', 'in progress'])
             ->latest()
             ->first();
     }

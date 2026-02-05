@@ -100,6 +100,14 @@ class ReportController extends Controller
                 // Get location from CCTV device
                 $displayLocation = $accident->cctvDevice?->location_name;
 
+                // Normalize status: convert "In Progress" to "Ongoing" for consistency
+                $status = $accident->status;
+                if (strtolower($status) === 'in progress') {
+                    $status = 'Ongoing';
+                } else {
+                    $status = ucfirst(strtolower($status)); // Normalize case: pending -> Pending, resolved -> Resolved
+                }
+
                 return [
                     'id' => $accident->id,
                     'report_type' => ucfirst($accident->accident_type),
@@ -109,7 +117,7 @@ class ReportController extends Controller
                     'longtitude' => $accident->longitude,
                     'location_name' => $displayLocation,
                     'is_acknowledge' => strtolower($accident->status) !== 'pending',
-                    'status' => ucfirst($accident->status),
+                    'status' => $status,
                     'created_at' => $accident->created_at,
                     'updated_at' => $accident->updated_at,
                     'user' => null, // Accidents don't have users (YOLO detected)
@@ -246,10 +254,15 @@ class ReportController extends Controller
                 'report_type' => 'required|string',
                 'transcript' => 'nullable|string|max:500',
                 'description' => 'required|string|max:1000',
-                'latitute' => 'required|numeric|between:-90,90',
+                'latitude' => 'required|numeric|between:-90,90',
                 'longtitude' => 'required|numeric|between:-180,180',
-                'status' => 'nullable|string|in:Pending,In Progress,Resolved',
+                'status' => 'nullable|string|in:Pending,Ongoing,In Progress,Resolved',
             ]);
+
+            // Normalize status: convert "In Progress" to "Ongoing" for consistency
+            if (isset($validated['status']) && $validated['status'] === 'In Progress') {
+                $validated['status'] = 'Ongoing';
+            }
 
             DB::beginTransaction();
             try {
@@ -262,6 +275,18 @@ class ReportController extends Controller
                     'accident_type' => strtolower($validated['report_type']),
                     'status' => $validated['status'] ?? $accident->status,
                 ]);
+
+                // Sync with associated PublicPost if it exists
+                $publicPost = PublicPost::where('postable_id', $accident->id)
+                    ->where('postable_type', Accident::class)
+                    ->first();
+
+                if ($publicPost) {
+                    $publicPost->update([
+                        'title' => $validated['transcript'] ?? $publicPost->title,
+                        'content' => $validated['description'],
+                    ]);
+                }
 
                 DB::commit();
 
@@ -312,11 +337,12 @@ class ReportController extends Controller
 
             \Log::info('Acknowledging accident', [
                 'id' => $id,
-                'current_status' => $accident->status,
+                'currentStatus' => $accident->status,
             ]);
 
-            // Check if already acknowledged (not Pending)
-            if ($accident->status !== 'Pending') {
+            // Check if already acknowledged (not Pending) - case-insensitive comparison
+            $currentStatus = strtolower($accident->status);
+            if ($currentStatus !== 'pending') {
                 \Log::warning('Accident already acknowledged', ['status' => $accident->status]);
 
                 return back()->withErrors(['message' => 'Report is already acknowledged.']);
@@ -396,28 +422,35 @@ class ReportController extends Controller
         try {
             $accident = Accident::findOrFail($id);
 
-            if ($accident->status === 'Resolved') {
+            // Case-insensitive status comparison
+            $currentStatus = strtolower($accident->status);
+
+            if ($currentStatus === 'resolved') {
                 return back()->with('error', 'Report is already resolved.');
             }
 
-            if ($accident->status !== 'In Progress') {
+            if (! in_array($currentStatus, ['in progress', 'ongoing'])) {
                 return back()->with('error', 'Only ongoing reports can be resolved.');
             }
 
             DB::beginTransaction();
             try {
+                // Update accident status to Resolved
                 $accident->update([
                     'status' => 'Resolved',
                 ]);
 
-                // Find the associated public post
+                // Find the associated public post and update its title
                 $publicPost = PublicPost::where('postable_id', $accident->id)
                     ->where('postable_type', Accident::class)
                     ->first();
 
                 if ($publicPost) {
-                    // Use service to resolve/update the post
-                    $this->publicPostService->resolveAccidentPost($publicPost);
+                    $publicPost->update([
+                        'title' => str_contains($publicPost->title, '[RESOLVED]')
+                            ? $publicPost->title
+                            : '[RESOLVED] '.$publicPost->title,
+                    ]);
                 }
 
                 DB::commit();

@@ -27,7 +27,7 @@ import {
 
 import { toast } from '@/components/use-toast';
 import { getStatusCardColorClass } from '@/lib/badgeStyles';
-import { locations } from '@/lib/packages';
+import { getPackageDropdownOptions } from '@/lib/geojson-packages';
 import { router } from '@inertiajs/react';
 import {
     Activity,
@@ -182,9 +182,9 @@ function CCTVDisplay({
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Packages</SelectItem>
-                                {locations.map((loc) => (
-                                    <SelectItem key={loc.id} value={loc.name}>
-                                        {loc.name}
+                                {getPackageDropdownOptions().map((pkg) => (
+                                    <SelectItem key={pkg.id} value={pkg.name}>
+                                        {pkg.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
