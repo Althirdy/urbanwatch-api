@@ -26,6 +26,8 @@ import {
 } from '@/components/ui/tooltip';
 
 import { toast } from '@/components/use-toast';
+import { getStatusCardColorClass } from '@/lib/badgeStyles';
+import { locations } from '@/lib/packages';
 import { router } from '@inertiajs/react';
 import {
     Activity,
@@ -42,7 +44,6 @@ import {
 import { useMemo, useState } from 'react';
 import {
     cctv_T,
-    location_T,
     paginated_T,
 } from '../../types/cctv-location-types';
 import ArchiveCCTV from './cctv-archive';
@@ -53,7 +54,6 @@ interface CCTVDisplayProps {
     onDelete?: (device: cctv_T) => void;
     onViewStream?: (device: cctv_T) => void;
     devices: paginated_T<cctv_T>;
-    locations: location_T[];
 }
 
 function CCTVDisplay({
@@ -61,20 +61,12 @@ function CCTVDisplay({
     onDelete,
     onViewStream,
     devices,
-    locations = [],
 }: CCTVDisplayProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [locationFilter, setLocationFilter] = useState<string>('all');
-    const [brandFilter, setBrandFilter] = useState<string>('all');
+    const [packageFilter, setPackageFilter] = useState<string>('all');
     const [yoloFilter, setYoloFilter] = useState<string>('all');
     const [togglingYolo, setTogglingYolo] = useState<number | null>(null);
-
-    // Get unique brands from devices
-    const uniqueBrands = useMemo(() => {
-        const brands = new Set(devices?.data.map((d) => d.brand).filter(Boolean));
-        return Array.from(brands);
-    }, [devices?.data]);
 
     // Handle YOLO toggle
     const handleYoloToggle = (device: cctv_T) => {
@@ -84,12 +76,12 @@ function CCTVDisplay({
             {},
             {
                 preserveScroll: true,
-                preserveState: false, // Force refresh of page data
+                preserveState: false,
                 onSuccess: () => {
-                    router.flushAll(); // Clear prefetch cache to prevent stale data
+                    router.flushAll();
                     toast({
                         title: 'Success!',
-                        description: `YOLO detection ${device.yolo_enabled ? 'disabled' : 'enabled'} for ${device.device_name}.`,
+                        description: `YOLO detection ${device.yolo_enabled ? 'disabled' : 'enabled'} for ${device.location_name}.`,
                         variant: 'default',
                     });
                 },
@@ -109,25 +101,17 @@ function CCTVDisplay({
             const searchLower = searchQuery.toLowerCase();
             const matchesSearch =
                 searchQuery === '' ||
-                device.device_name.toLowerCase().includes(searchLower) ||
-                device.brand?.toLowerCase().includes(searchLower) ||
-                device.location?.location_name?.toLowerCase().includes(searchLower) ||
-                device.location?.barangay?.toLowerCase().includes(searchLower);
+                device.location_name?.toLowerCase().includes(searchLower);
 
             // Status filter
             const matchesStatus =
                 statusFilter === 'all' ||
                 device.status.toLowerCase() === statusFilter.toLowerCase();
 
-            // Location filter
-            const matchesLocation =
-                locationFilter === 'all' ||
-                device.location?.id?.toString() === locationFilter;
-
-            // Brand filter
-            const matchesBrand =
-                brandFilter === 'all' ||
-                device.brand === brandFilter;
+            // Package filter
+            const matchesPackage =
+                packageFilter === 'all' ||
+                device.package === packageFilter;
 
             // YOLO filter
             const matchesYolo =
@@ -135,53 +119,24 @@ function CCTVDisplay({
                 (yoloFilter === 'enabled' && device.yolo_enabled) ||
                 (yoloFilter === 'disabled' && !device.yolo_enabled);
 
-            return matchesSearch && matchesStatus && matchesLocation && matchesBrand && matchesYolo;
+            return matchesSearch && matchesStatus && matchesPackage && matchesYolo;
         });
-    }, [devices?.data, searchQuery, statusFilter, locationFilter, brandFilter, yoloFilter]);
+    }, [devices?.data, searchQuery, statusFilter, packageFilter, yoloFilter]);
 
     // Clear all filters
     const clearFilters = () => {
         setSearchQuery('');
         setStatusFilter('all');
-        setLocationFilter('all');
-        setBrandFilter('all');
+        setPackageFilter('all');
         setYoloFilter('all');
     };
 
     const hasActiveFilters =
         searchQuery !== '' ||
         statusFilter !== 'all' ||
-        locationFilter !== 'all' ||
-        brandFilter !== 'all' ||
+        packageFilter !== 'all' ||
         yoloFilter !== 'all';
 
-    // Get status badge styles
-    const getStatusStyles = (status: string) => {
-        switch (status.toUpperCase()) {
-            case 'ACTIVE':
-                return 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-500/30';
-            case 'MAINTENANCE':
-                return 'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-500/30';
-            case 'INACTIVE':
-                return 'bg-zinc-500/15 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 border-zinc-500/30';
-            default:
-                return 'bg-zinc-500/15 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 border-zinc-500/30';
-        }
-    };
-
-    // Get status icon
-    const getStatusIcon = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'active':
-                return <Activity className="h-3 w-3" />;
-            case 'inactive':
-                return <Wifi className="h-3 w-3" />;
-            case 'maintenance':
-                return <SquarePen className="h-3 w-3" />;
-            default:
-                return null;
-        }
-    };
 
     return (
         <div className="space-y-4">
@@ -192,7 +147,7 @@ function CCTVDisplay({
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                            placeholder="Search devices, brands, locations..."
+                            placeholder="Search devices, locations..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-9 h-9"
@@ -219,31 +174,16 @@ function CCTVDisplay({
                             </SelectContent>
                         </Select>
 
-                        {/* Location Filter */}
-                        <Select value={locationFilter} onValueChange={setLocationFilter}>
+                        {/* Package Filter */}
+                        <Select value={packageFilter} onValueChange={setPackageFilter}>
                             <SelectTrigger className="h-8 w-[130px] text-xs">
-                                <SelectValue placeholder="Location" />
+                                <SelectValue placeholder="Package" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All Locations</SelectItem>
+                                <SelectItem value="all">All Packages</SelectItem>
                                 {locations.map((loc) => (
-                                    <SelectItem key={loc.id} value={loc.id.toString()}>
-                                        {loc.location_name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-
-                        {/* Brand Filter */}
-                        <Select value={brandFilter} onValueChange={setBrandFilter}>
-                            <SelectTrigger className="h-8 w-[110px] text-xs">
-                                <SelectValue placeholder="Brand" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Brands</SelectItem>
-                                {uniqueBrands.map((brand) => (
-                                    <SelectItem key={brand} value={brand}>
-                                        {brand}
+                                    <SelectItem key={loc.id} value={loc.name}>
+                                        {loc.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -279,7 +219,8 @@ function CCTVDisplay({
                 {/* Results count */}
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>
-                        Showing {filteredDevices.length} of {devices?.data?.length || 0} devices
+                        Showing {filteredDevices.length} of {devices?.total || 0} devices
+                        {devices?.last_page > 1 && ` (Page ${devices?.current_page} of ${devices?.last_page})`}
                     </span>
                     {hasActiveFilters && (
                         <span className="text-primary">Filters applied</span>
@@ -298,58 +239,37 @@ function CCTVDisplay({
                             {/* Header Row */}
                             <div className="flex items-start justify-between gap-2 mb-3">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
-
                                     <div className="min-w-0 flex flex-col gap-1">
-                                        <h3 className="truncate  font-semibold leading-tight">
-                                            {device.device_name}
+                                        <h3 className="truncate text-sm font-semibold leading-tight">
+                                            {device.location_name}
                                         </h3>
-                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                            <MapPin className="h-auto w-4 shrink-0" />
-                                            <span className="truncate">
-                                                {device.location?.barangay}
-                                            </span>
-                                        </div>
+                                        {device.package && (
+                                            <p className="text-xs text-muted-foreground truncate">
+                                                {device.package}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                                 <Badge
                                     variant="outline"
-                                    className={`shrink-0 gap-1 text-xs font-medium px-1.5 py-0.5 capitalize ${getStatusStyles(device.status)}`}
+                                    className={`shrink-0 gap-1 text-xs font-medium px-1.5 py-0.5 capitalize ${getStatusCardColorClass(device.status?.toLowerCase() === 'active')}`}
                                 >
-                                    {getStatusIcon(device.status)}
                                     {device.status}
                                 </Badge>
                             </div>
 
-                            {/* Specs Grid - Compact */}
-                            <div className="grid grid-cols-3 gap-2 mb-3 text-xs text-left">
-                                <div className=" bg-zinc-50 dark:bg-zinc-800/50 p-1.5">
-                                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Res</p>
-                                    <p className="font-medium truncate">{device.resolution}</p>
-                                </div>
-                                <div className=" bg-zinc-50 dark:bg-zinc-800/50 p-1.5">
-                                    <p className="text-xs text-muted-foreground uppercase tracking-wide">FPS</p>
-                                    <p className="font-medium">{device.fps}</p>
-                                </div>
-                                <div className=" bg-zinc-50 dark:bg-zinc-800/50 p-1.5">
-                                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Brand</p>
-                                    <p className="font-medium truncate">{device.brand}</p>
-                                </div>
-                            </div>
+                            <div className='flex '>
 
-                            {/* Location - Compact */}
-                            <div className="mb-3 text-xs p-1.5">
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Location</p>
-                                <p className="font-medium truncate">{device.location?.location_name}</p>
                             </div>
 
                             {/* YOLO Detection Toggle */}
-                            <div className="flex items-center justify-between mb-3 rounded-md bg-zinc-50 dark:bg-zinc-800/50 p-1.5">
+                            <div className="flex items-center justify-between mb-3  bg-zinc-50 dark:bg-zinc-800/50 p-1.5">
                                 <div className="flex items-center gap-2">
                                     <Eye className={`h-auto w-5 ${device.yolo_enabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
                                     <div>
                                         <p className="text-xs font-medium">YOLO Detection</p>
                                         <p className="text-xs text-muted-foreground">
-                                            {device.yolo_enabled ? 'Running' : 'Disabled'}
+                                            {device.yolo_enabled ? '' : ''}
                                         </p>
                                     </div>
                                 </div>
@@ -369,17 +289,17 @@ function CCTVDisplay({
                                             {device.status.toLowerCase() !== 'active'
                                                 ? 'CCTV must be active to enable YOLO'
                                                 : device.yolo_enabled
-                                                    ? 'Disable YOLO detection'
-                                                    : 'Enable YOLO detection'}
+                                                    ? 'YOLO detection'
+                                                    : 'YOLO detection'}
                                         </p>
                                     </TooltipContent>
                                 </Tooltip>
                             </div>
 
                             {/* Action Buttons - Compact */}
-                            <div className="flex items-center justify-end gap-1.5 pt-2 border-t dark:border-zinc-800">
+                            <div className="flex items-center justify-end gap-1.5 pt-2 dark:border-zinc-800">
                                 <Tooltip>
-                                    <EditCCTVDevice location={locations} cctv={device}>
+                                    <EditCCTVDevice cctv={device}>
                                         <TooltipTrigger asChild>
                                             <Button
                                                 variant="outline"
@@ -449,25 +369,35 @@ function CCTVDisplay({
                                 className="h-8 text-xs"
                             />
                         </PaginationItem>
-                        {devices.links.map((link, index) => {
-                            if (link.url !== null) {
-                                return (
-                                    <PaginationItem key={index}>
-                                        <PaginationLink
-                                            isActive={link.active}
-                                            href={link.url || '#'}
-                                            className="h-8 w-8 text-xs"
-                                        >
-                                            {link.label}
-                                        </PaginationLink>
-                                    </PaginationItem>
-                                );
-                            }
-                            return null;
-                        })}
-                        <PaginationItem>
-                            <PaginationEllipsis className="h-8" />
-                        </PaginationItem>
+                        {devices.links
+                            .filter((link) => {
+                                // Skip Previous and Next labels (handled separately)
+                                return !link.label.includes('Previous') && !link.label.includes('Next');
+                            })
+                            .map((link, index) => {
+                                if (link.url !== null) {
+                                    return (
+                                        <PaginationItem key={index}>
+                                            <PaginationLink
+                                                isActive={link.active}
+                                                href={link.url || '#'}
+                                                className="h-8 w-8 text-xs"
+                                            >
+                                                {link.label}
+                                            </PaginationLink>
+                                        </PaginationItem>
+                                    );
+                                }
+                                // Show ellipsis for null url (...)
+                                if (link.label === '...') {
+                                    return (
+                                        <PaginationItem key={index}>
+                                            <PaginationEllipsis className="h-8" />
+                                        </PaginationItem>
+                                    );
+                                }
+                                return null;
+                            })}
                         <PaginationItem>
                             <PaginationNext
                                 href={devices.next_page_url || '#'}

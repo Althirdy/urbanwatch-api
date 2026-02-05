@@ -15,7 +15,9 @@ RUN apt-get update && apt-get install -y \
     git \
     nodejs \
     npm \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
+    && pecl install redis \
+    && docker-php-ext-enable redis
 
 # 2. Enable Apache Rewrite
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
@@ -39,4 +41,4 @@ RUN npm ci
 RUN npm run build
 
 # 7. Set Permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache      

@@ -26,43 +26,64 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { toast } from '@/components/use-toast';
+import { MapModal } from '@/components/map-modal';
+import { getPackageDropdownOptions, getPackageLocation } from '@/lib/geojson-packages';
 import { router, useForm } from '@inertiajs/react';
 import { Select } from '@radix-ui/react-select';
-import { format } from 'date-fns'; // Add this import
+import { format } from 'date-fns';
 import { Camera, ChevronDownIcon, MoveLeft, Plus } from 'lucide-react';
 import React, { useState } from 'react';
-import { location_T } from '../../types/cctv-location-types';
 
-function AddCCTVDevice({ location }: { location: location_T[] }) {
+function AddCCTVDevice() {
     // Dialog control state
     const [dialogOpen, setDialogOpen] = useState(false);
     const { data, setData, post, processing, errors, reset } = useForm({
-        device_name: '',
+        location_name: '',
+        package: '',
+        latitude: '',
+        longitude: '',
         primary_rtsp_url: '',
         backup_rtsp_url: '',
         rtsp_username: '',
         rtsp_password: '',
-        location_id: '',
         status: '',
-        model: '',
-        brand: '',
-        fps: '',
-        resolution: '',
-        bitrate: '',
         installation_date: '',
     });
 
     const [open, setOpen] = React.useState(false);
     const [date, setDate] = React.useState<Date | undefined>(undefined);
 
+    const packageOptions = getPackageDropdownOptions();
+
+    const handlePackageChange = (packageName: string) => {
+        // Get the GeoJSON centroid for the selected package
+        const packageLocation = getPackageLocation(packageName);
+        if (packageLocation) {
+            // Update all fields at once to avoid state batching issues
+            setData({
+                ...data,
+                package: packageName,
+                latitude: packageLocation.centroid.latitude.toString(),
+                longitude: packageLocation.centroid.longitude.toString(),
+            });
+        } else {
+            setData('package', packageName);
+        }
+    };
+
+    // Called when auto-detected from map click - only updates package, keeps clicked coordinates
+    const handlePackageSelectFromMap = (packageName: string) => {
+        setData('package', packageName);
+    };
+
     const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        console.log('Form data being sent:', data); // Debug log
+        console.log('Form data being sent:', data);
 
         post('/devices/cctv', {
             onSuccess: () => {
-                router.flushAll(); // Clear prefetch cache to prevent stale data
+                router.flushAll();
                 console.log('CCTV device created successfully');
                 toast({
                     title: 'Success!',
@@ -112,17 +133,87 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
                     <div className="flex-1 space-y-6 overflow-y-auto px-6 py-4">
                         <div className="space-y-4">
                             <div className="flex flex-col gap-2">
-                                <Label htmlFor="camera-name">Camera Name</Label>
+                                <Label htmlFor="location-name">Location Name</Label>
                                 <Input
-                                    id="camera-name"
-                                    value={data.device_name}
+                                    id="location-name"
+                                    placeholder=""
+                                    value={data.location_name}
                                     onChange={(e) =>
-                                        setData('device_name', e.target.value)
+                                        setData('location_name', e.target.value)
                                     }
                                 />
-                                {errors.device_name && (
+                                {errors.location_name && (
                                     <p className="mt-1 text-sm text-red-500">
-                                        {errors.device_name}
+                                        {errors.location_name}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <Label htmlFor="package">Package/Area</Label>
+                                <Select
+                                    value={data.package}
+                                    onValueChange={handlePackageChange}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select package/area" />
+                                    </SelectTrigger>
+                                    <SelectContent id="package">
+                                        <SelectGroup>
+                                            {packageOptions.map((pkg) => (
+                                                <SelectItem
+                                                    key={pkg.id}
+                                                    value={pkg.id}
+                                                >
+                                                    {pkg.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                                {errors.package && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {errors.package}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <Label>Location Coordinates (Auto-filled by Package)</Label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label htmlFor="latitude" className="text-xs">Latitude</Label>
+                                        <Input
+                                            id="latitude"
+                                            value={data.latitude}
+                                            readOnly
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="longitude" className="text-xs ">Longitude</Label>
+                                        <Input
+                                            id="longitude"
+                                            value={data.longitude}
+                                            readOnly
+                                        />
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">Select a package to auto-fill coordinates. You can also manually adjust them below.</p>
+                                <MapModal
+                                    coordinates={{
+                                        latitude: data.latitude,
+                                        longitude: data.longitude,
+                                    }}
+                                    selectedPackage={data.package}
+                                    onPackageSelect={handlePackageSelectFromMap}
+                                    onLocationSelect={(location) => {
+                                        setData('latitude', location.lat.toString());
+                                        setData('longitude', location.lng.toString());
+                                    }}
+                                />
+                                {(errors.latitude || errors.longitude) && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {errors.latitude || errors.longitude}
                                     </p>
                                 )}
                             </div>
@@ -169,6 +260,7 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
                                 </Label>
                                 <Input
                                     id="primary-rtsp-url"
+                                    className='placeholder:text-gray-400'
                                     placeholder="192.168.1.100:554/stream1"
                                     value={data.primary_rtsp_url}
                                     onChange={(e) =>
@@ -206,175 +298,37 @@ function AddCCTVDevice({ location }: { location: location_T[] }) {
                                 )}
                             </div>
 
-                            <div className="flex flex-row justify-between gap-2">
-                                <div className="flex w-full flex-col gap-2">
-                                    <Label htmlFor="cctv-location">
-                                        CCTV Location
-                                    </Label>
-                                    <Select
-                                        onValueChange={(value) =>
-                                            setData('location_id', value)
-                                        }
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent id="cctv-location">
-                                            <SelectGroup>
-                                                {location.map((loc) => (
-                                                    <SelectItem
-                                                        key={loc.id}
-                                                        value={loc.id.toString()}
-                                                    >
-                                                        {loc.location_name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.location_id && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            {errors.location_id}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div className="flex w-full flex-col gap-2">
-                                    <Label htmlFor="cctv-status">
-                                        CCTV Status
-                                    </Label>
-                                    <Select
-                                        onValueChange={(value) =>
-                                            setData('status', value)
-                                        }
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent id="cctv-status">
-                                            <SelectGroup>
-                                                <SelectItem value="active">
-                                                    Active
-                                                </SelectItem>
-                                                <SelectItem value="inactive">
-                                                    Inactive
-                                                </SelectItem>
-                                                <SelectItem value="maintenance">
-                                                    Maintenance
-                                                </SelectItem>
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.status && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            {errors.status}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="pt-4">
-                                <h3 className="text-md font-medium">
-                                    CCTV Details
-                                </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Additional settings for the CCTV camera.
-                                </p>
-                            </div>
-
-                            <div className="flex gap-2">
-                                <div className="flex flex-1 flex-col gap-2">
-                                    <Label htmlFor="model">Model</Label>
-                                    <Input
-                                        id="model"
-                                        value={data.model}
-                                        onChange={(e) =>
-                                            setData('model', e.target.value)
-                                        }
-                                    />
-                                    {errors.model && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            {errors.model}
-                                        </p>
-                                    )}
-                                </div>
-                                <div className="flex flex-1 flex-col gap-2">
-                                    <Label htmlFor="brand">Brand</Label>
-                                    <Input
-                                        id="brand"
-                                        value={data.brand}
-                                        onChange={(e) =>
-                                            setData('brand', e.target.value)
-                                        }
-                                    />
-                                    {errors.brand && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            {errors.brand}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="flex gap-2">
-                                <div className="flex flex-1 flex-col gap-2">
-                                    <Label htmlFor="fps">FPS</Label>
-                                    <Select
-                                        onValueChange={(value) =>
-                                            setData('fps', value)
-                                        }
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent id="fps">
-                                            <SelectGroup>
-                                                <SelectItem value="24">
-                                                    24 FPS
-                                                </SelectItem>
-                                                <SelectItem value="30">
-                                                    30 FPS
-                                                </SelectItem>
-                                                <SelectItem value="60">
-                                                    60 FPS
-                                                </SelectItem>
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.fps && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            {errors.fps}
-                                        </p>
-                                    )}
-                                </div>
-                                <div className="flex flex-1 flex-col gap-2">
-                                    <Label htmlFor="cctv-resolution">
-                                        Resolution
-                                    </Label>
-                                    <Select
-                                        onValueChange={(value) =>
-                                            setData('resolution', value)
-                                        }
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent id="cctv-resolution">
-                                            <SelectGroup>
-                                                <SelectItem value="4k">
-                                                    4K
-                                                </SelectItem>
-                                                <SelectItem value="1080p">
-                                                    1080p
-                                                </SelectItem>
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.resolution && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            {errors.resolution}
-                                        </p>
-                                    )}
-                                </div>
+                            <div className="flex flex-col gap-2">
+                                <Label htmlFor="cctv-status">
+                                    CCTV Status
+                                </Label>
+                                <Select
+                                    onValueChange={(value) =>
+                                        setData('status', value)
+                                    }
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent id="cctv-status">
+                                        <SelectGroup>
+                                            <SelectItem value="active">
+                                                Active
+                                            </SelectItem>
+                                            <SelectItem value="inactive">
+                                                Inactive
+                                            </SelectItem>
+                                            <SelectItem value="maintenance">
+                                                Maintenance
+                                            </SelectItem>
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                                {errors.status && (
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {errors.status}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="flex flex-col gap-2">

@@ -9,34 +9,10 @@ import {
 import { Contact } from '@/types/contacts-types';
 import { Archive, ExternalLink, MapPin, Phone, SquarePen, } from 'lucide-react';
 
+import { getResponderTypeCardColorClass, getStatusCardColorClass } from '@/lib/badgeStyles';
 import DeleteContacts from './contacts-delete';
 import EditContacts from './contacts-edit';
 import ViewContacts from './contacts-view';
-
-// Responder type badge styles
-const getResponderTypeStyles = (type: string) => {
-    switch (type.toLowerCase()) {
-        case 'fire':
-            return 'bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-400 border-red-500/30';
-        case 'emergency':
-            return 'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-500/30';
-        case 'crime':
-            return 'bg-zinc-500/15 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-300 border-zinc-500/30';
-        case 'traffic':
-            return 'bg-orange-500/15 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400 border-orange-500/30';
-        case 'barangay':
-            return 'bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/30';
-        default:
-            return 'bg-zinc-500/15 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 border-zinc-500/30';
-    }
-};
-
-// Status badge styles
-const getStatusStyles = (active: boolean) => {
-    return active
-        ? 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-500/30'
-        : 'bg-zinc-500/15 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 border-zinc-500/30';
-};
 
 const ContactCard = ({ contacts }: { contacts: Contact[] }) => {
     return (
@@ -65,22 +41,19 @@ const ContactCard = ({ contacts }: { contacts: Contact[] }) => {
                                     <h3 className="truncate font-semibold leading-tight">
                                         {contact.branch_unit_name}
                                     </h3>
-                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                        <MapPin className="h-4 w-4 shrink-0" />
-                                        <span className="truncate">{contact.location}</span>
-                                    </div>
+
                                 </div>
                             </div>
                             <div className='flex flex-col items-end gap-2'>
                                 <Badge
                                     variant="outline"
-                                    className={`shrink-0 text-xs font-medium px-1.5 py-0.5 ${getStatusStyles(contact.active)}`}
+                                    className={`shrink-0 text-xs font-medium px-1.5 py-0.5 ${getStatusCardColorClass(contact.active)}`}
                                 >
                                     {contact.active ? 'Active' : 'Inactive'}
                                 </Badge>
                                 <Badge
                                     variant="outline"
-                                    className={`text-xs font-medium px-1.5 py-0.5 ${getResponderTypeStyles(contact.responder_type)}`}
+                                    className={`text-xs font-medium px-1.5 py-0.5 ${getResponderTypeCardColorClass(contact.responder_type)}`}
                                 >
                                     {contact.responder_type}
                                 </Badge>

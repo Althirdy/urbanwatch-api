@@ -3,51 +3,29 @@
 use App\Http\Controllers\Operator\CCTVController;
 use App\Http\Controllers\Operator\UWDeviceController;
 use App\Models\cctvDevices;
-use App\Models\Locations;
 use App\Models\UwDevice;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::middleware('auth')->group(function () {
     Route::get('devices', function () {
-        $cacheKey = 'devices_list_latest';
+        $page = request()->get('page', 1);
+        $cacheKey = "devices_list_page_{$page}";
 
-        // Use tagged caching so that when any cctv_devices, uw_devices, or locations are updated,
+        // Use tagged caching so that when any cctv_devices or uw_devices are updated,
         // the observers will invalidate this cache automatically
-        $data = \Illuminate\Support\Facades\Cache::tags(['cctv_devices', 'uw_devices', 'locations'])->remember($cacheKey, now()->addHours(1), function () {
-            $location = Locations::get()->map(function ($loc) {
-                return [
-                    'id' => $loc->id,
-                    'location_name' => $loc->location_name,
-                    'landmark' => $loc->landmark,
-                    'barangay' => $loc->barangay,
-                ];
-            });
+        $data = \Illuminate\Support\Facades\Cache::tags(['cctv_devices', 'uw_devices'])->remember($cacheKey, now()->addHours(1), function () {
+            $cctvDevices = cctvDevices::paginate(10);
 
-            $cctvDevices = cctvDevices::with([
-                'location:id,location_name,landmark,barangay',
-            ])->paginate(10);
-
-            // Get UW Devices with relationships
-            $uwDevices = UwDevice::with([
-                'location:id,location_name,landmark,barangay,latitude,longitude',
-                'location.cctvDevices:id,device_name,location_id',
-            ])->paginate(10);
-
-            $uwDevices->getCollection()->transform(function ($device) {
-                // Add helper properties for frontend
-                $device->cctv_cameras = $device->location ? $device->location->cctvDevices : [];
-
-                return $device;
-            });
+            // Get UW Devices
+            $uwDevices = UwDevice::paginate(10);
 
             // Get all CCTV devices for the dropdown in UW Device form
-            $allCctvDevices = cctvDevices::with('location:id,location_name')->get();
+            $allCctvDevices = cctvDevices::all();
 
             return [
                 'devices' => $cctvDevices,
                 'uwDevices' => $uwDevices,
-                'locations' => $location,
                 'cctvDevices' => $allCctvDevices,
             ];
         });

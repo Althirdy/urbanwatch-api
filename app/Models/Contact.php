@@ -13,18 +13,13 @@ class Contact extends Model
         'branch_unit_name',
         'contact_person',
         'responder_type',
-        'location',
         'primary_mobile',
         'backup_mobile',
-        'latitude',
-        'longitude',
         'active',
     ];
 
     protected $casts = [
         'active' => 'boolean',
-        'latitude' => 'decimal:8',
-        'longitude' => 'decimal:8',
     ];
 
     /**
@@ -51,8 +46,7 @@ class Contact extends Model
         return $query->where(function ($q) use ($term) {
             $q->where('branch_unit_name', 'like', "%{$term}%")
                 ->orWhere('contact_person', 'like', "%{$term}%")
-                ->orWhere('primary_mobile', 'like', "%{$term}%")
-                ->orWhere('location', 'like', "%{$term}%");
+                ->orWhere('primary_mobile', 'like', "%{$term}%");
         });
     }
 }

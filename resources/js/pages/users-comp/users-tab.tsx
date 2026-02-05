@@ -13,30 +13,28 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import { locations } from '@/lib/packages';
 import { cn } from '@/lib/utils';
 import { Check, ChevronsUpDown, Filter, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
-import { location_T } from '@/types/location-types';
 import { roles_T } from '@/types/role-types';
 import { PaginatedUsers, users_T } from '@/types/user-types';
 
 const UserActionTab = ({
     users,
     roles,
-    locations,
     setFilteredUsers,
 }: {
     users: PaginatedUsers;
     roles: roles_T[];
-    locations: location_T[];
     setFilteredUsers: (users: users_T[]) => void;
 }) => {
     const [roleOpen, setRoleOpen] = useState(false);
     const [statusOpen, setStatusOpen] = useState(false);
     const [locationOpen, setLocationOpen] = useState(false);
     const [roleFilter, setRoleFilter] = useState<string | null>(null);
-    const [statusFilter, setStatusFilter] = useState<string | null>(null);
+    const [statusFilter, setStatusFilter] = useState<string | null>('active');
     const [locationFilter, setLocationFilter] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -52,12 +50,12 @@ const UserActionTab = ({
             .sort();
     }, [users.data]);
 
-    // Sort locations alphabetically by location_name
+    // Sort locations alphabetically by name
     const sortedLocations = useMemo(() => {
         return [...locations].sort((a, b) =>
-            a.location_name.localeCompare(b.location_name)
+            a.name.localeCompare(b.name)
         );
-    }, [locations]);
+    }, []);
 
     const statusOptions = [
         { value: 'active', label: 'Active' },
@@ -89,8 +87,8 @@ const UserActionTab = ({
             if (selectedLocation) {
                 filteredResults = filteredResults.filter(
                     (user: users_T) =>
-                        user.citizen_details?.barangay === selectedLocation.barangay ||
-                        user.official_details?.assigned_brgy === selectedLocation.barangay,
+                        user.citizen_details?.barangay === selectedLocation.name ||
+                        user.official_details?.assigned_brgy === selectedLocation.name,
                 );
             }
         }
@@ -146,8 +144,8 @@ const UserActionTab = ({
             if (selectedLocation) {
                 filtered = filtered.filter(
                     (user) =>
-                        user.citizen_details?.barangay === selectedLocation.barangay ||
-                        user.official_details?.assigned_brgy === selectedLocation.barangay,
+                        user.citizen_details?.barangay === selectedLocation.name ||
+                        user.official_details?.assigned_brgy === selectedLocation.name,
                 );
             }
         }
@@ -265,22 +263,6 @@ const UserActionTab = ({
                                 <CommandList>
                                     <CommandEmpty>No status found.</CommandEmpty>
                                     <CommandGroup>
-                                        <CommandItem
-                                            key="all-status"
-                                            value=""
-                                            onSelect={() => {
-                                                setStatusFilter(null);
-                                                setStatusOpen(false);
-                                            }}
-                                        >
-                                            All Status
-                                            <Check
-                                                className={cn(
-                                                    'ml-auto h-4 w-4',
-                                                    statusFilter === null ? 'opacity-100' : 'opacity-0',
-                                                )}
-                                            />
-                                        </CommandItem>
                                         {statusOptions.map((status) => (
                                             <CommandItem
                                                 key={status.value}
@@ -315,7 +297,7 @@ const UserActionTab = ({
                                 className="h-8 w-[150px] justify-between text-xs cursor-pointer"
                             >
                                 {locationFilter
-                                    ? sortedLocations.find((l) => l.id.toString() === locationFilter)?.location_name
+                                    ? sortedLocations.find((l) => l.id.toString() === locationFilter)?.name
                                     : 'Location'}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
@@ -345,7 +327,7 @@ const UserActionTab = ({
                                         {sortedLocations.map((location) => (
                                             <CommandItem
                                                 key={location.id}
-                                                value={location.location_name}
+                                                value={location.name}
                                                 onSelect={() => {
                                                     setLocationFilter(
                                                         location.id.toString() === locationFilter
@@ -355,7 +337,7 @@ const UserActionTab = ({
                                                     setLocationOpen(false);
                                                 }}
                                             >
-                                                {location.location_name}
+                                                {location.name}
                                                 <Check
                                                     className={cn(
                                                         'ml-auto h-4 w-4',
@@ -380,8 +362,8 @@ const UserActionTab = ({
                             onClick={clearFilters}
                             className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
                         >
-                            <X className="h-3 w-3 mr-1" />
-                            Clear
+                            <X className="h-3 w-3 " />
+
                         </Button>
                     )}
                 </div>

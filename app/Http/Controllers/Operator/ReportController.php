@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Operator;
 use App\Http\Controllers\Controller;
 use App\Models\Accident;
 use App\Models\FalseAlarm;
-use App\Models\Locations;
 use App\Models\PublicPost;
 use App\Models\Report;
 use App\Models\User;
@@ -24,7 +23,7 @@ class ReportController extends Controller
         $viewType = $request->input('view', 'incidents'); // 'incidents' or 'false_alarms'
 
         if ($viewType === 'false_alarms') {
-            $query = FalseAlarm::with(['cctvDevice.location']);
+            $query = FalseAlarm::with(['cctvDevice']);
 
             // Search functionality for False Alarms
             if ($request->has('search') && $request->search) {
@@ -40,23 +39,15 @@ class ReportController extends Controller
                 ->withQueryString();
 
             $reports->getCollection()->transform(function ($alarm) {
-                $displayLocation = null;
-                $latitude = null;
-                $longitude = null;
-
-                if ($alarm->cctvDevice && $alarm->cctvDevice->location) {
-                    $displayLocation = $alarm->cctvDevice->location->location_name;
-                    $latitude = $alarm->cctvDevice->location->latitude;
-                    $longitude = $alarm->cctvDevice->location->longitude;
-                }
+                $displayLocation = $alarm->cctvDevice?->location_name;
 
                 return [
                     'id' => $alarm->id,
                     'report_type' => ucfirst($alarm->attempted_accident_type ?? 'Unknown'),
                     'transcript' => 'AI: False Alarm Detected',
                     'description' => $alarm->gemini_reasoning,
-                    'latitude' => $latitude ?? 0,
-                    'longtitude' => $longitude ?? 0,
+                    'latitude' => 0,
+                    'longtitude' => 0,
                     'location_name' => $displayLocation,
                     'is_acknowledge' => true, // False alarms are auto-acknowledged/ignored
                     'status' => 'False Alarm',
@@ -68,8 +59,8 @@ class ReportController extends Controller
                 ];
             });
         } else {
-            // Get accidents with media and cctv device location
-            $query = Accident::with(['media', 'cctvDevice.location']);
+            // Get accidents with media and cctv device
+            $query = Accident::with(['media', 'cctvDevice']);
 
             // Search functionality
             if ($request->has('search') && $request->search) {
@@ -104,38 +95,10 @@ class ReportController extends Controller
                 ->paginate(10)
                 ->withQueryString();
 
-            // Fetch all locations for nearest neighbor search (fallback for accidents without CCTV device)
-            $locations = Locations::all(['location_name', 'latitude', 'longitude']);
-
             // Transform accidents data to match reports structure
-            $accidents->getCollection()->transform(function ($accident) use ($locations) {
-                // First, try to get location from CCTV device (most accurate for YOLO detections)
-                $displayLocation = null;
-
-                if ($accident->cctvDevice && $accident->cctvDevice->location) {
-                    $displayLocation = $accident->cctvDevice->location->location_name;
-                } else {
-                    // Fallback: Find nearest location using Haversine formula
-                    $nearestLocationName = null;
-                    $shortestDistance = PHP_FLOAT_MAX;
-
-                    foreach ($locations as $location) {
-                        $distance = $this->calculateDistance(
-                            $accident->latitude,
-                            $accident->longitude,
-                            $location->latitude,
-                            $location->longitude
-                        );
-
-                        if ($distance < $shortestDistance) {
-                            $shortestDistance = $distance;
-                            $nearestLocationName = $location->location_name;
-                        }
-                    }
-
-                    // Only assign location name if within a reasonable distance (1km)
-                    $displayLocation = ($shortestDistance <= 1000) ? $nearestLocationName : null;
-                }
+            $accidents->getCollection()->transform(function ($accident) {
+                // Get location from CCTV device
+                $displayLocation = $accident->cctvDevice?->location_name;
 
                 return [
                     'id' => $accident->id,
@@ -356,7 +319,20 @@ class ReportController extends Controller
             if ($accident->status !== 'Pending') {
                 \Log::warning('Accident already acknowledged', ['status' => $accident->status]);
 
-                return back()->with('error', 'Report is already acknowledged.');
+                return back()->withErrors(['message' => 'Report is already acknowledged.']);
+            }
+
+            // Check if a public post already exists for this accident
+            $existingPost = PublicPost::where('postable_id', $accident->id)
+                ->where('postable_type', Accident::class)
+                ->first();
+
+            if ($existingPost) {
+                // Public post exists, just update the accident status
+                $accident->update(['status' => 'In Progress']);
+
+                return redirect()->route('reports')
+                    ->with('success', 'Incident acknowledged! (Public post already exists)');
             }
 
             DB::beginTransaction();
@@ -368,66 +344,50 @@ class ReportController extends Controller
 
                 \Log::info('Accident status updated', ['new_status' => $accident->fresh()->status]);
 
-                // Create a PublicPost for this accident using the service
-                $imagePath = null;
+                // Create a PublicPost directly (avoid nested transaction in service)
                 $firstMedia = $accident->media()->first();
-                // We'll pass the image as a file if we had it, but here we just have a path.
-                // Since the Service handles upload, but we already have the media, we might need to adjust
-                // OR we pass the path directly if we modify the Service, BUT better:
-                // We construct the data array and let the service handle the creation logic and triggering notifications.
-                // Note: The service expects an UploadedFile for 'image', but we already have a path.
-                // However, the PublicPost model uses 'image_path'.
-                // The service's createPublicPost takes $data and $image.
-                // We can cheat slightly or update the service. Let's see...
-                // The service does: $publicPost = PublicPost::create([... 'image_path' => $imagePath ...]);
-                // So if we pass null as image, image_path becomes null in the service logic.
-                // We need to bypass the service's image upload if we already have a path.
-                // BUT, createPublicPost doesn't support setting image_path directly from $data unless we modify it.
-                // Wait, the service does: 'image_path' => $imagePath (from upload).
-                // It does NOT merge $data['image_path'].
-                // So we have to pass null as image, and then update it manually or use a specialized method.
-                // BETTER: We use the Service to create the post structure and trigger notifications,
-                // but we might need to handle the image path separately or update the service to accept it.
-                // Let's rely on the fact that we can update the post immediately after creation if needed,
-                // OR simpler: We trust the service to create the post.
-                // If we want the image, we should probably update the PublicPostService to verify if 'image_path' is in $data.
 
-                // For now, let's look at PublicPostService::createPublicPost again.
-                // It takes $data['title'], $data['content'], etc.
-                // It ignores $data['image_path'].
-                // Let's use the service to create, then force update the image path if we have one.
-
-                $postData = [
+                $publicPost = PublicPost::create([
                     'title' => 'PAUNAWA: '.$accident->title,
                     'content' => $accident->description,
+                    'image_path' => $firstMedia?->original_path,
                     'category' => 'emergency',
                     'postable_id' => $accident->id,
                     'postable_type' => Accident::class,
+                    'published_by' => auth()->id(),
+                    'published_at' => now(),
                     'status' => 'published',
-                    // 'published_at' => now(), // Handled by service based on status='published'
-                ];
-
-                $publicPost = $this->publicPostService->createPublicPost($postData, null);
-
-                // If we have an existing image path, update it (since we didn't upload a new file)
-                if ($firstMedia) {
-                    $publicPost->update(['image_path' => $firstMedia->original_path]);
-                }
+                ]);
 
                 DB::commit();
 
+                \Log::info('Acknowledge completed successfully', [
+                    'accident_id' => $id,
+                    'public_post_id' => $publicPost->id,
+                ]);
+
+                // Trigger notifications asynchronously (after commit)
+                $this->publicPostService->triggerNotificationsForPost($publicPost);
+
                 return redirect()->route('reports')
-                    ->with('success', 'Accident report acknowledged successfully.')
-                    ->with('refresh', true);
+                    ->with('success', 'Incident acknowledged! A public post has been created and citizens have been notified.');
             } catch (\Exception $e) {
                 DB::rollBack();
+                \Log::error('Failed to acknowledge accident', [
+                    'id' => $id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
 
-                return back()
-                    ->with('error', 'Failed to acknowledge report. Please try again.');
+                return back()->withErrors(['message' => 'Failed to acknowledge: '.$e->getMessage()]);
             }
         } catch (\Exception $e) {
-            return back()
-                ->with('error', 'Failed to acknowledge report. Please try again.');
+            \Log::error('Acknowledge outer exception', [
+                'id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withErrors(['message' => 'Failed to acknowledge report: '.$e->getMessage()]);
         }
     }
 
@@ -463,7 +423,7 @@ class ReportController extends Controller
                 DB::commit();
 
                 return redirect()->route('reports')
-                    ->with('success', 'Report resolved successfully.');
+                    ->with('success', 'Incident resolved! The public post has been updated with [RESOLVED] status.');
             } catch (\Exception $e) {
                 DB::rollBack();
 

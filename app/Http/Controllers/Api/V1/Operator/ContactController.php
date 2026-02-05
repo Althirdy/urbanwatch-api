@@ -168,26 +168,4 @@ class ContactController extends BaseApiController
             return $this->sendError('An error occurred while deleting the contact: '.$e->getMessage());
         }
     }
-
-    /**
-     * Get all contacts for heatmap display.
-     */
-    public function heatmap()
-    {
-        try {
-            $contacts = Contact::where('active', true)->get();
-
-            return $this->sendResponse([
-                'contacts' => ContactResource::collection($contacts),
-            ], 'Contacts retrieved successfully for heatmap');
-
-        } catch (\Exception $e) {
-            Log::error('Error retrieving heatmap contacts', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return $this->sendError('An error occurred while retrieving contacts: '.$e->getMessage());
-        }
-    }
 }

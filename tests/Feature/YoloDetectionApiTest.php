@@ -5,7 +5,6 @@ use App\Events\AccidentUpdated;
 use App\Models\Accident;
 use App\Models\cctvDevices;
 use App\Models\IncidentMedia;
-use App\Models\Locations;
 use App\Services\FileUploadService;
 use App\Services\GeminiService;
 use Illuminate\Http\UploadedFile;
@@ -22,25 +21,15 @@ beforeEach(function () {
     config(['services.yolo_api_key' => 'test-api-key']);
 
     // Create seed data
-    $this->location = Locations::create([
-        'location_name' => 'Test Junction',
-        'barangay' => 'Test Barangay',
-        'latitude' => 14.5995,
-        'longitude' => 120.9842,
-        'description' => 'Test Description',
-    ]);
-
     $this->device = cctvDevices::create([
-        'location_id' => $this->location->id,
+        'location_name' => 'Test Junction',
         'device_name' => 'CCTV-BH-001',
         'primary_rtsp_url' => 'rtsp://admin:admin123@192.168.1.101:554/stream1',
         'backup_rtsp_url' => 'rtsp://admin:admin123@192.168.1.101:554/stream2',
         'status' => 'Active',
-        'brand' => 'Hikvision',
-        'model' => 'DS-2CD2043G2-I',
-        'resolution' => '1920x1080',
-        'fps' => 30,
         'installation_date' => '2024-01-15',
+        'latitude' => 14.5995,
+        'longitude' => 120.9842,
         'created_at' => now(),
         'updated_at' => now(),
         'yolo_enabled' => true,

@@ -8,6 +8,7 @@ use App\Jobs\SendOtpJob;
 use App\Models\CitizenDetails;
 use App\Models\Otp;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -53,15 +54,27 @@ class PasswordResetController extends Controller
         }
 
         // Find user by phone number in CitizenDetails
-        $citizenDetails = CitizenDetails::where('phone_number', $phone)->first();
+        // Since phone_number is encrypted, we must iterate to find the match
+        $citizenDetails = $this->findCitizenByPhone($phone);
 
         if (! $citizenDetails) {
-            // Don't reveal if phone exists for security
             return response()->json([
-                'success' => true,
-                'message' => 'If a user with this phone number exists, an OTP will be sent.',
-                'data' => ['phone' => $phone, 'expires_in' => 5],
-            ]);
+                'success' => false,
+                'message' => 'Phone number not registered.',
+            ], 404);
+        }
+
+        $user = $citizenDetails->user;
+
+        // Check 30-day cooldown for password reset
+        if ($user->last_sensitive_update_at && Carbon::parse($user->last_sensitive_update_at)->addDays(30)->isFuture()) {
+            $daysLeft = (int) ceil(now()->floatDiffInDays(Carbon::parse($user->last_sensitive_update_at)->addDays(30)));
+
+            return response()->json([
+                'success' => false,
+                'message' => "For security, you can only reset your password once every 30 days. Please try again in $daysLeft days.",
+                'days_remaining' => $daysLeft,
+            ], 403);
         }
 
         // Rate limiting: 60 seconds between requests
@@ -86,7 +99,7 @@ class PasswordResetController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'If a user with this phone number exists, an OTP will be sent.',
+            'message' => 'OTP sent successfully. Please check your phone.',
             'data' => [
                 'phone' => $phone,
                 'expires_in' => 5, // minutes
@@ -226,7 +239,7 @@ class PasswordResetController extends Controller
         }
 
         // Find user by phone number
-        $citizenDetails = CitizenDetails::where('phone_number', $request->phone)->first();
+        $citizenDetails = $this->findCitizenByPhone($request->phone);
 
         if (! $citizenDetails) {
             return response()->json([
@@ -237,9 +250,10 @@ class PasswordResetController extends Controller
 
         $user = $citizenDetails->user;
 
-        // Update password
+        // Update password and set last_sensitive_update_at for 30-day cooldown
         $user->forceFill([
             'password' => Hash::make($request->password),
+            'last_sensitive_update_at' => now(),
         ])->save();
 
         // Revoke all tokens (Security)
@@ -300,5 +314,22 @@ class PasswordResetController extends Controller
             'success' => true,
             'message' => 'Password has been successfully reset.',
         ]);
+    }
+
+    /**
+     * Helper to find citizen by encrypted phone number.
+     * Note: This performs a collection-based search and is O(N).
+     */
+    private function findCitizenByPhone(string $phone): ?CitizenDetails
+    {
+        // Chunking would be better for memory, but for now strict iteration is required
+        // to decrypt and compare the phone number.
+        return CitizenDetails::all()->first(function ($citizen) use ($phone) {
+            try {
+                return $citizen->phone_number === $phone;
+            } catch (\Exception $e) {
+                return false;
+            }
+        });
     }
 }

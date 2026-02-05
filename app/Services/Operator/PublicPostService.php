@@ -180,6 +180,15 @@ class PublicPostService
     }
 
     /**
+     * Public method to trigger notifications for a public post.
+     * Used when creating posts outside of the service (e.g., from acknowledge).
+     */
+    public function triggerNotificationsForPost(PublicPost $post)
+    {
+        $this->triggerPostNotifications($post);
+    }
+
+    /**
      * Get a single public post.
      */
     public function getPublicPost(PublicPost $publicPost)

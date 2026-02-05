@@ -14,6 +14,7 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { baseBadgeClasses, getStatusColorClass } from '@/lib/badgeStyles';
 import { formatRelativeTime } from '@/lib/utils';
 import { router } from '@inertiajs/react';
 import {
@@ -44,17 +45,35 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
             `/report/${id}/acknowledge`,
             {},
             {
-                preserveScroll: true,
-                onSuccess: () => {
-                    console.log('Successfully acknowledged');
+                preserveState: false, // Force reload to show updated status
+                onSuccess: (page) => {
+                    console.log('Acknowledge request completed', page.props);
+                    
+                    // Check for validation errors
+                    const errors = page.props.errors as Record<string, string> | undefined;
+                    if (errors && Object.keys(errors).length > 0) {
+                        const errorMsg = errors.message || Object.values(errors)[0] || 'Unknown error';
+                        console.error('Acknowledge error:', errorMsg);
+                        alert(`❌ ${errorMsg}`);
+                        return;
+                    }
+                    
+                    // Show success message
+                    const flash = page.props.flash as { success?: string } | undefined;
+                    if (flash?.success) {
+                        console.log('Success:', flash.success);
+                        alert(`✅ ${flash.success}\n\n📋 Check the Public Posts section to see the announcement.`);
+                    }
                 },
                 onError: (errors) => {
                     console.error('Failed to acknowledge:', errors);
-                    // You might want to show a toast here
-                    alert('Failed to acknowledge report. Check console for details.');
+                    const errorMsg = typeof errors === 'object' 
+                        ? (errors.message || Object.values(errors)[0] || 'Unknown error')
+                        : 'Request failed';
+                    alert(`❌ ${errorMsg}`);
                 },
                 onFinish: () => {
-                    console.log('Request finished');
+                    console.log('Request finished, page will reload');
                 }
             },
         );
@@ -66,13 +85,17 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
             `/report/${id}/resolve`,
             {},
             {
-                preserveScroll: true,
-                onSuccess: () => {
+                preserveState: false, // Force reload to show updated status
+                onSuccess: (page) => {
                     console.log('Successfully resolved');
+                    // Show success message from backend
+                    if (page.props.flash?.success) {
+                        alert(`✅ ${page.props.flash.success}`);
+                    }
                 },
                 onError: (errors) => {
                     console.error('Failed to resolve:', errors);
-                    alert('Failed to resolve report. Check console for details.');
+                    alert('❌ Failed to resolve report. Please try again.');
                 },
             },
         );
@@ -155,7 +178,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                     </CardTitle>
                                     <div className="flex items-center gap-2">
 
-                                        <Badge variant="outline" className="text-[10px] font-medium px-1.5 py-0.5 text-muted-foreground">
+                                        <Badge variant="outline" className={`${baseBadgeClasses} text-muted-foreground`}>
 
                                             #{report.id}
 
@@ -164,14 +187,14 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                         {report.status === 'False Alarm' ? (
                                             <Badge
                                                 variant="outline"
-                                                className="text-[10px] font-medium px-1.5 py-0.5 capitalize border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400"
+                                                className={`${baseBadgeClasses} capitalize ${getStatusColorClass('pending')}`}
                                             >
                                                 False Alarm
                                             </Badge>
                                         ) : (
                                             <Badge
-                                                variant={report.status === 'Resolved' ? 'default' : 'secondary'}
-                                                className="text-[10px] font-medium px-1.5 py-0.5 capitalize"
+                                                variant="outline"
+                                                className={`${baseBadgeClasses} capitalize ${getStatusColorClass(report.status)}`}
                                             >
                                                 {report.status}
                                             </Badge>

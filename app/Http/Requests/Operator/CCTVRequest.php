@@ -22,17 +22,15 @@ class CCTVRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'device_name' => 'required|string|max:255',
+            'location_name' => 'required|string|max:255',
+            'package' => 'nullable|string|max:255',
+            'latitude' => 'nullable|string|max:50',
+            'longitude' => 'nullable|string|max:50',
             'primary_rtsp_url' => 'required|string|max:500',
             'backup_rtsp_url' => 'nullable|string|max:500',
             'rtsp_username' => 'nullable|string|max:255',
             'rtsp_password' => 'nullable|string|max:255',
-            'location_id' => 'required|exists:locations,id',
             'status' => 'required|in:active,inactive,maintenance',
-            'model' => 'nullable|string|max:100',
-            'brand' => 'nullable|string|max:100',
-            'fps' => 'nullable|integer|min:1|max:120',
-            'resolution' => 'nullable|in:4k,1080p,720p,480p',
             'installation_date' => 'nullable|date',
         ];
     }
@@ -45,18 +43,12 @@ class CCTVRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'device_name.required' => 'Device name is required.',
             'primary_rtsp_url.required' => 'Primary RTSP URL is required.',
             'primary_rtsp_url.url' => 'Primary RTSP URL must be a valid URL.',
             'backup_rtsp_url.url' => 'Backup RTSP URL must be a valid URL.',
-            'location_id.required' => 'Location is required.',
-            'location_id.exists' => 'Selected location does not exist.',
+            'location_name.required' => 'Location is required.',
             'status.required' => 'Status is required.',
             'status.in' => 'Status must be active, inactive, or maintenance.',
-            'fps.integer' => 'FPS must be a number.',
-            'fps.min' => 'FPS must be at least 1.',
-            'fps.max' => 'FPS cannot exceed 120.',
-            'resolution.in' => 'Resolution must be 4k, 1080p, 720p, or 480p.',
             'installation_date.date' => 'Installation date must be a valid date.',
         ];
     }

@@ -5,7 +5,6 @@ import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import {
     cctv_T,
-    location_T,
     paginated_T,
     uwDevice_T,
 } from '../types/cctv-location-types';
@@ -28,14 +27,12 @@ type UWDevice_T = paginated_T<uwDevice_T>;
 interface DevicesPageProps {
     devices: Device_T;
     uwDevices: UWDevice_T;
-    locations: location_T[];
     cctvDevices: cctv_T[];
 }
 
 export default function Devices({
     devices,
     uwDevices,
-    locations,
     cctvDevices,
 }: DevicesPageProps) {
     const [viewMode, setViewMode] = useState<'cctv' | 'uwDevice'>('cctv');
@@ -47,19 +44,14 @@ export default function Devices({
             <div className="space-y-2 p-4">
                 <div className="flex items-center  gap-2">
                     {viewMode === 'cctv' ? (
-                        <AddCCTVDevice location={locations} />
-
+                        <AddCCTVDevice />
                     ) : (
-                        <AddUWDevice
-                            location={locations}
-                            cctvDevices={cctvDevices}
-                        />
-
+                        <AddUWDevice />
                     )}
 
                     {/* View Toggle */}
                     <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'cctv' | 'uwDevice')}>
-                        <TabsList className="h-10 p-1">
+                        <TabsList className="h-9.5 p-1">
                             <TabsTrigger
                                 value="cctv"
                                 className="h-8 px-3 text- data-[state=active]:bg-background"
@@ -76,24 +68,13 @@ export default function Devices({
                     </Tabs>
                 </div>
 
-
-
                 {/* Content */}
                 {viewMode === 'cctv' ? (
-
-                    <CCTVDisplay devices={devices} locations={locations} />
-
+                    <CCTVDisplay devices={devices} />
                 ) : (
-
-                    <UWDeviceDisplay
-                        devices={uwDevices}
-                        locations={locations}
-                        cctvDevices={cctvDevices}
-                    />
+                    <UWDeviceDisplay devices={uwDevices} />
                 )}
             </div>
-
-
         </AppLayout>
     );
 }

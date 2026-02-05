@@ -32,7 +32,6 @@ import {
 
 import { SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
-import { location_T } from '@/types/location-types';
 import { roles_T } from '@/types/role-types';
 import { users_T } from '@/types/user-types';
 import { columns } from './users-table-columns';
@@ -40,13 +39,11 @@ import { columns } from './users-table-columns';
 const UserTable = ({
     users,
     roles,
-    locations,
     puroks = [],
     isLoading = false,
 }: {
     users: users_T[];
     roles: roles_T[];
-    locations: location_T[];
     puroks?: any[];
     isLoading?: boolean;
 }) => {
@@ -65,7 +62,7 @@ const UserTable = ({
 
     const table = useReactTable({
         data: filteredUsers,
-        columns: columns(roles, locations, puroks),
+        columns: columns(roles, puroks),
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
         getCoreRowModel: getCoreRowModel(),
