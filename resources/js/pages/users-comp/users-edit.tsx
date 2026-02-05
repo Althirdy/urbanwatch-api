@@ -2,7 +2,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PurokSelectorMap from '@/components/purok-selector-map';
 import { toast } from '@/components/use-toast';
-import { location_T } from '@/types/location-types';
+import { locations } from '@/lib/packages';
 import { roles_T } from '@/types/role-types';
 import { users_T } from '@/types/user-types';
 import { useForm } from '@inertiajs/react';
@@ -17,7 +17,6 @@ import { FormEvent, useState } from 'react';
 type EditUserProps = {
     user: users_T;
     roles: roles_T[];
-    locations: location_T[];
     puroks?: any[];
     children?: React.ReactNode;
 };
@@ -47,7 +46,7 @@ type EditUserForm = {
     purok_id: string;
 };
 
-function EditUser({ user, roles, locations, puroks = [], children }: EditUserProps) {
+function EditUser({ user, roles, puroks = [], children }: EditUserProps) {
     const [open, setOpen] = useState(false);
 
     const getUserFullName = (user: users_T) => {
@@ -278,7 +277,7 @@ function EditUser({ user, roles, locations, puroks = [], children }: EditUserPro
                                                         <SelectValue placeholder="Select location" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {locations.map((l) => <SelectItem key={l.id} value={l.location_name}>{l.location_name}</SelectItem>)}
+                                                        {locations.map((l) => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
                                             )}

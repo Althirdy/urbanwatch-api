@@ -20,7 +20,7 @@ class FalseAlarmDetected implements ShouldBroadcastNow
      */
     public function __construct(FalseAlarm $falseAlarm)
     {
-        $this->falseAlarm = $falseAlarm->load('cctvDevice.location');
+        $this->falseAlarm = $falseAlarm->load('cctvDevice');
     }
 
     /**
@@ -45,12 +45,11 @@ class FalseAlarmDetected implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         $device = $this->falseAlarm->cctvDevice;
-        $location = $device?->location;
 
         return [
             'id' => $this->falseAlarm->id,
             'device_name' => $device?->device_name ?? 'Unknown Device',
-            'location_name' => $location?->location_name ?? 'Unknown Location',
+            'location_name' => $device?->location_name ?? 'Unknown Location',
             'attempted_accident_type' => $this->falseAlarm->attempted_accident_type,
             'gemini_reasoning' => $this->falseAlarm->gemini_reasoning,
             'confidence_score' => $this->falseAlarm->confidence_score,

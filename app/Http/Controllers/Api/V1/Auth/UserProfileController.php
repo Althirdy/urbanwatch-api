@@ -119,13 +119,13 @@ class UserProfileController extends BaseApiController
             // Delete old photo if exists (handle both path and URL formats)
             if ($user->profile_photo_path) {
                 $oldPath = $user->profile_photo_path;
-                
+
                 // If it's a full URL, extract the path
                 if (filter_var($oldPath, FILTER_VALIDATE_URL)) {
                     $parsedUrl = parse_url($oldPath);
                     $oldPath = ltrim($parsedUrl['path'] ?? '', '/storage/');
                 }
-                
+
                 // Try to delete from public disk
                 if (Storage::disk('public')->exists($oldPath)) {
                     Storage::disk('public')->delete($oldPath);

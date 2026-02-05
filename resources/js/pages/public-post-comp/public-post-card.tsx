@@ -21,22 +21,16 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from '@/components/ui/pagination';
-import { Archive, ExternalLink as Open, SquarePen, CheckCircle2, Calendar } from 'lucide-react';
+import { Archive, ExternalLink as Open, SquarePen, CheckCircle2, Dot } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
+import { baseBadgeClasses, getPublicationStatusColorClass, getStatusColorClass, publicationStatusColors } from '@/lib/badgeStyles';
 import { PublicPost_T } from '@/types/public-post-types';
 import ArchivePublicPost from './public-post-archive';
 import EditPublicPost from './public-post-edit';
 import ViewPublicPostDetails from './public-post-view';
 import ResolvePublicPost from './public-post-resolve';
 import { cn } from '@/lib/utils';
-
-const reportTypeColors: Record<string, string> = {
-    CCTV: 'bg-blue-800',
-    'Citizen Concern': 'bg-purple-800',
-    Emergency: 'bg-red-800',
-    Announcement: 'bg-yellow-800',
-};
 
 // Real-time status badge component for cards
 function StatusBadge({ publishedAt }: { publishedAt: string | null }) {
@@ -67,7 +61,7 @@ function StatusBadge({ publishedAt }: { publishedAt: string | null }) {
         return (
             <Badge
                 variant="outline"
-                className="text-[10px] font-medium px-1.5 py-0.5 bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20"
+                className={`${baseBadgeClasses} ${publicationStatusColors.draft}`}
             >
                 Draft
             </Badge>
@@ -80,7 +74,7 @@ function StatusBadge({ publishedAt }: { publishedAt: string | null }) {
         return (
             <Badge
                 variant="outline"
-                className="text-[10px] font-medium px-1.5 py-0.5 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20"
+                className={`${baseBadgeClasses} ${publicationStatusColors.scheduled}`}
             >
                 Scheduled
             </Badge>
@@ -90,7 +84,7 @@ function StatusBadge({ publishedAt }: { publishedAt: string | null }) {
     return (
         <Badge
             variant="outline"
-            className="text-[10px] font-medium px-1.5 py-0.5 bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20"
+            className={`${baseBadgeClasses} ${publicationStatusColors.published}`}
         >
             Published
         </Badge>
@@ -101,7 +95,7 @@ function getStatusInfo(publishedAt: string | null) {
     if (!publishedAt) {
         return {
             label: 'Draft',
-            className: 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20'
+            className: publicationStatusColors.draft
         };
     }
 
@@ -111,13 +105,13 @@ function getStatusInfo(publishedAt: string | null) {
     if (publishDate > now) {
         return {
             label: 'Scheduled',
-            className: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
+            className: publicationStatusColors.scheduled,
         };
     }
 
     return {
         label: 'Published',
-        className: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
+        className: publicationStatusColors.published
     };
 }
 
@@ -138,7 +132,7 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="grid auto-rows-min gap-4 md:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                 {paginatedPosts.length === 0 && (
                     <Card className="col-span-full rounded-[var(--radius)] border border-sidebar-border/70 dark:border-sidebar-border">
                         <CardContent className="flex items-center justify-center py-12">
@@ -155,7 +149,7 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
                             key={post.id}
                             className="relative flex h-full flex-col overflow-hidden rounded-[var(--radius)] border border-sidebar-border/70 dark:border-sidebar-border"
                         >
-                            <CardHeader className="pb-2 pt-2 px-6">
+                            <CardHeader className=" pt-1 px-6">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         <CardTitle className="line-clamp-1 text-lg font-bold">
@@ -166,7 +160,7 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
                                             {post.category && (
                                                 <Badge
                                                     variant="outline"
-                                                    className="text-[10px] font-medium px-1.5 py-0.5 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 capitalize"
+                                                    className={`${baseBadgeClasses} bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 capitalize`}
                                                 >
                                                     {post.category}
                                                 </Badge>
@@ -175,59 +169,58 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
                                                 <Badge
                                                     variant="outline"
                                                     className={cn(
-                                                        "text-[10px] font-medium px-1.5 py-0.5 capitalize",
-                                                        post.postable.status === 'resolved'
-                                                            ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
-                                                            : post.postable.status === 'ongoing'
-                                                                ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
-                                                                : 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20'
+                                                        baseBadgeClasses,
+                                                        "capitalize",
+                                                        getStatusColorClass(post.postable.status)
                                                     )}
                                                 >
                                                     {post.postable.status}
                                                 </Badge>
                                             )}
+                                            {post.published_at && (
+                                                <div className="flex flex-row gap-1 text-muted-foreground items-center">
+                                                    <Dot className="inline h-4 w-auto" />
+                                                    <span className="text-xs"> {new Date(post.published_at).toLocaleDateString('en-US', {
+                                                        year: 'numeric',
+                                                        month: 'short',
+                                                        day: 'numeric',
+                                                    })}</span>
+
+
+                                                    <span className="text-xs">
+
+                                                        {new Date(post.published_at).toLocaleTimeString('en-US', {
+                                                            hour: '2-digit',
+                                                            minute: '2-digit',
+                                                        })}
+                                                    </span>
+
+                                                </div>
+                                            )}
                                         </CardDescription>
                                     </div>
                                 </div>
                             </CardHeader>
-                            {post.image_path && (
-                                <div className="px-6">
-                                    <img
-                                        src={post.image_path}
-                                        alt={post.title}
-                                        className="h-36 w-full rounded-lg object-cover"
-                                    />
-                                </div>
-                            )}
+
                             <CardContent className="flex-1">
                                 <div className="flex flex-col gap-2">
-                                    <p className="line-clamp-4 text-base text-muted-foreground leading-relaxed">
+                                    <p className="line-clamp-4 text-sm text-muted-foreground leading-relaxed">
                                         {post.content || 'No content available'}
                                     </p>
-                                    {post.published_at && (
-                                        <div className="flex flex-row gap-1 text-muted-foreground items-center">
-                                            <Calendar className="inline mb-0.5 mr-1 h-4 w-auto" />
-                                            <span className="text-xs"> {new Date(post.published_at).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric',
-                                            })}</span>
+                                    {post.image_path && (
 
-
-                                            <span className="text-xs">
-
-                                                {new Date(post.published_at).toLocaleTimeString('en-US', {
-                                                    hour: '2-digit',
-                                                    minute: '2-digit',
-                                                })}
-                                            </span>
-
-                                        </div>
+                                        <img
+                                            src={post.image_path}
+                                            alt={post.title}
+                                            className="h-36 w-full rounded-[var(--radius)] object-cover"
+                                        />
                                     )}
+
+
                                 </div>
                             </CardContent>
                             <CardFooter className="mt-auto">
-                                <div className="flex w-full justify-end gap-1.5 pt-2 border-t dark:border-zinc-800">
+                                <div className="flex w-full justify-end gap-1.5 border-t dark:border-zinc-800">
                                     <Tooltip>
                                         <ViewPublicPostDetails post={post}>
                                             <TooltipTrigger asChild>

@@ -9,20 +9,12 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 
+import { baseBadgeClasses, getResponderTypeColorClass, getStatusColorClass } from '@/lib/badgeStyles';
 import { Contact } from '@/types/contacts-types';
 import DeleteContacts from './contacts-delete';
 import EditContacts from './contacts-edit';
 import ViewContacts from './contacts-view';
 import { cn } from '@/lib/utils';
-
-const responderTypeColors: Record<string, string> = {
-    Fire: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20',
-    Emergency: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
-    Crime: 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20',
-    Traffic: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20',
-    Barangay: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
-    Others: 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20',
-};
 
 export const columns = (): ColumnDef<Contact>[] => [
     {
@@ -75,14 +67,11 @@ export const columns = (): ColumnDef<Contact>[] => [
         },
         cell: ({ row }) => {
             const responderType = row.getValue('responder_type') as string;
-            const colorClass =
-                responderTypeColors[responderType] ||
-                'bg-blue-100 text-blue-800';
 
             return (
                 <Badge
                     variant="outline"
-                    className={`text-[10px] font-medium px-1.5 py-0.5 ${colorClass}`}
+                    className={`${baseBadgeClasses} ${getResponderTypeColorClass(responderType)}`}
                 >
                     {responderType}
                 </Badge>
@@ -101,18 +90,7 @@ export const columns = (): ColumnDef<Contact>[] => [
             );
         },
     },
-    {
-        accessorKey: 'location',
-        header: 'Location',
-        cell: ({ row }) => {
-            const contact = row.original;
-            return (
-                <div>
-                    <div className="font-medium">{contact.location}</div>
-                </div>
-            );
-        },
-    },
+
     {
         accessorKey: 'active',
         header: 'Status',
@@ -122,10 +100,8 @@ export const columns = (): ColumnDef<Contact>[] => [
                 <Badge
                     variant="outline"
                     className={cn(
-                        "text-[10px] font-medium px-1.5 py-0.5",
-                        active
-                            ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20"
-                            : "bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20"
+                        baseBadgeClasses,
+                        getStatusColorClass(active ? 'active' : 'inactive')
                     )}
                 >
                     {active ? 'Active' : 'Inactive'}

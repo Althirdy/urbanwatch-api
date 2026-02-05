@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Operator;
 use App\Http\Controllers\Controller;
 use App\Models\Accident;
 use App\Models\FalseAlarm;
-use App\Models\Locations;
 use App\Models\PublicPost;
 use App\Models\Report;
 use App\Models\User;
@@ -24,7 +23,7 @@ class ReportController extends Controller
         $viewType = $request->input('view', 'incidents'); // 'incidents' or 'false_alarms'
 
         if ($viewType === 'false_alarms') {
-            $query = FalseAlarm::with(['cctvDevice.location']);
+            $query = FalseAlarm::with(['cctvDevice']);
 
             // Search functionality for False Alarms
             if ($request->has('search') && $request->search) {
@@ -40,23 +39,15 @@ class ReportController extends Controller
                 ->withQueryString();
 
             $reports->getCollection()->transform(function ($alarm) {
-                $displayLocation = null;
-                $latitude = null;
-                $longitude = null;
-
-                if ($alarm->cctvDevice && $alarm->cctvDevice->location) {
-                    $displayLocation = $alarm->cctvDevice->location->location_name;
-                    $latitude = $alarm->cctvDevice->location->latitude;
-                    $longitude = $alarm->cctvDevice->location->longitude;
-                }
+                $displayLocation = $alarm->cctvDevice?->location_name;
 
                 return [
                     'id' => $alarm->id,
                     'report_type' => ucfirst($alarm->attempted_accident_type ?? 'Unknown'),
                     'transcript' => 'AI: False Alarm Detected',
                     'description' => $alarm->gemini_reasoning,
-                    'latitude' => $latitude ?? 0,
-                    'longtitude' => $longitude ?? 0,
+                    'latitude' => 0,
+                    'longtitude' => 0,
                     'location_name' => $displayLocation,
                     'is_acknowledge' => true, // False alarms are auto-acknowledged/ignored
                     'status' => 'False Alarm',
@@ -68,8 +59,8 @@ class ReportController extends Controller
                 ];
             });
         } else {
-            // Get accidents with media and cctv device location
-            $query = Accident::with(['media', 'cctvDevice.location']);
+            // Get accidents with media and cctv device
+            $query = Accident::with(['media', 'cctvDevice']);
 
             // Search functionality
             if ($request->has('search') && $request->search) {
@@ -104,38 +95,10 @@ class ReportController extends Controller
                 ->paginate(10)
                 ->withQueryString();
 
-            // Fetch all locations for nearest neighbor search (fallback for accidents without CCTV device)
-            $locations = Locations::all(['location_name', 'latitude', 'longitude']);
-
             // Transform accidents data to match reports structure
-            $accidents->getCollection()->transform(function ($accident) use ($locations) {
-                // First, try to get location from CCTV device (most accurate for YOLO detections)
-                $displayLocation = null;
-
-                if ($accident->cctvDevice && $accident->cctvDevice->location) {
-                    $displayLocation = $accident->cctvDevice->location->location_name;
-                } else {
-                    // Fallback: Find nearest location using Haversine formula
-                    $nearestLocationName = null;
-                    $shortestDistance = PHP_FLOAT_MAX;
-
-                    foreach ($locations as $location) {
-                        $distance = $this->calculateDistance(
-                            $accident->latitude,
-                            $accident->longitude,
-                            $location->latitude,
-                            $location->longitude
-                        );
-
-                        if ($distance < $shortestDistance) {
-                            $shortestDistance = $distance;
-                            $nearestLocationName = $location->location_name;
-                        }
-                    }
-
-                    // Only assign location name if within a reasonable distance (1km)
-                    $displayLocation = ($shortestDistance <= 1000) ? $nearestLocationName : null;
-                }
+            $accidents->getCollection()->transform(function ($accident) {
+                // Get location from CCTV device
+                $displayLocation = $accident->cctvDevice?->location_name;
 
                 return [
                     'id' => $accident->id,

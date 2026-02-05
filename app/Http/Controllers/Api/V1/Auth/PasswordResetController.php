@@ -8,6 +8,7 @@ use App\Jobs\SendOtpJob;
 use App\Models\CitizenDetails;
 use App\Models\Otp;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -16,7 +17,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
-use Carbon\Carbon;
 
 class PasswordResetController extends Controller
 {

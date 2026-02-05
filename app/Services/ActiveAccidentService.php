@@ -48,14 +48,14 @@ class ActiveAccidentService
 
         // Load relationships based on role
         if ($roleId === 2) {
-            // Role 2: Full access - load CCTV device, location, and media
+            // Role 2: Full access - load CCTV device and media
             $query->with([
-                'cctvDevice.location',
+                'cctvDevice',
                 'media',
             ]);
         } elseif ($roleId === 3) {
-            // Role 3: Limited access - only load CCTV device and location for coordinates
-            $query->with(['cctvDevice.location']);
+            // Role 3: Limited access - only load CCTV device for coordinates
+            $query->with(['cctvDevice']);
         }
 
         $accident = $query->first();

@@ -14,6 +14,8 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { getStatusColorClass } from '@/lib/badgeStyles';
+import { locations } from '@/lib/packages';
 import {
     Activity,
     Archive,
@@ -28,8 +30,6 @@ import {
 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import {
-    cctv_T,
-    location_T,
     paginated_T,
     uwDevice_T,
 } from '../../types/cctv-location-types';
@@ -42,8 +42,6 @@ interface UWDeviceDisplayProps {
     onDelete?: (device: uwDevice_T) => void;
     onViewReports?: (device: uwDevice_T) => void;
     devices: paginated_T<uwDevice_T>;
-    locations?: location_T[];
-    cctvDevices?: cctv_T[];
 }
 
 function UWDeviceDisplay({
@@ -51,13 +49,10 @@ function UWDeviceDisplay({
     onDelete,
     onViewReports,
     devices,
-    locations = [],
-    cctvDevices = [],
 }: UWDeviceDisplayProps): React.JSX.Element {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [locationFilter, setLocationFilter] = useState<string>('all');
-    const [locationTypeFilter, setLocationTypeFilter] = useState<string>('all');
 
     // Filter devices based on search and filters
     const filteredDevices = useMemo(() => {
@@ -69,8 +64,6 @@ function UWDeviceDisplay({
             const matchesSearch =
                 searchQuery === '' ||
                 device.device_name.toLowerCase().includes(searchLower) ||
-                device.location?.location_name?.toLowerCase().includes(searchLower) ||
-                device.location?.barangay?.toLowerCase().includes(searchLower) ||
                 device.custom_address?.toLowerCase().includes(searchLower);
 
             // Status filter
@@ -78,35 +71,27 @@ function UWDeviceDisplay({
                 statusFilter === 'all' ||
                 device.status.toLowerCase() === statusFilter.toLowerCase();
 
-            // Location filter
+            // Location filter - match against custom_address or find location name
+            const deviceLocationName = device.custom_address || '';
             const matchesLocation =
                 locationFilter === 'all' ||
-                device.location?.id?.toString() === locationFilter;
+                deviceLocationName.toLowerCase().includes(locationFilter.toLowerCase());
 
-            // Location type filter (registered vs custom)
-            const isCustomLocation = !device.location && device.custom_address;
-            const matchesLocationType =
-                locationTypeFilter === 'all' ||
-                (locationTypeFilter === 'registered' && device.location) ||
-                (locationTypeFilter === 'custom' && isCustomLocation);
-
-            return matchesSearch && matchesStatus && matchesLocation && matchesLocationType;
+            return matchesSearch && matchesStatus && matchesLocation;
         });
-    }, [devices?.data, searchQuery, statusFilter, locationFilter, locationTypeFilter]);
+    }, [devices?.data, searchQuery, statusFilter, locationFilter]);
 
     // Clear all filters
     const clearFilters = () => {
         setSearchQuery('');
         setStatusFilter('all');
         setLocationFilter('all');
-        setLocationTypeFilter('all');
     };
 
     const hasActiveFilters =
         searchQuery !== '' ||
         statusFilter !== 'all' ||
-        locationFilter !== 'all' ||
-        locationTypeFilter !== 'all';
+        locationFilter !== 'all';
 
     if (!devices || !devices.data) {
         return (
@@ -119,22 +104,6 @@ function UWDeviceDisplay({
             </div>
         );
     }
-
-    // Get status badge styles
-    const getStatusStyles = (status: string) => {
-        if (!status) return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
-
-        switch (status.toUpperCase()) {
-            case 'ACTIVE':
-                return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20';
-            case 'MAINTENANCE':
-                return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
-            case 'INACTIVE':
-                return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
-            default:
-                return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
-        }
-    };
 
     // Get status icon
     const getStatusIcon = (status: string) => {
@@ -196,22 +165,10 @@ function UWDeviceDisplay({
                             <SelectContent>
                                 <SelectItem value="all">All Locations</SelectItem>
                                 {locations.map((loc) => (
-                                    <SelectItem key={loc.id} value={loc.id.toString()}>
-                                        {loc.location_name}
+                                    <SelectItem key={loc.id} value={loc.name}>
+                                        {loc.name}
                                     </SelectItem>
                                 ))}
-                            </SelectContent>
-                        </Select>
-
-                        {/* Location Type Filter */}
-                        <Select value={locationTypeFilter} onValueChange={setLocationTypeFilter}>
-                            <SelectTrigger className="h-8 w-[120px] text-xs">
-                                <SelectValue placeholder="Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Types</SelectItem>
-                                <SelectItem value="registered">Registered</SelectItem>
-                                <SelectItem value="custom">Custom</SelectItem>
                             </SelectContent>
                         </Select>
 
@@ -253,7 +210,6 @@ function UWDeviceDisplay({
                                 {/* Header Row */}
                                 <div className="flex items-start justify-between gap-2 mb-3">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
-
                                         <div className="min-w-0 flex flex-col gap-1">
                                             <div className="flex items-center gap-2">
                                                 <h3 className="truncate font-semibold leading-tight">
@@ -271,17 +227,14 @@ function UWDeviceDisplay({
                                             <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                                                 <MapPin className="h-4 w-4 shrink-0" />
                                                 <span className="truncate">
-                                                    {device.location?.barangay ||
-                                                        (device.custom_address
-                                                            ? 'Custom Location'
-                                                            : 'No location')}
+                                                    {device.custom_address || 'No location'}
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
                                     <Badge
                                         variant="outline"
-                                        className={`shrink-0 gap-1 text-xs font-medium px-1.5 py-0.5 capitalize ${getStatusStyles(device.status)}`}
+                                        className={`shrink-0 gap-1 text-xs font-medium px-1.5 py-0.5 capitalize ${getStatusColorClass(device.status)}`}
                                     >
                                         {getStatusIcon(device.status)}
                                         {device.status}
@@ -289,32 +242,19 @@ function UWDeviceDisplay({
                                 </div>
 
                                 {/* Location Details - Compact */}
-                                <div className="mb-3 text-xs p-1.5  ">
+                                <div className="mb-3 text-xs p-1.5">
                                     <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Location</p>
-                                    {device.location ? (
-                                        <p className="font-medium truncate">
-                                            {device.location.location_name}
-                                        </p>
-                                    ) : device.custom_address ? (
+                                    {device.custom_address ? (
                                         <div className="space-y-0.5">
-                                            <div className="flex items-center gap-1.5">
-                                                <p className="font-medium truncate flex-1">
-                                                    {device.custom_address}
+                                            <p className="font-medium truncate">
+                                                {device.custom_address}
+                                            </p>
+                                            {device.custom_latitude && device.custom_longitude && (
+                                                <p className="text-muted-foreground text-xs">
+                                                    {Number(device.custom_latitude).toFixed(4)},{' '}
+                                                    {Number(device.custom_longitude).toFixed(4)}
                                                 </p>
-                                                <Badge
-                                                    variant="outline"
-                                                    className="shrink-0 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 text-[10px] font-medium"
-                                                >
-                                                    Custom
-                                                </Badge>
-                                            </div>
-                                            {device.custom_latitude &&
-                                                device.custom_longitude && (
-                                                    <p className="text-muted-foreground text-xs">
-                                                        {Number(device.custom_latitude).toFixed(4)},{' '}
-                                                        {Number(device.custom_longitude).toFixed(4)}
-                                                    </p>
-                                                )}
+                                            )}
                                         </div>
                                     ) : (
                                         <p className="text-muted-foreground italic">
@@ -338,7 +278,7 @@ function UWDeviceDisplay({
                                     </div>
                                 </div>
                             </CardContent>
-                            <CardFooter className="px-6 pb-6 pt-0 " >
+                            <CardFooter className="px-6 pb-6 pt-0">
                                 {/* Action Buttons - Premium Footer */}
                                 <div className="flex items-center justify-end gap-1.5 pt-2 w-full mt-auto border-t dark:border-zinc-800">
                                     <Tooltip>
@@ -358,11 +298,7 @@ function UWDeviceDisplay({
                                         </TooltipContent>
                                     </Tooltip>
                                     <Tooltip>
-                                        <EditUWDevice
-                                            location={locations}
-                                            device={device}
-                                            cctvDevices={cctvDevices}
-                                        >
+                                        <EditUWDevice device={device}>
                                             <TooltipTrigger asChild>
                                                 <Button
                                                     variant="outline"
@@ -389,7 +325,7 @@ function UWDeviceDisplay({
                                                 </Button>
                                             </TooltipTrigger>
                                         </ArchiveUWDevice>
-                                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2 ">
+                                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                                             <p>Archive Device</p>
                                         </TooltipContent>
                                     </Tooltip>

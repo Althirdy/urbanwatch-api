@@ -29,7 +29,7 @@ class CCTVController extends BaseApiController
             Log::info('CCTV Device created successfully:', [
                 'id' => $cctvDevice->id,
                 'device_name' => $cctvDevice->device_name,
-                'location_id' => $cctvDevice->location_id,
+                'location_name' => $cctvDevice->location_name,
             ]);
 
             // Commit the transaction
@@ -75,7 +75,6 @@ class CCTVController extends BaseApiController
         $cctvDevices = \Illuminate\Support\Facades\Cache::tags(['cctv_devices'])->remember($cacheKey, now()->addHours(1), function () {
             return cctvDevices::where('yolo_enabled', true)
                 ->where('status', 'active')
-                ->with('location:id,location_name,landmark,barangay')
                 ->get();
         });
 
@@ -140,7 +139,7 @@ class CCTVController extends BaseApiController
             Log::info('CCTV Device updated successfully:', [
                 'id' => $cctv->id,
                 'device_name' => $cctv->device_name,
-                'location_id' => $cctv->location_id,
+                'location_name' => $cctv->location_name,
             ]);
 
             // Commit the transaction
@@ -176,7 +175,7 @@ class CCTVController extends BaseApiController
             Log::info('CCTV Device deleted successfully:', [
                 'id' => $cctv->id,
                 'device_name' => $cctv->device_name,
-                'location_id' => $cctv->location_id,
+                'location_name' => $cctv->location_name,
             ]);
 
             return redirect()->back()->with('success', 'CCTV device deleted successfully!');

@@ -146,7 +146,7 @@ class IoTBoxController extends BaseApiController
     {
         try {
             $user = auth()->user();
-            $query = AnomalyLog::with('iotBox.location')
+            $query = AnomalyLog::with('iotBox')
                 ->orderBy('created_at', 'desc');
 
             // If user is a purok leader (role_id = 2), filter by their territory
@@ -161,25 +161,13 @@ class IoTBoxController extends BaseApiController
                     if ($purok) {
                         // Filter anomaly logs where IoT box is within the purok boundary
                         $query->whereHas('iotBox', function ($q) use ($purok) {
-                            // Check if device has a location relation with coordinates
-                            $q->where(function ($subQ) use ($purok) {
-                                // Check devices with location_id (use location's coordinates)
-                                $subQ->whereHas('location', function ($locQ) use ($purok) {
-                                    $locQ->whereRaw(
-                                        'ST_Contains((SELECT boundary FROM puroks WHERE id = ?), POINT(longitude, latitude))',
-                                        [$purok->id]
-                                    );
-                                });
-                            })->orWhere(function ($subQ) use ($purok) {
-                                // Check devices with custom coordinates (no location_id)
-                                $subQ->whereNull('location_id')
-                                    ->whereNotNull('custom_latitude')
-                                    ->whereNotNull('custom_longitude')
-                                    ->whereRaw(
-                                        'ST_Contains((SELECT boundary FROM puroks WHERE id = ?), POINT(custom_longitude, custom_latitude))',
-                                        [$purok->id]
-                                    );
-                            });
+                            // Check devices with custom coordinates
+                            $q->whereNotNull('custom_latitude')
+                                ->whereNotNull('custom_longitude')
+                                ->whereRaw(
+                                    'ST_Contains((SELECT boundary FROM puroks WHERE id = ?), POINT(custom_longitude, custom_latitude))',
+                                    [$purok->id]
+                                );
                         });
                     }
                 }
@@ -344,22 +332,12 @@ class IoTBoxController extends BaseApiController
                         $purok = Purok::find($purokId);
                         if ($purok) {
                             $query->whereHas('iotBox', function ($q) use ($purok) {
-                                $q->where(function ($subQ) use ($purok) {
-                                    $subQ->whereHas('location', function ($locQ) use ($purok) {
-                                        $locQ->whereRaw(
-                                            'ST_Contains((SELECT boundary FROM puroks WHERE id = ?), POINT(longitude, latitude))',
-                                            [$purok->id]
-                                        );
-                                    });
-                                })->orWhere(function ($subQ) use ($purok) {
-                                    $subQ->whereNull('location_id')
-                                        ->whereNotNull('custom_latitude')
-                                        ->whereNotNull('custom_longitude')
-                                        ->whereRaw(
-                                            'ST_Contains((SELECT boundary FROM puroks WHERE id = ?), POINT(custom_longitude, custom_latitude))',
-                                            [$purok->id]
-                                        );
-                                });
+                                $q->whereNotNull('custom_latitude')
+                                    ->whereNotNull('custom_longitude')
+                                    ->whereRaw(
+                                        'ST_Contains((SELECT boundary FROM puroks WHERE id = ?), POINT(custom_longitude, custom_latitude))',
+                                        [$purok->id]
+                                    );
                             });
                         }
                     }
@@ -375,22 +353,12 @@ class IoTBoxController extends BaseApiController
                     if ($purokId) {
                         $purok = Purok::find($purokId);
                         if ($purok) {
-                            $query->where(function ($q) use ($purok) {
-                                $q->whereHas('location', function ($locQ) use ($purok) {
-                                    $locQ->whereRaw(
-                                        'ST_Contains((SELECT boundary FROM puroks WHERE id = ?), POINT(longitude, latitude))',
-                                        [$purok->id]
-                                    );
-                                });
-                            })->orWhere(function ($q) use ($purok) {
-                                $q->whereNull('location_id')
-                                    ->whereNotNull('custom_latitude')
-                                    ->whereNotNull('custom_longitude')
-                                    ->whereRaw(
-                                        'ST_Contains((SELECT boundary FROM puroks WHERE id = ?), POINT(custom_longitude, custom_latitude))',
-                                        [$purok->id]
-                                    );
-                            });
+                            $query->whereNotNull('custom_latitude')
+                                ->whereNotNull('custom_longitude')
+                                ->whereRaw(
+                                    'ST_Contains((SELECT boundary FROM puroks WHERE id = ?), POINT(custom_longitude, custom_latitude))',
+                                    [$purok->id]
+                                );
                         }
                     }
                 }

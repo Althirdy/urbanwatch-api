@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Events\ConcernAssigned;
 use App\Events\ConcernValidationFailed;
 use App\Events\ConcernValidationSuccess;
 use App\Jobs\ProcessManualConcernJob;
@@ -59,6 +60,7 @@ class ConcernValidationTest extends TestCase
 
         // Fake Events
         Event::fake([
+            ConcernAssigned::class,
             ConcernValidationSuccess::class,
             ConcernValidationFailed::class,
         ]);

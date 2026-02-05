@@ -14,18 +14,12 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 
+import { publicationStatusColors } from '@/lib/badgeStyles';
 import { formatDateTime } from '@/lib/utils';
 import { PublicPost_T } from '@/types/public-post-types';
 import ArchivePublicPost from './public-post-archive';
 import EditPublicPost from './public-post-edit';
 import ViewPublicPostDetails from './public-post-view';
-
-const reportTypeColors: Record<string, string> = {
-    CCTV: 'bg-blue-800 ',
-    'Citizen Concern': 'bg-purple-800 ',
-    Emergency: 'bg-red-800 ',
-    Announcement: 'bg-yellow-800',
-};
 
 // Real-time status badge component that updates automatically
 function StatusBadge({ publishedAt }: { publishedAt: string | null }) {
@@ -54,7 +48,7 @@ function StatusBadge({ publishedAt }: { publishedAt: string | null }) {
 
     if (!publishedAt) {
         return (
-            <span className="inline-flex items-center rounded-md border bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400">
+            <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${publicationStatusColors.draft}`}>
                 Draft
             </span>
         );
@@ -64,14 +58,14 @@ function StatusBadge({ publishedAt }: { publishedAt: string | null }) {
 
     if (publishDate > now) {
         return (
-            <span className="inline-flex items-center rounded-md border bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400">
+            <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${publicationStatusColors.scheduled}`}>
                 Scheduled
             </span>
         );
     }
 
     return (
-        <span className="inline-flex items-center rounded-md border bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400">
+        <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${publicationStatusColors.published}`}>
             Published
         </span>
     );
@@ -80,7 +74,7 @@ function StatusBadge({ publishedAt }: { publishedAt: string | null }) {
 function getStatusBadge(publishedAt: string | null) {
     if (!publishedAt) {
         return (
-            <span className="inline-flex items-center rounded-md border bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400">
+            <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${publicationStatusColors.draft}`}>
                 Draft
             </span>
         );
@@ -91,14 +85,14 @@ function getStatusBadge(publishedAt: string | null) {
 
     if (publishDate > now) {
         return (
-            <span className="inline-flex items-center rounded-md border bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400">
+            <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${publicationStatusColors.scheduled}`}>
                 Scheduled
             </span>
         );
     }
 
     return (
-        <span className="inline-flex items-center  rounded-md border bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400">
+        <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${publicationStatusColors.published}`}>
             Published
         </span>
     );

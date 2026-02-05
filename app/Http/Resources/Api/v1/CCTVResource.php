@@ -16,6 +16,9 @@ class CCTVResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'location_name' => $this->location_name,
+            'latitude' => $this->latitude,
+            'longitude' => $this->longitude,
             'primaryRtspUrl' => $this->full_rtsp_url,
             'backupRtspUrl' => $this->full_backup_rtsp_url,
         ];

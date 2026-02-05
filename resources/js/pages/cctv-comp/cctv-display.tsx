@@ -15,6 +15,7 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { getStatusColorClass } from '@/lib/badgeStyles';
 import {
     Activity,
     Archive,
@@ -27,10 +28,8 @@ import {
 import { useState } from 'react';
 import {
     cctv_T,
-    location_T,
     paginated_T,
 } from '../../types/cctv-location-types';
-import { cn } from '@/lib/utils';
 import ArchiveCCTV from './cctv-archive';
 import EditCCTVDevice from './cctv-edit';
 
@@ -40,7 +39,6 @@ interface CCTVDisplayProps {
     onViewReports?: (device: any) => void;
     onViewStream?: (device: any) => void;
     devices: paginated_T<cctv_T>;
-    locations: location_T[];
 }
 
 function CCTVDisplay({
@@ -49,7 +47,6 @@ function CCTVDisplay({
     onViewReports,
     onViewStream,
     devices,
-    locations = [],
 }: CCTVDisplayProps) {
     const [selectedDevices, setSelectedDevices] = useState<number[]>([]);
 
@@ -76,35 +73,7 @@ function CCTVDisplay({
         }
     };
 
-    // Get status badge styles
-    const getStatusStyles = (status: string) => {
-        if (!status) return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
 
-        switch (status.toLowerCase()) {
-            case 'active':
-                return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20';
-            case 'maintenance':
-                return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
-            case 'inactive':
-                return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
-            default:
-                return 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20';
-        }
-    };
-
-    // Get status icon
-    const getStatusIcon = (status: string) => {
-        switch (status) {
-            case 'active':
-                return <Activity className="h-3 w-3" />;
-            case 'inactive':
-                return <Wifi className="h-3 w-3" />;
-            case 'maintenance':
-                return <SquarePen className="h-3 w-3" />;
-            default:
-                return null;
-        }
-    };
 
     return (
         <div className="space-y-6">
@@ -122,21 +91,19 @@ function CCTVDisplay({
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <h3 className="truncate text-base font-semibold">
-                                        {device.device_name}
+                                        {device.location_name}
                                     </h3>
-                                    <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                                        <MapPin className="h-3 w-3" />
-                                        <span className="truncate">
-                                            {device.location.barangay}
-                                        </span>
-                                    </div>
+                                    {device.package && (
+                                        <p className="text-xs text-muted-foreground truncate">
+                                            {device.package}
+                                        </p>
+                                    )}
                                     {/* Status Badge */}
                                     <div className="absolute top-4 right-4 z-10">
                                         <Badge
                                             variant="outline"
-                                            className={`gap-1 capitalize font-medium ${getStatusStyles(device.status)}`}
+                                            className={`gap-1 capitalize font-medium ${getStatusColorClass(device.status)}`}
                                         >
-                                            {getStatusIcon(device.status)}
                                             {device.status}
                                         </Badge>
                                     </div>
@@ -145,43 +112,6 @@ function CCTVDisplay({
                         </CardHeader>
 
                         <CardContent className="space-y-4">
-                            {/* Technical Details */}
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <p className="text-muted-foreground">
-                                        Resolution
-                                    </p>
-                                    <p className="font-medium">
-                                        {device.resolution}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground">FPS</p>
-                                    <p className="font-medium">{device.fps}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground">
-                                        Brand
-                                    </p>
-                                    <p className="font-medium">
-                                        {device.brand}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Location Details */}
-                            <div className="border-t pt-2">
-                                <p className="mb-1 text-xs text-muted-foreground">
-                                    Location
-                                </p>
-                                <p className="text-sm font-medium">
-                                    {device.location.location_name}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    {device.location.landmark}
-                                </p>
-                            </div>
-
                             {/* Action Buttons - Premium Footer */}
                             <div className="flex items-center justify-end gap-1.5 p-3 mt-auto border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/20">
                                 <Tooltip>
@@ -200,7 +130,7 @@ function CCTVDisplay({
                                     </TooltipContent>
                                 </Tooltip>
                                 <Tooltip>
-                                    <EditCCTVDevice location={locations} cctv={device}>
+                                    <EditCCTVDevice cctv={device}>
                                         <TooltipTrigger asChild>
                                             <Button
                                                 variant="outline"

@@ -9,12 +9,14 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { users_T } from '@/types/user-types';
 import { useForm } from '@inertiajs/react';
-import { Archive } from 'lucide-react';
+import { Archive, User } from 'lucide-react';
 import { useState } from 'react';
+import { getRoleColorClass, getStatusColorClass } from '@/lib/badgeStyles';
 
 type ArchiveUserProps = {
     user: users_T;
@@ -50,52 +52,93 @@ function ArchiveUser({ user, children }: ArchiveUserProps) {
     return (
         <AlertDialog>
             <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent className="sm:max-w-md">
                 <AlertDialogHeader>
-                    <AlertDialogTitle className="flex flex-row items-center gap-2 text-muted-foreground">
-                        <Archive className="h-6 w-6" /> Archive User
+                    <AlertDialogTitle className="flex items-center gap-2 text-muted-foreground">
+                        <Archive className="h-6 w-6" />
+                        Archive User
                     </AlertDialogTitle>
-                    <AlertDialogDescription className="text-whi mt-2">
-                        Are you sure you want to archive{' '}
-                        <span className="font-bold text-destructive">
-                            {getUserFullName(user)}?
-                        </span>{' '}
-                        This action cannot be undone.
+                    <AlertDialogDescription className="mt-2 text-foreground/90">
+                        Are you sure you want to archive this user? This
+                        action cannot be undone.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <div className="flex flex-col gap-2">
-                    <Label
-                        htmlFor="archive-user "
-                        className="text-sm text-muted-foreground"
-                    >
-                        To confirm archiving, type{' '}
-                        <span className="font-semibold">
-                            "{getUserFullName(user)}"
-                        </span>{' '}
-                        below:
-                    </Label>
-                    <div className="relative">
-                        <Input
-                            id="archive-user"
-                            value={confirmText}
-                            onChange={(e) => setConfirmText(e.target.value)}
-                            placeholder="Enter full name to confirm"
-                            className={
-                                confirmText &&
-                                confirmText !== getUserFullName(user)
-                                    ? 'border-red-500'
-                                    : ''
-                            }
-                        />
-                        {confirmText &&
-                            confirmText !== getUserFullName(user) && (
-                                <span className="absolute -bottom-5 left-0 text-xs text-red-500">
-                                    Please type the exact full name to confirm
+
+                <div className="space-y-4">
+                    {/* User info card */}
+                    <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-fit w-fit rounded-md bg-muted p-2 text-muted-foreground">
+                                <User className="h-6 w-6" />
+                            </div>
+                            <div className="flex flex-1 flex-col min-w-0">
+                                <h3 className="text-lg font-bold truncate text-foreground">
+                                    {getUserFullName(user)}
+                                </h3>
+                                <div className="flex items-center gap-2">
+                                    <Badge
+                                        className={`capitalize ${getRoleColorClass(user.role?.name || 'citizen')}`}
+                                    >
+                                        {user.role?.name || 'Citizen'}
+                                    </Badge>
+                                    <Badge
+                                        className={getStatusColorClass(user.status || 'inactive')}
+                                    >
+                                        {user.status || 'Inactive'}
+                                    </Badge>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1 border-t border-border pt-2 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Username:</span>
+                                <span className="font-medium text-foreground">{user.name}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Mobile:</span>
+                                <span className="font-medium text-foreground">
+                                    {user.official_details?.contact_number || user.citizen_details?.phone_number || 'N/A'}
                                 </span>
-                            )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3 py-2">
+                        <Label
+                            htmlFor="archive-user"
+                            className="text-sm text-muted-foreground"
+                        >
+                            To confirm archiving, type{' '}
+                            <span className="font-bold text-destructive">
+                                "{getUserFullName(user)}"
+                            </span>{' '}
+                            below:
+                        </Label>
+                        <div className="relative">
+                            <Input
+                                id="archive-user"
+                                value={confirmText}
+                                onChange={(e) => setConfirmText(e.target.value)}
+                                placeholder="Enter full name to confirm"
+                                className={
+                                    confirmText &&
+                                        confirmText !== getUserFullName(user)
+                                        ? 'border-destructive'
+                                        : ''
+                                }
+                            />
+                            {confirmText &&
+                                confirmText !== getUserFullName(user) && (
+                                    <span className="absolute -bottom-5 left-0 text-[10px] text-destructive">
+                                        Name must match exactly
+                                    </span>
+                                )}
+                        </div>
                     </div>
                 </div>
-                <AlertDialogFooter>
+
+                <AlertDialogFooter className="gap-2 pt-2">
                     <AlertDialogCancel
                         className="cursor-pointer"
                         onClick={() => setConfirmText('')}

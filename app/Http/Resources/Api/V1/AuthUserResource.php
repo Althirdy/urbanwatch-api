@@ -26,9 +26,9 @@ class AuthUserResource extends JsonResource
             return [
                 'id' => $this->id,
                 'profilePhotoPath' => $this->profile_photo_path,
-                'profilePhotoUrl' => $this->profile_photo_path 
-                    ? (filter_var($this->profile_photo_path, FILTER_VALIDATE_URL) 
-                        ? $this->profile_photo_path 
+                'profilePhotoUrl' => $this->profile_photo_path
+                    ? (filter_var($this->profile_photo_path, FILTER_VALIDATE_URL)
+                        ? $this->profile_photo_path
                         : \Illuminate\Support\Facades\Storage::disk('public')->url($this->profile_photo_path))
                     : null,
                 'firstName' => $officialDetails->first_name,
@@ -50,9 +50,9 @@ class AuthUserResource extends JsonResource
             return [
                 'id' => $this->id,
                 'profilePhotoPath' => $this->profile_photo_path,
-                'profilePhotoUrl' => $this->profile_photo_path 
-                    ? (filter_var($this->profile_photo_path, FILTER_VALIDATE_URL) 
-                        ? $this->profile_photo_path 
+                'profilePhotoUrl' => $this->profile_photo_path
+                    ? (filter_var($this->profile_photo_path, FILTER_VALIDATE_URL)
+                        ? $this->profile_photo_path
                         : \Illuminate\Support\Facades\Storage::disk('public')->url($this->profile_photo_path))
                     : null,
                 'firstName' => $citizenDetails->first_name,

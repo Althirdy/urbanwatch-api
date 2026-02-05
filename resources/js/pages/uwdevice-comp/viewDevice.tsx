@@ -11,6 +11,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { getDeviceStatusColorClass } from '@/lib/badgeStyles';
 import { cctv_T, uwDevice_T } from '@/types/cctv-location-types';
 import { Camera, Cpu, ExternalLink, MapPin, MoveLeft, Zap } from 'lucide-react';
 import React, { useState } from 'react';
@@ -25,22 +26,6 @@ function ViewUWDevice({
     children,
 }: ViewUWDeviceProps): React.JSX.Element {
     const [dialogOpen, setDialogOpen] = useState(false);
-
-    // Get status badge variant - matching CCTV pattern
-    const getStatusStyles = (status: string) => {
-        if (!status) return 'bg-gray-100 rounded-full dark:bg-zinc-600';
-
-        switch (status.toLocaleUpperCase()) {
-            case 'ACTIVE':
-                return 'bg-green-700 rounded-full  dark:bg-green-800 dark:';
-            case 'MAINTENANCE':
-                return 'bg-orange-100 rounded-full dark:bg-orange-700 ';
-            case 'INACTIVE':
-                return 'bg-gray-100 rounded-full  dark:bg-zinc-600 ';
-            default:
-                return 'bg-gray-100 rounded-full  dark:bg-zinc-600 ';
-        }
-    };
 
     return (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -62,7 +47,7 @@ function ViewUWDevice({
                     </DialogTitle>
                     <DialogDescription className="flex flex-row items-center gap-2">
                         <Badge
-                            className={`capitalize ${getStatusStyles(device.status)}`}
+                            className={`capitalize ${getDeviceStatusColorClass(device.status)}`}
                         >
                             {device.status}
                         </Badge>
@@ -185,7 +170,7 @@ function ViewUWDevice({
                                                         </div>
                                                     </div>
                                                     <Badge
-                                                        className={`capitalize ${getStatusStyles(camera.status)}`}
+                                                        className={`capitalize ${getDeviceStatusColorClass(camera.status)}`}
                                                     >
                                                         {camera.status}
                                                     </Badge>

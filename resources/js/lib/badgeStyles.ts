@@ -38,8 +38,42 @@ export const responderTypeColors = {
     fire: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20',
     medical: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20',
     rescue: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20',
-    barangay: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20',
+    barangay: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
+    emergency: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
+    crime: 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20',
+    traffic: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20',
+    others: 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20',
     other: 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20',
+} as const;
+
+/**
+ * Responder type colors for cards (higher opacity variant)
+ */
+export const responderTypeColorsCard = {
+    fire: 'bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-400 border-red-500/30',
+    emergency: 'bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-500/30',
+    crime: 'bg-zinc-500/15 text-zinc-700 dark:bg-zinc-500/20 dark:text-zinc-300 border-zinc-500/30',
+    traffic: 'bg-orange-500/15 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400 border-orange-500/30',
+    barangay: 'bg-blue-500/15 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/30',
+    others: 'bg-zinc-500/15 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 border-zinc-500/30',
+    other: 'bg-zinc-500/15 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 border-zinc-500/30',
+} as const;
+
+/**
+ * Status colors for cards (higher opacity variant)
+ */
+export const statusColorsCard = {
+    active: 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-500/30',
+    inactive: 'bg-zinc-500/15 text-zinc-600 dark:bg-zinc-500/20 dark:text-zinc-400 border-zinc-500/30',
+} as const;
+
+/**
+ * Device status colors (for CCTV, UW Devices)
+ */
+export const deviceStatusColors = {
+    active: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20',
+    maintenance: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20',
+    inactive: 'bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20',
 } as const;
 
 /**
@@ -50,6 +84,9 @@ export const reportTypeColors = {
     accident: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
     medical: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20',
     crime: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20',
+    cctv: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20',
+    'citizen concern': 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20',
+    emergency: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20',
     other: 'bg-zinc-50 text-zinc-700 border-zinc-200 dark:bg-zinc-500/10 dark:text-zinc-400 dark:border-zinc-500/20',
 } as const;
 
@@ -137,7 +174,7 @@ export function getSuspensionBadgeClass(type: string, isActive: boolean = false)
     if (isActive) {
         return `${baseBadgeClasses} ${suspensionColors.active}`;
     }
-    
+
     const normalizedType = type?.toLowerCase().replace('_', '') || 'expired';
     const typeMap: Record<string, keyof typeof suspensionColors> = {
         'warning1': 'warning1',
@@ -149,7 +186,7 @@ export function getSuspensionBadgeClass(type: string, isActive: boolean = false)
         'expired': 'expired',
         'revoked': 'revoked',
     };
-    
+
     const colorKey = typeMap[normalizedType] || 'expired';
     return `${baseBadgeClasses} ${suspensionColors[colorKey]}`;
 }
@@ -203,4 +240,35 @@ export function getReportTypeColorClass(type: string): string {
 export function getPublicationStatusColorClass(status: string): string {
     const normalizedStatus = status?.toLowerCase() || 'draft';
     return publicationStatusColors[normalizedStatus as keyof typeof publicationStatusColors] || publicationStatusColors.draft;
+}
+
+/**
+ * Get only the color classes for responder type cards (higher opacity variant)
+ */
+export function getResponderTypeCardColorClass(type: string): string {
+    const normalizedType = type?.toLowerCase() || 'other';
+    return responderTypeColorsCard[normalizedType as keyof typeof responderTypeColorsCard] || responderTypeColorsCard.other;
+}
+
+/**
+ * Get only the color classes for status cards (higher opacity variant)
+ */
+export function getStatusCardColorClass(active: boolean): string {
+    return active ? statusColorsCard.active : statusColorsCard.inactive;
+}
+
+/**
+ * Get device status badge classes (for CCTV, UW Devices)
+ */
+export function getDeviceStatusColorClass(status: string): string {
+    const normalizedStatus = status?.toUpperCase() || 'INACTIVE';
+    switch (normalizedStatus) {
+        case 'ACTIVE':
+            return deviceStatusColors.active;
+        case 'MAINTENANCE':
+            return deviceStatusColors.maintenance;
+        case 'INACTIVE':
+        default:
+            return deviceStatusColors.inactive;
+    }
 }
