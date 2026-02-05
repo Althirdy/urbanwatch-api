@@ -39,8 +39,7 @@ class SendPublicPostNotificationsJob implements ShouldQueue
     public function __construct(
         protected PublicPost $post,
         protected array $userIds
-    ) {
-    }
+    ) {}
 
     /**
      * Execute the job.
@@ -68,7 +67,7 @@ class SendPublicPostNotificationsJob implements ShouldQueue
                         'user_id' => $user->id,
                         'user_type' => $userType,
                         'type' => Notification::TYPE_NEW_SAFETY_POST,
-                        'title' => 'Safety Alert: ' . $post->title,
+                        'title' => 'Safety Alert: '.$post->title,
                         'message' => $post->excerpt ?? Str::limit($post->content, 100),
                         'data' => json_encode([
                             'post_id' => $post->id,
@@ -80,7 +79,7 @@ class SendPublicPostNotificationsJob implements ShouldQueue
                     ];
                 }
 
-                if (!empty($notifications)) {
+                if (! empty($notifications)) {
                     DB::table('notifications')->insert($notifications);
                 }
             }

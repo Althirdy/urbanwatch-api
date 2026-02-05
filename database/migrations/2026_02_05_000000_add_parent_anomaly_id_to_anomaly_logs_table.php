@@ -8,7 +8,7 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * 
+     *
      * Adds branching/grouping support for anomaly logs similar to how concerns handle related reports.
      * This allows multiple anomaly detections to be grouped under a parent anomaly for:
      * - Same IoT box detecting same anomaly type within a time window

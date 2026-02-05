@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 
 /**
  * Event broadcast when a new safety post/public announcement is published.
- * 
+ *
  * Listeners in mobile apps should subscribe to the 'public-posts' channel
  * and listen for the 'safety-post.published' event.
  */
@@ -32,7 +32,7 @@ class NewSafetyPostPublished implements ShouldBroadcastNow
 
     /**
      * Get the channels the event should broadcast on.
-     * 
+     *
      * Uses a public channel since safety posts are public information
      * that all authenticated users (citizens and purok leaders) should receive.
      */

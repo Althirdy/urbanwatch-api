@@ -39,7 +39,7 @@ class AnomalyLog extends Model
      */
     public function getImageUrlAttribute(): ?string
     {
-        if (!$this->image) {
+        if (! $this->image) {
             return null;
         }
 
@@ -102,7 +102,7 @@ class AnomalyLog extends Model
      */
     public function isParent(): bool
     {
-        return $this->parent_anomaly_id === null && !$this->is_duplicate;
+        return $this->parent_anomaly_id === null && ! $this->is_duplicate;
     }
 
     /**

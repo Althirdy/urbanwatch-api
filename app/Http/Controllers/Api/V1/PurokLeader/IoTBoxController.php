@@ -254,8 +254,8 @@ class IoTBoxController extends BaseApiController
                 },
                 'parentAnomaly', // Include parent if this is a duplicate
             ])
-            ->withCount('relatedAnomalies')
-            ->find($id);
+                ->withCount('relatedAnomalies')
+                ->find($id);
 
             if (! $anomalyLog) {
                 return $this->sendNotFound('Anomaly log not found');
@@ -288,7 +288,7 @@ class IoTBoxController extends BaseApiController
             }
 
             $disk = \Illuminate\Support\Facades\Storage::disk('public');
-            
+
             if (! $disk->exists($anomalyLog->image)) {
                 abort(404, 'Image file not found');
             }
@@ -382,16 +382,16 @@ class IoTBoxController extends BaseApiController
 
         try {
             $parentAnomaly = AnomalyLog::find($request->parent_anomaly_id);
-            
+
             // Ensure parent is not itself a duplicate
             if ($parentAnomaly->is_duplicate) {
                 return $this->sendError('Cannot merge into a duplicate anomaly. Use the parent anomaly instead.');
             }
 
             $childIds = $request->child_anomaly_ids;
-            
+
             // Filter out the parent ID if accidentally included
-            $childIds = array_filter($childIds, fn($id) => $id != $parentAnomaly->id);
+            $childIds = array_filter($childIds, fn ($id) => $id != $parentAnomaly->id);
 
             if (empty($childIds)) {
                 return $this->sendError('No valid child anomalies to merge.');
@@ -430,7 +430,7 @@ class IoTBoxController extends BaseApiController
                 'error' => $e->getMessage(),
             ]);
 
-            return $this->sendError('Failed to merge anomaly logs: ' . $e->getMessage());
+            return $this->sendError('Failed to merge anomaly logs: '.$e->getMessage());
         }
     }
 

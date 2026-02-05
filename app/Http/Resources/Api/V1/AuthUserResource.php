@@ -19,7 +19,7 @@ class AuthUserResource extends JsonResource
         if ($this->role_id == 1 || $this->role_id == 2) {
             $officialDetails = $this->officialDetails;
 
-            if (!$officialDetails) {
+            if (! $officialDetails) {
                 return [];
             }
 
@@ -43,7 +43,7 @@ class AuthUserResource extends JsonResource
         } elseif ($this->role_id == 3) {
             $citizenDetails = $this->citizenDetails;
 
-            if (!$citizenDetails) {
+            if (! $citizenDetails) {
                 return [];
             }
 

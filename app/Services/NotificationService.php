@@ -234,8 +234,8 @@ class NotificationService
                     'user_id' => $user->id,
                     'user_type' => $userType,
                     'type' => Notification::TYPE_NEW_SAFETY_POST,
-                    'title' => 'Safety Alert: ' . $post->title,
-                    'message' => $post->excerpt ?? substr($post->content, 0, 100) . '...',
+                    'title' => 'Safety Alert: '.$post->title,
+                    'message' => $post->excerpt ?? substr($post->content, 0, 100).'...',
                     'data' => json_encode([
                         'post_id' => $post->id,
                         'category' => $post->category,
@@ -325,7 +325,7 @@ class NotificationService
             ->where('user_id', $userId)
             ->first();
 
-        if (!$notification) {
+        if (! $notification) {
             return false;
         }
 
