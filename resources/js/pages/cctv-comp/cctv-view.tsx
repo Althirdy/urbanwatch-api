@@ -40,6 +40,7 @@ import {
     SquarePen,
     Wifi,
     X,
+    Locate,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
@@ -239,15 +240,27 @@ function CCTVDisplay({
                             {/* Header Row */}
                             <div className="flex items-start justify-between gap-2 mb-3">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <div className="min-w-0 flex flex-col gap-1">
+                                    <div className="min-w-0 flex flex-col gap-2">
                                         <h3 className="truncate text-sm font-semibold leading-tight">
                                             {device.location_name}
                                         </h3>
                                         {device.package && (
-                                            <p className="text-xs text-muted-foreground truncate">
-                                                {device.package}
-                                            </p>
+                                            <div className="text-xs flex gap-1 text-muted-foreground ">
+                                                <MapPin className="inline h-4 w-auto " />
+                                                <p>  {device.package}</p>
+                                            </div>
                                         )}
+                                        {device.latitude && device.longitude && (
+                                            <div className="text-xs flex gap-1 text-muted-foreground ">
+                                                <Locate className="inline h-4 w-auto " />
+                                                <p className="font-mono">
+                                                    {Number(device.latitude).toFixed(4)},{' '}
+                                                    {Number(device.longitude).toFixed(4)}
+                                                </p>
+                                            </div>
+                                        )}
+
+
                                     </div>
                                 </div>
                                 <Badge
@@ -258,12 +271,9 @@ function CCTVDisplay({
                                 </Badge>
                             </div>
 
-                            <div className='flex '>
-
-                            </div>
 
                             {/* YOLO Detection Toggle */}
-                            <div className="flex items-center justify-between mb-3  bg-zinc-50 dark:bg-zinc-800/50 p-1.5">
+                            <div className="flex items-center justify-between mb-3  bg-zinc-50 dark:bg-zinc-800/50 ">
                                 <div className="flex items-center gap-2">
                                     <Eye className={`h-auto w-5 ${device.yolo_enabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
                                     <div>
@@ -337,77 +347,81 @@ function CCTVDisplay({
             </div>
 
             {/* Empty State */}
-            {filteredDevices.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Camera className="h-12 w-12 text-muted-foreground/50 mb-3" />
-                    <h3 className="text-sm font-medium text-foreground">No devices found</h3>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        {hasActiveFilters
-                            ? 'Try adjusting your search or filters'
-                            : 'No CCTV devices have been added yet'}
-                    </p>
-                    {hasActiveFilters && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={clearFilters}
-                            className="mt-3 text-xs"
-                        >
-                            Clear all filters
-                        </Button>
-                    )}
-                </div>
-            )}
+            {
+                filteredDevices.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <Camera className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                        <h3 className="text-sm font-medium text-foreground">No devices found</h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            {hasActiveFilters
+                                ? 'Try adjusting your search or filters'
+                                : 'No CCTV devices have been added yet'}
+                        </p>
+                        {hasActiveFilters && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={clearFilters}
+                                className="mt-3 text-xs"
+                            >
+                                Clear all filters
+                            </Button>
+                        )}
+                    </div>
+                )
+            }
 
             {/* Pagination Controls */}
-            {devices && devices.links && filteredDevices.length > 0 && (
-                <Pagination className="flex justify-end">
-                    <PaginationContent>
-                        <PaginationItem>
-                            <PaginationPrevious
-                                href={devices.prev_page_url || '#'}
-                                className="h-8 text-xs"
-                            />
-                        </PaginationItem>
-                        {devices.links
-                            .filter((link) => {
-                                // Skip Previous and Next labels (handled separately)
-                                return !link.label.includes('Previous') && !link.label.includes('Next');
-                            })
-                            .map((link, index) => {
-                                if (link.url !== null) {
-                                    return (
-                                        <PaginationItem key={index}>
-                                            <PaginationLink
-                                                isActive={link.active}
-                                                href={link.url || '#'}
-                                                className="h-8 w-8 text-xs"
-                                            >
-                                                {link.label}
-                                            </PaginationLink>
-                                        </PaginationItem>
-                                    );
-                                }
-                                // Show ellipsis for null url (...)
-                                if (link.label === '...') {
-                                    return (
-                                        <PaginationItem key={index}>
-                                            <PaginationEllipsis className="h-8" />
-                                        </PaginationItem>
-                                    );
-                                }
-                                return null;
-                            })}
-                        <PaginationItem>
-                            <PaginationNext
-                                href={devices.next_page_url || '#'}
-                                className="h-8 text-xs"
-                            />
-                        </PaginationItem>
-                    </PaginationContent>
-                </Pagination>
-            )}
-        </div>
+            {
+                devices && devices.links && filteredDevices.length > 0 && (
+                    <Pagination className="flex justify-end">
+                        <PaginationContent>
+                            <PaginationItem>
+                                <PaginationPrevious
+                                    href={devices.prev_page_url || '#'}
+                                    className="h-8 text-xs"
+                                />
+                            </PaginationItem>
+                            {devices.links
+                                .filter((link) => {
+                                    // Skip Previous and Next labels (handled separately)
+                                    return !link.label.includes('Previous') && !link.label.includes('Next');
+                                })
+                                .map((link, index) => {
+                                    if (link.url !== null) {
+                                        return (
+                                            <PaginationItem key={index}>
+                                                <PaginationLink
+                                                    isActive={link.active}
+                                                    href={link.url || '#'}
+                                                    className="h-8 w-8 text-xs"
+                                                >
+                                                    {link.label}
+                                                </PaginationLink>
+                                            </PaginationItem>
+                                        );
+                                    }
+                                    // Show ellipsis for null url (...)
+                                    if (link.label === '...') {
+                                        return (
+                                            <PaginationItem key={index}>
+                                                <PaginationEllipsis className="h-8" />
+                                            </PaginationItem>
+                                        );
+                                    }
+                                    return null;
+                                })}
+                            <PaginationItem>
+                                <PaginationNext
+                                    href={devices.next_page_url || '#'}
+                                    className="h-8 text-xs"
+                                />
+                            </PaginationItem>
+                        </PaginationContent>
+                    </Pagination>
+                )
+            }
+        </div >
     );
 }
 

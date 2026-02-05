@@ -139,9 +139,9 @@ function EditUWDevice({
             <DialogContent className="flex max-h-[90vh] max-w-none flex-col overflow-hidden p-0 sm:max-w-2xl" showCloseButton={false}>
                 <form onSubmit={onSubmit} className="flex h-full flex-col overflow-hidden">
                     <TooltipProvider>
-                        <DialogHeader className="flex-shrink-0 px-6 pt-6">
-                            <DialogTitle>Edit IoT Sensor</DialogTitle>
-                            <DialogDescription>Update the IoT sensor configuration</DialogDescription>
+                        <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-2">
+                            <DialogTitle>Edit IoT Box</DialogTitle>
+                            <DialogDescription>Update the IoT Box configuration</DialogDescription>
                         </DialogHeader>
 
                         <div className="flex-1 overflow-y-auto px-6 py-4">
@@ -253,7 +253,7 @@ function EditUWDevice({
                                         <MoveLeft className="mr-2 h-4 w-4" /> Cancel
                                     </Button>
                                 </DialogClose>
-                                <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                                <Button type="submit" className="flex-2" disabled={isSubmitting}>
                                     {isSubmitting ? <Spinner className="mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
                                     {isSubmitting ? 'Updating...' : 'Update Device'}
                                 </Button>

@@ -85,10 +85,8 @@ function CCTVDisplay({
                         className="group relative overflow-hidden transition-all duration-200 hover:shadow-md"
                     >
                         <CardHeader className="pb-3">
-                            <div className="flex items-start gap-3">
-                                <div className="rounded-lg bg-blue-100 p-2">
-                                    <Camera className="h-5 w-5 text-blue-600" />
-                                </div>
+                            <div className="flex items-center gap-2">
+
                                 <div className="min-w-0 flex-1">
                                     <h3 className="truncate text-base font-semibold">
                                         {device.location_name}

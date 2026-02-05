@@ -15,9 +15,9 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/components/use-toast';
 import { Contact } from '@/types/contacts-types';
 import { router, useForm } from '@inertiajs/react';
-import { Archive, Phone, User } from 'lucide-react';
+import { Archive, Phone, User, MapPin, Dot } from 'lucide-react';
 import React, { useState } from 'react';
-import { getResponderTypeColorClass, getStatusColorClass } from '@/lib/badgeStyles';
+import { getResponderTypeCardColorClass, getStatusCardColorClass } from '@/lib/badgeStyles';
 
 
 
@@ -77,51 +77,62 @@ export default function DeleteContacts({
                 </AlertDialogHeader>
                 <div className="space-y-4">
                     <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                        <div className="flex flex-row items-center gap-2">
-                            <div className="h-fit w-fit rounded-md bg-muted p-2 text-muted-foreground">
-                                <User className="h-5 w-5" />
-                            </div>
-                            <div className="flex flex-1 flex-col min-w-0">
-                                <h1 className="text-lg font-bold truncate">
-                                    {contact.branch_unit_name}
-                                </h1>
-                                <div className="flex items-center gap-2">
-                                    <Badge
-                                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${getResponderTypeColorClass(
-                                            contact.responder_type
-                                        )}`}
-                                    >
-                                        {contact.responder_type}
-                                    </Badge>
-                                    <Badge
-                                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${getStatusColorClass(contact.active ? 'active' : 'inactive')}`}
-                                    >
-                                        {contact.active ? 'Active' : 'Inactive'}
-                                    </Badge>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+
+                                <div className="min-w-0 flex flex-col gap-2">
+                                    <h1 className="text-lg font-semibold truncate">
+                                        {contact.branch_unit_name}
+                                    </h1>
+                                    <div className="text-xs flex gap-1 text-muted-foreground">
+                                        <MapPin className="inline h-4 w-auto shrink-0" />
+                                        <p className="truncate">{contact.location}</p>
+                                    </div>
                                 </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                                <Badge
+                                    variant="outline"
+                                    className={`shrink-0 text-xs font-medium px-1.5 ${getStatusCardColorClass(contact.active)}`}
+                                >
+                                    {contact.active ? 'Active' : 'Inactive'}
+                                </Badge>
+                                <Badge
+                                    variant="outline"
+                                    className={`text-xs font-medium px-1.5 ${getResponderTypeCardColorClass(contact.responder_type)}`}
+                                >
+                                    {contact.responder_type}
+                                </Badge>
                             </div>
                         </div>
 
-                        {contact.contact_person && (
-                            <div className="flex items-center gap-2 text-sm border-t border-border pt-2">
-                                <span className="text-muted-foreground">Contact Person:</span>
-                                <p className="font-medium text-foreground">{contact.contact_person}</p>
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-1 gap-2 text-sm border-t border-border pt-2">
-                            <div className="flex items-center gap-2">
-                                <Phone className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Primary Mobile:</span>
-                                <p className="font-medium text-foreground">{contact.primary_mobile}</p>
-                            </div>
-                            {contact.backup_mobile && (
-                                <div className="flex items-center gap-2">
-                                    <Phone className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-muted-foreground">Backup Mobile:</span>
-                                    <p className="font-medium text-foreground">{contact.backup_mobile}</p>
+                        {/* Contact Info */}
+                        <div className="space-y-0 flex flex-col">
+                            {/* Contact Person */}
+                            {contact.contact_person && (
+                                <div className="flex items-center gap-2  py-2">
+                                    <User className="h-4 w-auto text-muted-foreground shrink-0" />
+                                    <p className="font-medium text-xs text-zinc-600 dark:text-zinc-400 truncate">
+                                        {contact.contact_person}
+                                    </p>
                                 </div>
                             )}
+
+                            {/* Phone Numbers */}
+                            <div className="flex items-center py-2">
+                                <Phone className="h-4 mr-2 w-auto text-muted-foreground shrink-0" />
+                                <span className="font-medium text-xs text-zinc-600 dark:text-zinc-400 font-mono">
+                                    {contact.primary_mobile}
+                                </span>
+                                {contact.backup_mobile && (
+                                    <>
+                                        <Dot className="h-4 w-auto text-muted-foreground shrink-0" />
+                                        <span className="font-medium text-xs text-zinc-600 dark:text-zinc-400 font-mono">
+                                            {contact.backup_mobile}
+                                        </span>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
 

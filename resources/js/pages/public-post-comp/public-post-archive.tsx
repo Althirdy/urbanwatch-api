@@ -1,3 +1,5 @@
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -11,9 +13,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { PublicPost_T } from '@/types/public-post-types';
 import { router, useForm } from '@inertiajs/react';
-import { Archive, Calendar, TriangleAlert, User } from 'lucide-react';
+import { Archive, TriangleAlert, Dot } from 'lucide-react';
 
 import { toast } from '@/components/use-toast';
+import { baseBadgeClasses, getStatusColorClass, publicationStatusColors } from '@/lib/badgeStyles';
+import { cn } from '@/lib/utils';
 
 type ArchivePublicPostProps = {
     post: PublicPost_T;
@@ -72,57 +76,85 @@ function ArchivePublicPost({ post, children }: ArchivePublicPostProps) {
                 <div className="space-y-4">
                     {/* Post Details Card */}
                     <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="h-fit w-fit rounded-md bg-muted p-2 text-muted-foreground">
-                                <TriangleAlert className="h-6 w-6" />
-                            </div>
-                            <div className="flex flex-1 flex-col min-w-0">
+                        <div className="flex items-start gap-3">
+
+                            <div className="flex-1 min-w-0">
                                 <h3 className="text-lg font-bold truncate text-foreground">
-                                    Post #{post.id}
+                                    {post.title || `Post #${post.id}`}
                                 </h3>
-                                <div className="text-sm text-muted-foreground">
-                                    {post.category || 'General'}
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                    <Badge
+                                        variant="outline"
+                                        className={cn(
+                                            baseBadgeClasses,
+                                            statusLabel === 'Draft' && publicationStatusColors.draft,
+                                            statusLabel === 'Scheduled' && publicationStatusColors.scheduled,
+                                            statusLabel === 'Published' && publicationStatusColors.published
+                                        )}
+                                    >
+                                        {statusLabel}
+                                    </Badge>
+                                    {post.category && (
+                                        <Badge
+                                            variant="outline"
+                                            className={`${baseBadgeClasses} bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 capitalize`}
+                                        >
+                                            {post.category}
+                                        </Badge>
+                                    )}
+                                    {post.postable?.status && (
+                                        <Badge
+                                            variant="outline"
+                                            className={cn(
+                                                baseBadgeClasses,
+                                                "capitalize",
+                                                getStatusColorClass(post.postable.status)
+                                            )}
+                                        >
+                                            {post.postable.status}
+                                        </Badge>
+                                    )}
+                                    {post.published_at && (
+                                        <div className="flex flex-row gap-1 text-muted-foreground items-center">
+                                            <Dot className="inline h-4 w-auto" />
+                                            <span className="text-xs">
+                                                {new Date(post.published_at).toLocaleDateString('en-US', {
+                                                    year: 'numeric',
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                })}
+                                            </span>
+                                            <span className="text-xs">
+                                                {new Date(post.published_at).toLocaleTimeString('en-US', {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                })}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
+                                {post.content && (
+                                    <div className="mt-3">
+                                        <p className="line-clamp-4 text-sm text-muted-foreground leading-relaxed">
+                                            {post.content}
+                                        </p>
+                                    </div>
+                                )}
+                                {post.image_path && (
+                                    <div className="mt-3">
+                                        <img
+                                            src={post.image_path}
+                                            alt={post.title}
+                                            className="h-36 w-full rounded-[var(--radius)] object-cover"
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
-
-                        <div className="space-y-2 border-t border-border pt-2 text-sm">
-                            <div className="flex items-center gap-2">
-                                <User className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Published By:</span>
-                                <span className="font-medium text-foreground ml-auto">
-                                    {post.publishedBy?.name || 'Barangay Office'}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Status:</span>
-                                <span className="font-medium text-foreground ml-auto">
-                                    {statusLabel}
-                                </span>
-                            </div>
-                            {post.published_at && (
-                                <div className="flex items-center gap-2">
-                                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-muted-foreground">Published:</span>
-                                    <span className="font-medium text-foreground ml-auto">
-                                        {new Date(post.published_at).toLocaleDateString()}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-
-                        {post.report?.transcript && (
-                            <div className="mt-2 border-t border-border pt-2">
-                                <p className="line-clamp-2 text-xs text-muted-foreground italic">
-                                    "{post.report.transcript}"
-                                </p>
-                            </div>
-                        )}
                     </div>
 
                     <div className="text-sm font-medium text-destructive">
-                        ⚠️ This action cannot be undone. The post will
+                        This action cannot be undone. The post will
                         be permanently removed from public view.
                     </div>
                 </div>

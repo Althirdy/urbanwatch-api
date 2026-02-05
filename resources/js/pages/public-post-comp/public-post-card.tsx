@@ -132,7 +132,7 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {paginatedPosts.length === 0 && (
                     <Card className="col-span-full rounded-[var(--radius)] border border-sidebar-border/70 dark:border-sidebar-border">
                         <CardContent className="flex items-center justify-center py-12">
