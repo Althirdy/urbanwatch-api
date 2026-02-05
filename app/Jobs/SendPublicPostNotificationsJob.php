@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\NewSafetyPostPublished;
 use App\Models\Notification;
 use App\Models\PublicPost;
 use App\Models\User;
@@ -38,7 +39,8 @@ class SendPublicPostNotificationsJob implements ShouldQueue
     public function __construct(
         protected PublicPost $post,
         protected array $userIds
-    ) {}
+    ) {
+    }
 
     /**
      * Execute the job.
@@ -66,7 +68,7 @@ class SendPublicPostNotificationsJob implements ShouldQueue
                         'user_id' => $user->id,
                         'user_type' => $userType,
                         'type' => Notification::TYPE_NEW_SAFETY_POST,
-                        'title' => 'Safety Alert: '.$post->title,
+                        'title' => 'Safety Alert: ' . $post->title,
                         'message' => $post->excerpt ?? Str::limit($post->content, 100),
                         'data' => json_encode([
                             'post_id' => $post->id,
@@ -78,14 +80,19 @@ class SendPublicPostNotificationsJob implements ShouldQueue
                     ];
                 }
 
-                if (! empty($notifications)) {
+                if (!empty($notifications)) {
                     DB::table('notifications')->insert($notifications);
                 }
             }
 
+            // Broadcast the event via Pusher for real-time notifications
+            // This allows mobile apps to receive instant push notifications
+            event(new NewSafetyPostPublished($post));
+
             Log::info('Public post notifications job completed', [
                 'post_id' => $post->id,
                 'total_users' => count($this->userIds),
+                'broadcast_sent' => true,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to process public post notifications job', [
