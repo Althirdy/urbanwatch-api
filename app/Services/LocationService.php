@@ -103,7 +103,7 @@ class LocationService
 
         $cacheKey = 'locations_list_latest';
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(24), function () {
+        return \Illuminate\Support\Facades\Cache::tags(['locations'])->remember($cacheKey, now()->addHours(24), function () {
             return $this->buildLocationsQuery()->get();
         });
     }

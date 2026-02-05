@@ -74,9 +74,10 @@ class PublicPostService
             return $this->buildMobileQuery($search)->cursorPaginate($perPage);
         }
 
-        $cacheKey = 'public_posts_mobile_latest';
+        $cursor = request()->get('cursor');
+        $cacheKey = "public_posts_mobile_cursor_" . ($cursor ?? 'first');
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(30), function () use ($perPage) {
+        return \Illuminate\Support\Facades\Cache::tags(['public_posts'])->remember($cacheKey, now()->addMinutes(30), function () use ($perPage) {
             return $this->buildMobileQuery()->cursorPaginate($perPage);
         });
     }
@@ -346,6 +347,8 @@ class PublicPostService
             default:
                 throw new UrbanWatchException('Invalid action');
         }
+
+        \Illuminate\Support\Facades\Cache::tags(['public_posts'])->flush();
 
         return [
             'message' => $message,

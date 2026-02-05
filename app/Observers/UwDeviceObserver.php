@@ -34,6 +34,6 @@ class UwDeviceObserver
 
     protected function clearCache(): void
     {
-        Cache::forget('devices_list_latest');
+        Cache::tags(['uw_devices'])->flush();
     }
 }

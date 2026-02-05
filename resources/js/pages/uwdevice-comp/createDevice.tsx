@@ -196,6 +196,7 @@ function AddUWDevice({
         // Submit to backend using Inertia
         router.post('/devices/uwdevice', formData, {
             onSuccess: (page) => {
+                router.flushAll(); // Clear prefetch cache to prevent stale data
                 const flash = page.props.flash as any;
                 if (flash?.api_token) {
                     setGeneratedToken(flash.api_token);

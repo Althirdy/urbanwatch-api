@@ -29,7 +29,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/use-toast';
 import { cn } from '@/lib/utils';
-import { useForm, usePage } from '@inertiajs/react';
+import { router, useForm, usePage } from '@inertiajs/react';
 import { Check, ChevronsUpDown, MoveLeft, Phone, Plus } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -227,6 +227,7 @@ function AddContacts() {
 
         post('/contacts', {
             onSuccess: () => {
+                router.flushAll(); // Clear prefetch cache to prevent stale data
                 reset();
                 setDialogOpen(false);
                 setHasAttemptedSubmit(false);
@@ -418,7 +419,7 @@ function AddContacts() {
                                             >
                                                 {responderTypeState.value
                                                     ? responderTypeState.value
-                                                          .name
+                                                        .name
                                                     : 'Select Type'}
                                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                             </Button>
@@ -620,10 +621,10 @@ function AddContacts() {
                                     }}
                                     className={
                                         hasAttemptedSubmit &&
-                                        (!data.primary_mobile ||
-                                            !isMobileNumberValid(
-                                                data.primary_mobile,
-                                            ))
+                                            (!data.primary_mobile ||
+                                                !isMobileNumberValid(
+                                                    data.primary_mobile,
+                                                ))
                                             ? 'border-red-500'
                                             : ''
                                     }
@@ -670,8 +671,8 @@ function AddContacts() {
                                     }}
                                     className={
                                         hasAttemptedSubmit &&
-                                        data.backup_mobile !== '' &&
-                                        !isMobileNumberValid(data.backup_mobile)
+                                            data.backup_mobile !== '' &&
+                                            !isMobileNumberValid(data.backup_mobile)
                                             ? 'border-red-500'
                                             : ''
                                     }

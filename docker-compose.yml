@@ -11,6 +11,11 @@ services:
       - APP_URL=https://urbanwatch.me
       - DB_HOST=db
       - DB_DATABASE=urbanwatch
+      - CACHE_STORE=redis
+      - REDIS_HOST=redis
+    depends_on:
+      - db
+      - redis
     networks:
       - prod-net
 
@@ -19,8 +24,12 @@ services:
     container_name: urbanwatch-queue
     restart: always
     command: php artisan queue:work
+    environment:
+      - CACHE_STORE=redis
+      - REDIS_HOST=redis
     depends_on:
       - db
+      - redis
     networks:
       - prod-net
 
@@ -33,6 +42,13 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
+    networks:
+      - prod-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: urbanwatch-redis
+    restart: always
     networks:
       - prod-net
 

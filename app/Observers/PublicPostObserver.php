@@ -52,12 +52,6 @@ class PublicPostObserver
      */
     protected function clearCache(): void
     {
-        // Use a wildcard pattern if the driver supports it, or specific keys.
-        // Since database driver doesn't support tags, we clear specific keys.
-        // We might need to clear multiple pages or just the main list.
-        Cache::forget('public_posts_mobile_page_1');
-        // For cursor pagination, it's harder to clear specific pages.
-        // We'll use a simpler approach: clear the main keys we define.
-        Cache::forget('public_posts_mobile_latest');
+        Cache::tags(['public_posts'])->flush();
     }
 }

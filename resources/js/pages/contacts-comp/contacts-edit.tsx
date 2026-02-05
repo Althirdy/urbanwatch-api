@@ -28,7 +28,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/use-toast';
 import { cn } from '@/lib/utils';
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
@@ -274,6 +274,7 @@ export default function EditContacts({ contact, children }: EditContactsProps) {
 
         put(`/contacts/${contact.id}`, {
             onSuccess: () => {
+                router.flushAll(); // Clear prefetch cache to prevent stale data
                 setDialogOpen(false);
                 setHasAttemptedSubmit(false);
                 toast({
@@ -443,7 +444,7 @@ export default function EditContacts({ contact, children }: EditContactsProps) {
                                             >
                                                 {responderTypeState.value
                                                     ? responderTypeState.value
-                                                          .name
+                                                        .name
                                                     : 'Select Type'}
                                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                             </Button>
@@ -643,9 +644,9 @@ export default function EditContacts({ contact, children }: EditContactsProps) {
                                     }
                                     className={
                                         hasAttemptedSubmit &&
-                                        !isMobileNumberValid(
-                                            data.primary_mobile,
-                                        )
+                                            !isMobileNumberValid(
+                                                data.primary_mobile,
+                                            )
                                             ? 'border-red-500'
                                             : ''
                                     }
@@ -687,8 +688,8 @@ export default function EditContacts({ contact, children }: EditContactsProps) {
                                     }
                                     className={
                                         hasAttemptedSubmit &&
-                                        data.backup_mobile.trim() &&
-                                        !isMobileNumberValid(data.backup_mobile)
+                                            data.backup_mobile.trim() &&
+                                            !isMobileNumberValid(data.backup_mobile)
                                             ? 'border-red-500'
                                             : ''
                                     }

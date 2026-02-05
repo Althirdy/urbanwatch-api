@@ -106,6 +106,7 @@ export default function CreatePublicPostModal() {
             setOpen(false);
             form.reset();
             setPreview(null);
+            router.flushAll(); // Clear prefetch cache to prevent stale data
             router.reload(); // Refresh the page data
         } catch (error: any) {
             console.error(error);

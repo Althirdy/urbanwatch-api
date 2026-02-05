@@ -25,6 +25,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 
+import { toast } from '@/components/use-toast';
 import { router } from '@inertiajs/react';
 import {
     Activity,
@@ -83,7 +84,18 @@ function CCTVDisplay({
             {},
             {
                 preserveScroll: true,
-                onFinish: () => setTogglingYolo(null),
+                preserveState: false, // Force refresh of page data
+                onSuccess: () => {
+                    router.flushAll(); // Clear prefetch cache to prevent stale data
+                    toast({
+                        title: 'Success!',
+                        description: `YOLO detection ${device.yolo_enabled ? 'disabled' : 'enabled'} for ${device.device_name}.`,
+                        variant: 'default',
+                    });
+                },
+                onFinish: () => {
+                    setTogglingYolo(null);
+                },
             }
         );
     };
