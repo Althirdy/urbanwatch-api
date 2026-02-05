@@ -126,7 +126,7 @@ function UWDeviceDisplay({
 
         switch (status.toUpperCase()) {
             case 'ACTIVE':
-                return 'bg-green-50 text-green-700 border-green-200 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20';
+                return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20';
             case 'MAINTENANCE':
                 return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20';
             case 'INACTIVE':
@@ -246,155 +246,156 @@ function UWDeviceDisplay({
                 {filteredDevices.map((device) => (
                     <Card
                         key={device.id}
-                        className="group relative py-0 overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700"
+                        className="group relative py-0 overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700 h-full"
                     >
-                        <CardContent className="p-6">
-                            {/* Header Row */}
-                            <div className="flex items-start justify-between gap-2 mb-3">
-                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="flex flex-col h-full">
+                            <CardContent className="p-6 flex-grow">
+                                {/* Header Row */}
+                                <div className="flex items-start justify-between gap-2 mb-3">
+                                    <div className="flex items-center gap-2 min-w-0 flex-1">
 
-                                    <div className="min-w-0 flex flex-col gap-1">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="truncate font-semibold leading-tight">
-                                                {device.device_name}
-                                            </h3>
-                                            {/* Online/Offline indicator */}
-                                            <div
-                                                className={`h-2 w-2 rounded-full shrink-0 ${device.is_online ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-zinc-300 dark:bg-zinc-600'}`}
-                                                title={device.is_online ? 'Online' : 'Offline'}
-                                            />
-                                        </div>
-                                        <div className="flex items-center gap-1.5 text-[10px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700 w-fit font-mono text-muted-foreground">
-                                            <Cpu className="h-3 w-3" />
-                                            <span>SN: {device.device_id}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                                            <MapPin className="h-4 w-4 shrink-0" />
-                                            <span className="truncate">
-                                                {device.location?.barangay ||
-                                                    (device.custom_address
-                                                        ? 'Custom Location'
-                                                        : 'No location')}
-                                            </span>
+                                        <div className="min-w-0 flex flex-col gap-1">
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="truncate font-semibold leading-tight">
+                                                    {device.device_name}
+                                                </h3>
+                                                {/* Online/Offline indicator */}
+                                                <div
+                                                    className={`h-2 w-2 rounded-full shrink-0 ${device.is_online ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                                                    title={device.is_online ? 'Online' : 'Offline'}
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-1.5 text-[10px] bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700 w-fit font-mono text-muted-foreground">
+                                                <span>Device ID: {device.device_id}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                                                <MapPin className="h-4 w-4 shrink-0" />
+                                                <span className="truncate">
+                                                    {device.location?.barangay ||
+                                                        (device.custom_address
+                                                            ? 'Custom Location'
+                                                            : 'No location')}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <Badge
-                                    variant="outline"
-                                    className={`shrink-0 gap-1 text-xs font-medium px-1.5 py-0.5 capitalize ${getStatusStyles(device.status)}`}
-                                >
-                                    {getStatusIcon(device.status)}
-                                    {device.status}
-                                </Badge>
-                            </div>
-
-                            {/* Location Details - Compact */}
-                            <div className="mb-3 text-xs p-1.5  ">
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Location</p>
-                                {device.location ? (
-                                    <p className="font-medium truncate">
-                                        {device.location.location_name}
-                                    </p>
-                                ) : device.custom_address ? (
-                                    <div className="space-y-0.5">
-                                        <div className="flex items-center gap-1.5">
-                                            <p className="font-medium truncate flex-1">
-                                                {device.custom_address}
-                                            </p>
-                                            <Badge
-                                                variant="outline"
-                                                className="shrink-0 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 text-[10px] font-medium"
-                                            >
-                                                Custom
-                                            </Badge>
-                                        </div>
-                                        {device.custom_latitude &&
-                                            device.custom_longitude && (
-                                                <p className="text-muted-foreground text-xs">
-                                                    {Number(device.custom_latitude).toFixed(4)},{' '}
-                                                    {Number(device.custom_longitude).toFixed(4)}
-                                                </p>
-                                            )}
-                                    </div>
-                                ) : (
-                                    <p className="text-muted-foreground italic">
-                                        No location assigned
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Anomaly Count Metric */}
-                            <div className="mb-4">
-                                <div className="flex items-center justify-between rounded-md bg-zinc-50 p-2 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800">
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-                                            <Activity className="h-4 w-4 text-red-600 dark:text-red-400" />
-                                        </div>
-                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-tight">Anomalies Detected</span>
-                                    </div>
-                                    <span className="text-sm font-bold text-foreground">
-                                        {device.anomaly_count || 0}
-                                    </span>
-                                </div>
-                            </div>
-                        </CardContent>
-                        <CardFooter >
-                            {/* Action Buttons - Premium Footer */}
-                            <div className="flex w-full justify-end gap-2 pt-2 border-t dark:border-zinc-800">
-                                <Tooltip>
-                                    <ViewUWDevice device={device}>
-                                        <TooltipTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                                            >
-                                                <ExternalLink className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                                            </Button>
-                                        </TooltipTrigger>
-                                    </ViewUWDevice>
-                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
-                                        <p>View Details</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                    <EditUWDevice
-                                        location={locations}
-                                        device={device}
-                                        cctvDevices={cctvDevices}
+                                    <Badge
+                                        variant="outline"
+                                        className={`shrink-0 gap-1 text-xs font-medium px-1.5 py-0.5 capitalize ${getStatusStyles(device.status)}`}
                                     >
-                                        <TooltipTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                                            >
-                                                <SquarePen className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                                            </Button>
-                                        </TooltipTrigger>
-                                    </EditUWDevice>
-                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
-                                        <p>Edit Device</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                    <ArchiveUWDevice device={device}>
-                                        <TooltipTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 group"
-                                            >
-                                                <Archive className="h-4 w-4 text-zinc-400 group-hover:text-red-500 transition-colors" />
-                                            </Button>
-                                        </TooltipTrigger>
-                                    </ArchiveUWDevice>
-                                    <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
-                                        <p>Archive Device</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </div>
-                        </CardFooter>
+                                        {getStatusIcon(device.status)}
+                                        {device.status}
+                                    </Badge>
+                                </div>
+
+                                {/* Location Details - Compact */}
+                                <div className="mb-3 text-xs p-1.5  ">
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Location</p>
+                                    {device.location ? (
+                                        <p className="font-medium truncate">
+                                            {device.location.location_name}
+                                        </p>
+                                    ) : device.custom_address ? (
+                                        <div className="space-y-0.5">
+                                            <div className="flex items-center gap-1.5">
+                                                <p className="font-medium truncate flex-1">
+                                                    {device.custom_address}
+                                                </p>
+                                                <Badge
+                                                    variant="outline"
+                                                    className="shrink-0 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 text-[10px] font-medium"
+                                                >
+                                                    Custom
+                                                </Badge>
+                                            </div>
+                                            {device.custom_latitude &&
+                                                device.custom_longitude && (
+                                                    <p className="text-muted-foreground text-xs">
+                                                        {Number(device.custom_latitude).toFixed(4)},{' '}
+                                                        {Number(device.custom_longitude).toFixed(4)}
+                                                    </p>
+                                                )}
+                                        </div>
+                                    ) : (
+                                        <p className="text-muted-foreground italic">
+                                            No location assigned
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Anomaly Count Metric */}
+                                <div className="mb-4">
+                                    <div className="flex items-center justify-between rounded-md bg-zinc-50 p-2 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800">
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                                                <Activity className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                            </div>
+                                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-tight">Anomalies Detected</span>
+                                        </div>
+                                        <span className="text-sm font-bold text-foreground">
+                                            {device.anomaly_count || 0}
+                                        </span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="px-6 pb-6 pt-0 " >
+                                {/* Action Buttons - Premium Footer */}
+                                <div className="flex items-center justify-end gap-1.5 pt-2 w-full mt-auto border-t dark:border-zinc-800">
+                                    <Tooltip>
+                                        <ViewUWDevice device={device}>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                                >
+                                                    <ExternalLink className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                        </ViewUWDevice>
+                                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                            <p>View Details</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                        <EditUWDevice
+                                            location={locations}
+                                            device={device}
+                                            cctvDevices={cctvDevices}
+                                        >
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                                >
+                                                    <SquarePen className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                        </EditUWDevice>
+                                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
+                                            <p>Edit Device</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                        <ArchiveUWDevice device={device}>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 group"
+                                                >
+                                                    <Archive className="h-4 w-4 text-zinc-400 group-hover:text-red-500 transition-colors" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                        </ArchiveUWDevice>
+                                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2 ">
+                                            <p>Archive Device</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </div>
+                            </CardFooter>
+                        </div>
                     </Card>
                 ))}
             </div>

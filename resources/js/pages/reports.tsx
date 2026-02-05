@@ -50,11 +50,11 @@ const Reports = ({ reports, reportTypes, currentView = 'incidents' }: ReportsPro
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Incident Monitoring" />
-            <div className="mx-auto w-full space-y-2 p-6">
+            <div className="mx-auto w-full space-y-2 px-6 py-4">
                 {/* Header Section */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                        <h1 className="text-xl font-bold tracking-tight text-foreground">
                             Incident Monitoring
                         </h1>
                         <p className="text-sm text-muted-foreground">

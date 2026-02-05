@@ -63,11 +63,7 @@ export const columns = (): ColumnDef<location_T>[] => [
             );
         },
     },
-    {
-        accessorKey: 'barangay',
-        header: 'Barangay',
-        cell: ({ row }) => <div>{row.getValue('barangay')}</div>,
-    },
+
     {
         id: 'cctv_count',
         header: 'CCTV Cameras',
@@ -81,6 +77,25 @@ export const columns = (): ColumnDef<location_T>[] => [
             );
         },
     },
+    {
+        id: 'coordinates',
+        header: 'Coordinates',
+        cell: ({ row }) => {
+            const location = row.original;
+            return (
+                <div className="flex flex-col gap-0.5 font-mono text-xs">
+                    <div>
+                        <span className="text-muted-foreground">Lat: </span>
+                        {Number(location.latitude).toFixed(6)}
+                    </div>
+                    <div>
+                        <span className="text-muted-foreground">Lng: </span>
+                        {Number(location.longitude).toFixed(6)}
+                    </div>
+                </div>
+            );
+        },
+    },
 
     {
         id: 'actions',
@@ -90,21 +105,21 @@ export const columns = (): ColumnDef<location_T>[] => [
             const location = row.original;
 
             return (
-                <div className="flex justify-center gap-2">
+                <div className="flex justify-center gap-1.5">
                     <Tooltip>
                         <ViewLocation location={location}>
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="cursor-pointer"
+                                    className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <ExternalLink className="h-4 w-4" />
+                                    <ExternalLink className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                 </Button>
                             </TooltipTrigger>
                         </ViewLocation>
-                        <TooltipContent>
+                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                             <p>View Details</p>
                         </TooltipContent>
                     </Tooltip>
@@ -114,14 +129,14 @@ export const columns = (): ColumnDef<location_T>[] => [
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="cursor-pointer"
+                                    className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                     onClick={(e) => e.stopPropagation()}
                                 >
-                                    <SquarePen className="h-4 w-4" />
+                                    <SquarePen className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                 </Button>
                             </TooltipTrigger>
                         </EditLocation>
-                        <TooltipContent>
+                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                             <p>Edit Location</p>
                         </TooltipContent>
                     </Tooltip>
@@ -138,7 +153,7 @@ export const columns = (): ColumnDef<location_T>[] => [
                                 </Button>
                             </TooltipTrigger>
                         </DeleteLocation>
-                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2 border-red-500/20 bg-red-50/90 dark:bg-red-950/90 text-red-600 dark:text-red-400">
+                        <TooltipContent side="bottom" className="text-[10px] py-1 px-2">
                             <p>Archive Location</p>
                         </TooltipContent>
                     </Tooltip>

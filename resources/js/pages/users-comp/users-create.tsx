@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import PurokSelectorMap from '@/components/purok-selector-map';
+import { toast } from '@/components/use-toast';
 import { location_T } from '@/types/location-types';
 import { roles_T } from '@/types/role-types';
 import { useForm } from '@inertiajs/react';
@@ -52,6 +53,7 @@ function CreateUsers({
     locations: location_T[];
     puroks?: any[]; // Using any for now to avoid extensive type definitions, or define interface
 }) {
+    const [open, setOpen] = useState(false);
     const { data, setData, post, processing, errors, reset } =
         useForm<CreateUserForm>({
             first_name: '',
@@ -249,39 +251,35 @@ function CreateUsers({
             }
         });
 
-        console.log('Validation errors:', validationErrors);
-        console.log('Form data:', data);
-
         if (Object.keys(validationErrors).length > 0) {
             setClientErrors(validationErrors);
-            console.log('Form has validation errors, not submitting');
             return;
         }
 
         // Clear client errors and submit
         setClientErrors({});
-        console.log('Submitting form...');
-        console.log('Form data being sent:', data);
         post('/user', {
             onSuccess: () => {
-                console.log('User created successfully');
+                toast({
+                    title: 'Success',
+                    description: 'User created successfully.',
+                });
                 reset();
                 setClientErrors({});
-                // Force page reload to show the new user
-                window.location.href = '/users';
+                setOpen(false);
             },
             onError: (errors) => {
-                console.log('Server validation errors:', errors);
-                console.error(
-                    'Full error object:',
-                    JSON.stringify(errors, null, 2),
-                );
+                toast({
+                    title: 'Error',
+                    description: Object.values(errors).flat().join(', ') || 'Failed to create user.',
+                    variant: 'destructive',
+                });
             },
         });
     };
 
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button className="cursor-pointer px-4 py-2">
                     <Plus /> Add User
@@ -328,18 +326,18 @@ function CreateUsers({
                                             placeholder="Enter first name"
                                             className={
                                                 errors.first_name ||
-                                                clientErrors.first_name
+                                                    clientErrors.first_name
                                                     ? 'border-[var(--destructive)] focus:ring-[var(--ring)]'
                                                     : ''
                                             }
                                         />
                                         {(errors.first_name ||
                                             clientErrors.first_name) && (
-                                            <span className="absolute -bottom-5 left-0 text-xs text-[var(--destructive)]">
-                                                {errors.first_name ||
-                                                    clientErrors.first_name}
-                                            </span>
-                                        )}
+                                                <span className="absolute -bottom-5 left-0 text-xs text-[var(--destructive)]">
+                                                    {errors.first_name ||
+                                                        clientErrors.first_name}
+                                                </span>
+                                            )}
                                     </div>
                                 </div>
                                 <div className="col-span-2 grid gap-2">
@@ -388,18 +386,18 @@ function CreateUsers({
                                             placeholder="Enter last name"
                                             className={
                                                 errors.last_name ||
-                                                clientErrors.last_name
+                                                    clientErrors.last_name
                                                     ? 'border-red-500 focus:ring-red-500'
                                                     : ''
                                             }
                                         />
                                         {(errors.last_name ||
                                             clientErrors.last_name) && (
-                                            <span className="absolute -bottom-5 left-0 text-xs text-red-500">
-                                                {errors.last_name ||
-                                                    clientErrors.last_name}
-                                            </span>
-                                        )}
+                                                <span className="absolute -bottom-5 left-0 text-xs text-red-500">
+                                                    {errors.last_name ||
+                                                        clientErrors.last_name}
+                                                </span>
+                                            )}
                                     </div>
                                 </div>
                                 <div className="col-span-1 grid gap-2">
@@ -441,18 +439,18 @@ function CreateUsers({
                                             placeholder=""
                                             className={
                                                 errors.email ||
-                                                clientErrors.email
+                                                    clientErrors.email
                                                     ? 'border-red-500 focus:ring-red-500'
                                                     : ''
                                             }
                                         />
                                         {(errors.email ||
                                             clientErrors.email) && (
-                                            <span className="mt-1 block text-xs text-red-500">
-                                                {errors.email ||
-                                                    clientErrors.email}
-                                            </span>
-                                        )}
+                                                <span className="mt-1 block text-xs text-red-500">
+                                                    {errors.email ||
+                                                        clientErrors.email}
+                                                </span>
+                                            )}
                                     </div>
                                 </div>
                                 <div className="grid gap-2">
@@ -472,18 +470,18 @@ function CreateUsers({
                                             placeholder=""
                                             className={
                                                 errors.phone_number ||
-                                                clientErrors.phone_number
+                                                    clientErrors.phone_number
                                                     ? 'border-red-500 focus:ring-red-500'
                                                     : ''
                                             }
                                         />
                                         {(errors.phone_number ||
                                             clientErrors.phone_number) && (
-                                            <span className="mt-1 block text-xs text-red-500">
-                                                {errors.phone_number ||
-                                                    clientErrors.phone_number}
-                                            </span>
-                                        )}
+                                                <span className="mt-1 block text-xs text-red-500">
+                                                    {errors.phone_number ||
+                                                        clientErrors.phone_number}
+                                                </span>
+                                            )}
                                     </div>
                                 </div>
                             </div>
@@ -507,14 +505,20 @@ function CreateUsers({
                                                     ...prev,
                                                     role_id: undefined,
                                                 }));
-                                                // Reset location when role changes
-                                                setData(prev => ({ ...prev, assigned_brgy: '', purok_id: '' }));
+                                                // Auto-set location for Operator, reset for others
+                                                if (value === '1') {
+                                                    // Operator: Auto-assign to BRGY 176 E
+                                                    setData(prev => ({ ...prev, assigned_brgy: 'BRGY 176 E', purok_id: '' }));
+                                                } else {
+                                                    // Reset location for other roles
+                                                    setData(prev => ({ ...prev, assigned_brgy: '', purok_id: '' }));
+                                                }
                                             }}
                                         >
                                             <SelectTrigger
                                                 className={
                                                     errors.role_id ||
-                                                    clientErrors.role_id
+                                                        clientErrors.role_id
                                                         ? 'border-red-500 focus:ring-red-500'
                                                         : ''
                                                 }
@@ -540,21 +544,28 @@ function CreateUsers({
                                         </Select>
                                         {(errors.role_id ||
                                             clientErrors.role_id) && (
-                                            <span className="mt-1 block text-xs text-red-500">
-                                                {errors.role_id ||
-                                                    clientErrors.role_id}
-                                            </span>
-                                        )}
+                                                <span className="mt-1 block text-xs text-red-500">
+                                                    {errors.role_id ||
+                                                        clientErrors.role_id}
+                                                </span>
+                                            )}
                                     </div>
                                 </div>
                                 <div className="grid flex-1 gap-2">
                                     <Label htmlFor="location">Location / Assignment</Label>
                                     <div>
-                                        {data.role_id === '2' ? (
+                                        {data.role_id === '1' ? (
+                                            // Operator: Fixed location BRGY 176 E
+                                            <Input
+                                                value="BRGY 176 E"
+                                                readOnly
+                                                className="bg-muted cursor-not-allowed"
+                                            />
+                                        ) : data.role_id === '2' ? (
                                             // Purok Leader: Read-only display of selected Purok
-                                            <Input 
-                                                value={data.assigned_brgy || "Select from map below"} 
-                                                readOnly 
+                                            <Input
+                                                value={data.assigned_brgy || "Select from map below"}
+                                                readOnly
                                                 className="bg-muted"
                                                 placeholder="Select a territory below"
                                             />
@@ -573,7 +584,7 @@ function CreateUsers({
                                                 <SelectTrigger
                                                     className={
                                                         errors.assigned_brgy ||
-                                                        clientErrors.assigned_brgy
+                                                            clientErrors.assigned_brgy
                                                             ? 'border-red-500 focus:ring-red-500'
                                                             : ''
                                                     }
@@ -596,11 +607,11 @@ function CreateUsers({
                                         )}
                                         {(errors.assigned_brgy ||
                                             clientErrors.assigned_brgy) && (
-                                            <span className="mt-1 block text-xs text-red-500">
-                                                {errors.assigned_brgy ||
-                                                    clientErrors.assigned_brgy}
-                                            </span>
-                                        )}
+                                                <span className="mt-1 block text-xs text-red-500">
+                                                    {errors.assigned_brgy ||
+                                                        clientErrors.assigned_brgy}
+                                                </span>
+                                            )}
                                     </div>
                                 </div>
                             </div>
@@ -611,7 +622,7 @@ function CreateUsers({
                             <div className="grid flex-1 auto-rows-min gap-2">
                                 <Label>Select Territory (Purok)</Label>
                                 <div className="rounded-md border p-1">
-                                    <PurokSelectorMap 
+                                    <PurokSelectorMap
                                         puroks={puroks}
                                         selectedPurokId={data.purok_id ? parseInt(data.purok_id) : null}
                                         onSelectPurok={(id, name) => {
@@ -657,18 +668,18 @@ function CreateUsers({
                                         placeholder=""
                                         className={
                                             errors.password ||
-                                            clientErrors.password
+                                                clientErrors.password
                                                 ? 'border-red-500 focus:ring-red-500'
                                                 : ''
                                         }
                                     />
                                     {(errors.password ||
                                         clientErrors.password) && (
-                                        <span className="mt-1 block text-xs text-red-500">
-                                            {errors.password ||
-                                                clientErrors.password}
-                                        </span>
-                                    )}
+                                            <span className="mt-1 block text-xs text-red-500">
+                                                {errors.password ||
+                                                    clientErrors.password}
+                                            </span>
+                                        )}
                                 </div>
                             </div>
                             <div className="grid gap-2">
@@ -691,18 +702,18 @@ function CreateUsers({
                                         placeholder=""
                                         className={
                                             errors.password_confirmation ||
-                                            clientErrors.password_confirmation
+                                                clientErrors.password_confirmation
                                                 ? 'border-red-500 focus:ring-red-500'
                                                 : ''
                                         }
                                     />
                                     {(errors.password_confirmation ||
                                         clientErrors.password_confirmation) && (
-                                        <span className="mt-1 block text-xs text-red-500">
-                                            {errors.password_confirmation ||
-                                                clientErrors.password_confirmation}
-                                        </span>
-                                    )}
+                                            <span className="mt-1 block text-xs text-red-500">
+                                                {errors.password_confirmation ||
+                                                    clientErrors.password_confirmation}
+                                            </span>
+                                        )}
                                 </div>
                             </div>
                         </div>

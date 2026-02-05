@@ -34,6 +34,7 @@ export type PublicPost_T = {
     published_by: number;
     published_at: string | null;
     status: 'draft' | 'published' | 'scheduled';
+    computed_status?: 'draft' | 'published' | 'scheduled';
     created_at: string;
     updated_at: string;
     report?: Report_T;

@@ -38,6 +38,29 @@ const PublicPostTab = ({ posts, setFilteredPosts }: PublicPostTabProps) => {
     const [searchableCategories, setSearchableCategories] = useState<string[]>(
         [],
     );
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    // Set precise timeouts for each scheduled post to update exactly when it should be published
+    useEffect(() => {
+        const now = new Date();
+        const timeouts: NodeJS.Timeout[] = [];
+
+        posts.forEach((post) => {
+            if (post.published_at) {
+                const publishDate = new Date(post.published_at);
+                if (publishDate > now) {
+                    const msUntilPublish = publishDate.getTime() - now.getTime();
+                    // Set timeout to trigger exactly when post should be published
+                    const timeout = setTimeout(() => {
+                        setCurrentTime(new Date());
+                    }, msUntilPublish + 100);
+                    timeouts.push(timeout);
+                }
+            }
+        });
+
+        return () => timeouts.forEach(t => clearTimeout(t));
+    }, [posts]);
 
     // Extract unique categories from posts data
     useEffect(() => {
@@ -64,24 +87,17 @@ const PublicPostTab = ({ posts, setFilteredPosts }: PublicPostTabProps) => {
 
         // Filter by status if selected
         if (statusValue) {
-            const now = new Date();
             filtered = filtered.filter((post: PublicPost_T) => {
-                switch (statusValue) {
-                    case 'published':
-                        return (
-                            post.published_at &&
-                            new Date(post.published_at) <= now
-                        );
-                    case 'draft':
-                        return !post.published_at;
-                    case 'scheduled':
-                        return (
-                            post.published_at &&
-                            new Date(post.published_at) > now
-                        );
-                    default:
-                        return true;
+                // Compute status based on current time
+                let computedStatus: string;
+                if (!post.published_at) {
+                    computedStatus = 'draft';
+                } else {
+                    const publishedDate = new Date(post.published_at);
+                    computedStatus = publishedDate > currentTime ? 'scheduled' : 'published';
                 }
+
+                return computedStatus === statusValue;
             });
         }
 
@@ -103,7 +119,7 @@ const PublicPostTab = ({ posts, setFilteredPosts }: PublicPostTabProps) => {
         }
 
         return filtered;
-    }, [categoryValue, statusValue, searchQuery, posts]);
+    }, [categoryValue, statusValue, searchQuery, posts, currentTime]);
 
     useEffect(() => {
         setFilteredPosts(filteredResults);
