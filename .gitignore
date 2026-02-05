@@ -32,3 +32,5 @@ deploy-staging.sh
 fix-location-category.sh
 setup.sh
 .ddev/commands/host/phpmyadmin
+package-lock.json
+vite.config.ts

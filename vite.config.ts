@@ -5,7 +5,9 @@ import laravel from 'laravel-vite-plugin';
 import { defineConfig } from 'vite';
 
 const port = 5173;
-const origin = `${process.env.DDEV_PRIMARY_URL}:${port}`;
+// Strip any existing port from DDEV_PRIMARY_URL before adding Vite's port
+const baseUrl = (process.env.DDEV_PRIMARY_URL || 'https://api.ddev.site').replace(/:\d+$/, '');
+const origin = `${baseUrl}:${port}`;
 
 export default defineConfig({
     plugins: [
