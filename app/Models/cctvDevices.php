@@ -55,7 +55,7 @@ class cctvDevices extends Model
      */
     protected function formatRtspUrl(?string $baseUrl): ?string
     {
-        if (!$baseUrl) {
+        if (! $baseUrl) {
             return null;
         }
 
@@ -66,7 +66,7 @@ class cctvDevices extends Model
             if (str_starts_with($url, 'rtsp://')) {
                 $url = substr($url, 7);
             }
-            
+
             return "rtsp://{$this->rtsp_username}:{$this->rtsp_password}@{$url}";
         }
 

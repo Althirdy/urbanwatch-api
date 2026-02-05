@@ -75,7 +75,7 @@ class PublicPostService
         }
 
         $cursor = request()->get('cursor');
-        $cacheKey = "public_posts_mobile_cursor_" . ($cursor ?? 'first');
+        $cacheKey = 'public_posts_mobile_cursor_'.($cursor ?? 'first');
 
         return \Illuminate\Support\Facades\Cache::tags(['public_posts'])->remember($cacheKey, now()->addMinutes(30), function () use ($perPage) {
             return $this->buildMobileQuery()->cursorPaginate($perPage);
