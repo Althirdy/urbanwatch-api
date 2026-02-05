@@ -23,8 +23,10 @@ class CCTVRequest extends FormRequest
     {
         return [
             'device_name' => 'required|string|max:255',
-            'primary_rtsp_url' => 'required|url|max:500',
-            'backup_rtsp_url' => 'nullable|url|max:500',
+            'primary_rtsp_url' => 'required|string|max:500',
+            'backup_rtsp_url' => 'nullable|string|max:500',
+            'rtsp_username' => 'nullable|string|max:255',
+            'rtsp_password' => 'nullable|string|max:255',
             'location_id' => 'required|exists:locations,id',
             'status' => 'required|in:active,inactive,maintenance',
             'model' => 'nullable|string|max:100',

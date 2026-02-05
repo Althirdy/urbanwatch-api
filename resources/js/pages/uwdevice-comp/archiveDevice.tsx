@@ -72,6 +72,7 @@ function ArchiveUWDevice({
         // Use Inertia.js to make DELETE request to backend
         router.delete(`/devices/uwdevice/${device.id}`, {
             onSuccess: () => {
+                router.flushAll(); // Clear prefetch cache to prevent stale data
                 toast({
                     title: 'IoT Device Archived',
                     description: `${device.device_name} has been successfully archived.`,
@@ -80,8 +81,6 @@ function ArchiveUWDevice({
                 setOpen(false);
                 setConfirmationText('');
                 onArchiveSuccess?.();
-                // Force page refresh to update the device list
-                window.location.reload();
             },
             onError: () => {
                 toast({

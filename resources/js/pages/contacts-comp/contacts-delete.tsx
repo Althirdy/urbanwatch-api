@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/use-toast';
 import { Contact } from '@/types/contacts-types';
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { Archive, MapPin, Phone, User } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -47,6 +47,7 @@ export default function DeleteContacts({
 
         destroy(`/contacts/${contact.id}`, {
             onSuccess: () => {
+                router.flushAll(); // Clear prefetch cache to prevent stale data
                 setIsOpen(false);
                 setConfirmText('');
                 toast({
@@ -89,11 +90,10 @@ export default function DeleteContacts({
                                 {contact.branch_unit_name}
                             </h1>
                             <Badge
-                                className={`inline-flex items-center rounded-[var(--radius)] px-2.5 py-1 text-xs font-medium ${
-                                    responderTypeColors[
-                                        contact.responder_type
+                                className={`inline-flex items-center rounded-[var(--radius)] px-2.5 py-1 text-xs font-medium ${responderTypeColors[
+                                    contact.responder_type
                                     ] || 'bg-blue-100 text-blue-800'
-                                }`}
+                                    }`}
                             >
                                 {contact.responder_type}
                             </Badge>
@@ -159,11 +159,10 @@ export default function DeleteContacts({
                                 Status:
                             </span>
                             <Badge
-                                className={`ml-2 inline-flex items-center rounded-[var(--radius)] px-2 py-1 text-xs font-medium ${
-                                    contact.active
+                                className={`ml-2 inline-flex items-center rounded-[var(--radius)] px-2 py-1 text-xs font-medium ${contact.active
                                         ? 'bg-green-800'
                                         : 'bg-gray-800'
-                                }`}
+                                    }`}
                             >
                                 {contact.active ? 'Active' : 'Inactive'}
                             </Badge>
@@ -186,7 +185,7 @@ export default function DeleteContacts({
                                 placeholder="Enter branch/unit name to confirm"
                                 className={
                                     confirmText &&
-                                    confirmText !== contact.branch_unit_name
+                                        confirmText !== contact.branch_unit_name
                                         ? 'border-red-500'
                                         : ''
                                 }

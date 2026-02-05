@@ -12,7 +12,9 @@ Route::middleware('auth')->group(function () {
     Route::get('devices', function () {
         $cacheKey = 'devices_list_latest';
 
-        $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(1), function () {
+        // Use tagged caching so that when any cctv_devices, uw_devices, or locations are updated,
+        // the observers will invalidate this cache automatically
+        $data = \Illuminate\Support\Facades\Cache::tags(['cctv_devices', 'uw_devices', 'locations'])->remember($cacheKey, now()->addHours(1), function () {
             $location = Locations::get()->map(function ($loc) {
                 return [
                     'id' => $loc->id,

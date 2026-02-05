@@ -90,6 +90,7 @@ function ViewPublicPostDetails({ post, children }: ViewPublicPostDetailsProps) {
             {},
             {
                 onSuccess: () => {
+                    router.flushAll(); // Clear prefetch cache to prevent stale data
                     toast({
                         title: "Success",
                         description: "Public post published successfully.",
@@ -106,6 +107,7 @@ function ViewPublicPostDetails({ post, children }: ViewPublicPostDetailsProps) {
             {},
             {
                 onSuccess: () => {
+                    router.flushAll(); // Clear prefetch cache to prevent stale data
                     toast({
                         title: "Success",
                         description: "Public post unpublished successfully.",

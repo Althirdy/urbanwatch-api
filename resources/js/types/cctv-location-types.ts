@@ -18,6 +18,7 @@ export type cctv_T = {
     device_name: string;
     primary_rtsp_url: string;
     backup_rtsp_url: string | null;
+    rtsp_username: string | null;
     brand: string;
     installation_date: Date;
     location: location_T;

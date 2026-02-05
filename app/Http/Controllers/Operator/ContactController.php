@@ -22,9 +22,10 @@ class ContactController extends Controller
             return $this->getFilteredContacts($request);
         }
 
-        $cacheKey = 'contacts_list_latest';
+        $page = $request->get('page', 1);
+        $cacheKey = "contacts_list_page_{$page}";
 
-        $cachedData = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(1), function () use ($request) {
+        $cachedData = \Illuminate\Support\Facades\Cache::tags(['contacts'])->remember($cacheKey, now()->addHours(1), function () use ($request) {
             return $this->getFilteredContacts($request);
         });
 

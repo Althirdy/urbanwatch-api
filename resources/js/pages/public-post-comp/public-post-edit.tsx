@@ -23,7 +23,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { toast } from '@/components/use-toast';
 import { cn } from '@/lib/utils';
 import { PublicPost_T } from '@/types/public-post-types';
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { Calendar, Globe, ImageIcon, MoveLeft, Save, Trash2, User } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 
@@ -136,6 +136,7 @@ function EditPublicPost({ post, children }: EditPublicPostProps) {
 
         postRequest(`/public-post/${post.id}`, {
             onSuccess: () => {
+                router.flushAll(); // Clear prefetch cache to prevent stale data
                 toast({
                     title: "Success",
                     description: "Public post updated successfully.",

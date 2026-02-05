@@ -34,8 +34,6 @@ class CctvDeviceObserver
 
     protected function clearCache(): void
     {
-        Cache::forget('devices_list_latest');
-        Cache::forget('cctv_devices_active');
-        Cache::forget('cctv_devices_yolo_active');
+        Cache::tags(['cctv_devices'])->flush();
     }
 }

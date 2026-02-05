@@ -34,6 +34,6 @@ class LocationObserver
 
     protected function clearCache(): void
     {
-        Cache::forget('locations_list_latest');
+        Cache::tags(['locations'])->flush();
     }
 }

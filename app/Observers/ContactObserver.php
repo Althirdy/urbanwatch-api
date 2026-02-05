@@ -34,6 +34,6 @@ class ContactObserver
 
     protected function clearCache(): void
     {
-        Cache::forget('contacts_list_latest');
+        Cache::tags(['contacts'])->flush();
     }
 }

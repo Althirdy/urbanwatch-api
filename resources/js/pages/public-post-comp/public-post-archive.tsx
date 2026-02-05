@@ -10,7 +10,7 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { PublicPost_T } from '@/types/public-post-types';
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { Calendar, TriangleAlert, User } from 'lucide-react';
 
 import { toast } from '@/components/use-toast';
@@ -36,6 +36,7 @@ function ArchivePublicPost({ post, children }: ArchivePublicPostProps) {
     const handleArchive = () => {
         destroy(`/public-post/${post.id}`, {
             onSuccess: () => {
+                router.flushAll(); // Clear prefetch cache to prevent stale data
                 toast({
                     title: "Success",
                     description: "Public post archived successfully.",
