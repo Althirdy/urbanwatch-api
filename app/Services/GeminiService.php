@@ -271,42 +271,7 @@ class GeminiService
                 }
             }
 
-            $prompt = "You are an emergency detection AI system currently operating in DEMO/SIMULATION MODE. Your job is to analyze CCTV footage and flag emergencies for the UrbanWatch system.\n\n".
-                       "CRITICAL DEMO RULES:\n".
-                       "1. ENABLE SIMULATION RECOGNITION: The image is a **SIMULATION** (diorama, printed photo, or screen capture) for a thesis project. You MUST treat scale models, toy vehicles, or printed photos of accidents as REAL events. Ignore that they are toys or paper. Analyze the *scenario* depicted.\n".
-                       "2. ALWAYS PREPEND 'DEMO:': Start the description with 'DEMO:' to indicate this is a simulation analysis.\n".
-                       "3. LOWER THRESHOLD: Be sensitive. If it looks like an accident/fire/flood (even if simulated), mark it as VALID (is_valid: true).\n".
-                       "4. LANGUAGE: Use conversational Tagalog (Taglish). Use terms like 'Accident', 'Fire', 'Flood' mixed with Tagalog sentences.\n\n".
-
-                       "VALID EMERGENCIES (is_valid: true):\n".
-                       "- Fire: Flames consuming a structure/vehicle (real or diorama), large smoke.\n".
-                       "- Flood: Water covering roads/areas (real or diorama).\n".
-                       "- Accident: Vehicle collisions (real or toy cars), debris.\n\n".
-
-                       "FALSE ALARMS (is_valid: false):\n".
-                       "- TRIVIAL FIRE: Lighters, matchsticks, candles, stove burners (unless out of control).\n".
-                       "- TRIVIAL WATER: Wet floors, small spills, puddles indoors.\n".
-                       "- Normal traffic, empty roads, blurry images.\n\n".
-
-                       "OUTPUT FORMAT (JSON):\n".
-                       "If VALID EMERGENCY (is_valid: true):\n".
-                       "1. accident_type: 'Fire', 'Flood', or 'Accident'\n".
-                       "2. severity: 'Low', 'Medium', or 'High'\n".
-                       "3. title: 5-8 words in Tagalog. Example: 'DEMO: May banggaan ng sasakyan sa kalsada'\n".
-                       "4. description: Start with 'DEMO: Paki-check ang picture na ito mula sa CCTV. Sa tingin ko may [Incident]...' followed by details in Tagalog.\n".
-                       "   Example: 'DEMO: Paki-check ang picture na ito mula sa CCTV. Sa tingin ko may car accident. Dalawang sasakyan ang nagbanggaan sa gitna ng daan.'\n".
-                       "5. confidence: 60-100\n".
-                       "6. detected_objects: ['car', 'toy_car', ...]\n".
-                       "7. reasoning: English explanation (e.g., 'Simulation detected: Toy cars colliding').\n\n".
-
-                       "If FALSE ALARM (is_valid: false):\n".
-                       "1. is_valid: false\n".
-                       "2. Set others to null except reasoning.\n\n".
-
-                       $contextInfo."\n".
-
-                       "Return ONLY valid JSON with keys: is_valid, accident_type, severity, title, description, confidence, detected_objects, reasoning.\n".
-                       'Do not include markdown formatting.';
+            $prompt = $this->getImageAnalysisSystemPrompt($contextInfo);
 
             $response = Http::timeout(60)->withHeaders([
                 'Content-Type' => 'application/json',
@@ -402,26 +367,8 @@ class GeminiService
                 return null;
             }
 
-            $prompt = 'You are an AI gatekeeper for UrbanWatch, a community concern reporting system. '.
-                      'Your task is to VALIDATE if a report is a legitimate community issue and CLASSIFY it.'."\n\n".
-                      'VALIDATION CRITERIA:'."\n".
-                      '- is_valid: true IF it describes a real issue (e.g., accidents, fire, broken roads, garbage, noise, security threats).'."\n".
-                      '- is_valid: false IF it is gibberish ("asdf"), irrelevant chat ("Kumain ka na?"), test spam, or personal/non-community issues.'."\n\n".
-                      'CLASSIFICATION (Only if is_valid is true):'."\n".
-                      '- CATEGORIES: safety, security, infrastructure, environment, noise, other'."\n".
-                      '- SPECIFIC TYPE: One-word lowercase tag identifying the exact issue (e.g., fire, collision, theft, flood, assault, noise, garbage, pothole, light, sewage).'."\n".
-                      '- SEVERITY: low, medium, high'."\n\n".
-                      'INPUT TEXT: '.$text."\n\n".
-                      'Return strictly valid JSON:'."\n".
-                      '{'."\n".
-                      '  "is_valid": boolean,'."\n".
-                      '  "rejection_reason": "Brief Tagalog explanation if invalid, else null",'."\n".
-                      '  "category": "category string or null",'."\n".
-                      '  "specific_type": "specific type string or null",'."\n".
-                      '  "severity": "severity string or null",'."\n".
-                      '  "confidence": float (0.0-1.0),'."\n".
-                      '  "reasoning": "Internal English reasoning"'."\n".
-                      '}';
+            $hasImage = $fileContent && $mimeType;
+            $prompt = $this->getValidationSystemPrompt($text, $hasImage);
 
             $parts = [['text' => $prompt]];
 
@@ -489,7 +436,7 @@ class GeminiService
      *
      * @param  string  $fileContent  Raw binary content of the image file
      * @param  string  $mimeType  Mime type of the file (e.g., 'image/jpeg')
-     * @return array Returns array with 'is_authentic', 'data' containing extracted fields, or throws exception on API failure
+     * @return array Returns array with 'is_authentic', 'data' containing extracted fields, 'isOutsideAllowedArea', 'locationRestrictionReason' or throws exception on API failure
      *
      * @throws \Exception When Gemini API fails
      */
@@ -582,6 +529,26 @@ class GeminiService
                 throw new \Exception('Failed to parse Gemini JSON: '.json_last_error_msg());
             }
 
+            // Check location restriction if system setting is enabled
+            $restrictToBarangay = \App\Models\SystemSetting::get('restrict_registration_to_brgy_176', 'false') === 'true';
+            $result['isOutsideAllowedArea'] = false;
+            $result['locationRestrictionReason'] = null;
+
+            if ($restrictToBarangay && $result['isAuthentic']) {
+                $address = $result['data']['address'] ?? null;
+
+                // Check if address starts with "PH9" (Barangay 176 area format)
+                if (! $address || ! str_starts_with(strtoupper(trim($address)), 'PH9')) {
+                    $result['isOutsideAllowedArea'] = true;
+                    $result['locationRestrictionReason'] = 'Registration is currently restricted to Barangay 176 residents only. Your address must start with PH9.';
+
+                    Log::info('National ID validation: Outside allowed area', [
+                        'address' => $address,
+                        'restriction_enabled' => $restrictToBarangay,
+                    ]);
+                }
+            }
+
             return $result;
 
         } catch (\Throwable $e) {
@@ -638,5 +605,126 @@ class GeminiService
 
             return true;
         }
+    }
+
+    /**
+     * Get the system prompt for YOLO/CCTV image analysis (Diorama and Real-World Detection).
+     *
+     * Uses Natural Taglish (conversational, avoiding deep Tagalog) for Barangay admin readability.
+     * Supports thesis diorama simulation mode with explicit class mapping: Collision, Flood, Fir.
+     */
+    private function getImageAnalysisSystemPrompt(string $contextInfo = ''): string
+    {
+        return <<<PROMPT
+You are the UrbanWatch Emergency Detection AI. You analyze CCTV footage and flag emergencies.
+
+MODE: DEMO/SIMULATION (Thesis Diorama Mode Enabled)
+- Treat toy vehicles, scale models, and diorama scenes AS REAL emergencies.
+- Ignore that they are toys or paper. Focus on the SCENARIO depicted.
+
+YOLO CLASS MAPPING (from dataset):
+- 'Collision' or car crash/vehicle accident → accident_type: 'Accident'
+- 'Flood' or water on roads/areas → accident_type: 'Flood'
+- 'Fir' or flames/smoke → accident_type: 'Fire'
+
+VALID EMERGENCIES (is_valid: true):
+- Fire: Flames, large smoke, burning structures/vehicles (real or diorama).
+- Flood: Water covering roads/areas significantly (real or diorama).
+- Accident: Vehicle collisions, debris on road (real or toy cars).
+
+FALSE ALARMS (is_valid: false):
+- Trivial fire: Lighters, candles, stove burners (unless out of control).
+- Trivial water: Wet floors, small spills, indoor puddles.
+- Normal traffic, empty roads, blurry/unclear images.
+
+OUTPUT (JSON):
+
+If VALID (is_valid: true):
+{
+  "is_valid": true,
+  "accident_type": "Fire" | "Flood" | "Accident",
+  "severity": "Low" | "Medium" | "High",
+  "title": "SYSTEM ALERT: [Type in Natural Taglish, 5-8 words]",
+  "description": "SYSTEM ALERT: [Type] IDENTIFIED. [Natural Taglish description for Barangay admin, e.g., 'May na-detect na collision sa intersection area. Based sa camera analysis, medyo malakas ang impact. Paki-deploy po ng responders asap.']",
+  "confidence": 60-100,
+  "detected_objects": ["car", "toy_car", "smoke", ...],
+  "reasoning": "English internal reasoning for logs."
+}
+
+If DIORAMA/SIMULATION (still valid, add prefix):
+- title: "DEMO: SYSTEM ALERT: [Type]"
+- description: "DEMO: SYSTEM ALERT: [Type] IDENTIFIED (Simulation). ..."
+
+If FALSE ALARM (is_valid: false):
+{
+  "is_valid": false,
+  "accident_type": null,
+  "severity": null,
+  "title": null,
+  "description": null,
+  "confidence": null,
+  "detected_objects": null,
+  "reasoning": "Explanation why it's a false alarm."
+}
+
+{$contextInfo}
+
+Return ONLY valid JSON. Do not include markdown formatting.
+PROMPT;
+    }
+
+    /**
+     * Get the system prompt for citizen concern validation and classification.
+     *
+     * Implements Weighted Coherence (Title vs. Description vs. Image) and Detail Level scoring.
+     * Scores below threshold will be used by ConcernService to reject the concern.
+     */
+    private function getValidationSystemPrompt(string $text, bool $hasImage = false): string
+    {
+        $imageInstruction = $hasImage
+            ? "\n- COHERENCE CHECK: Cross-reference the text with the provided image. If the image shows something unrelated to the text, lower the coherence_score."
+            : '';
+
+        return <<<PROMPT
+You are the UrbanWatch AI Gatekeeper. Validate and classify citizen concern reports.
+
+VALIDATION CRITERIA:
+- is_valid: TRUE if it describes a real community issue (accidents, fire, garbage, noise, security threats).
+- is_valid: FALSE if gibberish ("asdf"), irrelevant chat ("Kumain ka na?"), test spam, or personal/non-community issues.
+{$imageInstruction}
+
+QUALITY SCORING (0.00 to 1.00):
+1. coherence_score: Agreement between Title, Description, and Image (if any).
+   - High (0.8-1.0): All elements match (e.g., text says "Fire", image shows flames).
+   - Medium (0.5-0.7): Partial match or minor inconsistencies.
+   - Low (< 0.5): Mismatch (e.g., text says "Flood", image shows a cat).
+
+2. detail_score: Context completeness (Who, What, Where).
+   - High (0.8-1.0): Specific location, clear description of issue, identifiable subject.
+   - Medium (0.5-0.7): Some details missing but understandable.
+   - Low (< 0.5): Vague, no location, unclear issue (e.g., "Tulonggg" only).
+
+CLASSIFICATION (Only if is_valid is true):
+- CATEGORIES: safety, security, infrastructure, environment, noise, other
+- SPECIFIC TYPE: One-word lowercase tag (fire, collision, theft, flood, assault, noise, garbage, pothole, light, sewage).
+- SEVERITY: low, medium, high
+
+INPUT TEXT: {$text}
+
+Return strictly valid JSON:
+{
+  "is_valid": boolean,
+  "rejection_reason": "Brief Tagalog explanation if invalid, else null",
+  "category": "category string or null",
+  "specific_type": "specific type string or null",
+  "severity": "severity string or null",
+  "confidence": float (0.0-1.0),
+  "coherence_score": float (0.0-1.0),
+  "detail_score": float (0.0-1.0),
+  "reasoning": "Internal English reasoning"
+}
+
+Do not include markdown formatting.
+PROMPT;
     }
 }

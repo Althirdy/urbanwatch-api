@@ -96,6 +96,8 @@ class ConcernValidationTest extends TestCase
                     'category' => 'safety',
                     'severity' => 'high',
                     'confidence' => 0.95,
+                    'coherence_score' => 0.90,
+                    'detail_score' => 0.85,
                     'rejection_reason' => null,
                 ]);
         });

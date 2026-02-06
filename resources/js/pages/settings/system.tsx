@@ -28,6 +28,7 @@ export default function SystemSettings({ settings }: Props) {
     const { toast } = useToast();
     // Current state from DB
     const geofencingEnabled = settings['geofencing_enabled']?.value === 'true';
+    const registrationRestricted = settings['restrict_registration_to_brgy_176']?.value === 'true';
 
     const { data, setData, processing } = useForm({
         key: 'geofencing_enabled',
@@ -62,6 +63,32 @@ export default function SystemSettings({ settings }: Props) {
         });
     };
 
+    const handleRegistrationToggle = (checked: boolean) => {
+        const newValue = checked ? 'true' : 'false';
+        
+        router.patch('/system-settings', {
+            key: 'restrict_registration_to_brgy_176',
+            value: newValue
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast({
+                    title: "Success",
+                    description: checked 
+                        ? 'Registration restricted to Barangay 176 only' 
+                        : 'Registration opened to all areas',
+                });
+            },
+            onError: () => {
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: 'Failed to update registration restriction',
+                });
+            }
+        });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="System Settings" />
@@ -88,6 +115,25 @@ export default function SystemSettings({ settings }: Props) {
                                 id="geofencing"
                                 checked={data.value === 'true'}
                                 onCheckedChange={handleToggle}
+                                disabled={processing}
+                            />
+                        </div>
+
+                        {/* Registration Restriction Toggle */}
+                        <div className="flex items-center justify-between space-x-4">
+                            <div className="flex-1 space-y-1">
+                                <Label htmlFor="registration" className="text-base font-medium">
+                                    Registration Restriction
+                                </Label>
+                                <p className="text-sm text-muted-foreground">
+                                    Restrict user registration to Barangay 176 residents only (addresses starting with PH9).
+                                    Disable this to allow registrations from all areas.
+                                </p>
+                            </div>
+                            <Switch
+                                id="registration"
+                                checked={registrationRestricted}
+                                onCheckedChange={handleRegistrationToggle}
                                 disabled={processing}
                             />
                         </div>

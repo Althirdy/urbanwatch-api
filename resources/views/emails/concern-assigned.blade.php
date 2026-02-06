@@ -3,24 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Concern Status Update</title>
+    <title>Concern Assigned</title>
 </head>
 <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f5f5f5;">
-    @php
-        // Default values for preview
-        $citizenName = $citizenName ?? 'Juan Dela Cruz';
-        $concern = $concern ?? (object) [
-            'id' => 2,
-            'tracking_code' => 'CN-2026-001237',
-            'title' => 'Garbage Collection Issue',
-            'category' => 'waste_management',
-        ];
-        $oldStatus = $oldStatus ?? 'In Progress';
-        $newStatus = $newStatus ?? 'Resolved';
-        $updatedByName = $updatedByName ?? 'Nestor Parungao';
-        $remarks = $remarks ?? 'The garbage has been collected and the area has been cleaned. Thank you for your patience.';
-    @endphp
-    
     <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
         <tr>
             <td style="padding: 30px;">
@@ -29,24 +14,15 @@
                 <hr style="border: none; border-top: 1px solid #ddd; margin: 0 0 20px 0;">
                 
                 <!-- Title -->
-                <h1 style="margin: 0 0 20px 0; color: #000; font-size: 24px; font-weight: normal;">Status Update</h1>
+                <h1 style="margin: 0 0 20px 0; color: #000; font-size: 24px; font-weight: normal;">Concern Assigned</h1>
                 
                 <!-- Message -->
                 <p style="margin: 0 0 20px 0; color: #555; line-height: 1.6;">
                     Hello {{ $citizenName }},
                 </p>
                 <p style="margin: 0 0 30px 0; color: #555; line-height: 1.6;">
-                    The status of your concern has been updated.
+                    Your concern has been verified and assigned to a Purok Leader for action.
                 </p>
-                
-                <!-- Status Change -->
-                <div style="padding: 15px; background-color: #f0f9ff; border: 1px solid #0284c7; border-radius: 4px; margin-bottom: 30px;">
-                    <p style="margin: 0; color: #0c4a6e; font-size: 14px; text-align: center;">
-                        <span style="text-decoration: line-through; color: #64748b;">{{ ucfirst($oldStatus) }}</span>
-                        <span style="margin: 0 10px;">→</span>
-                        <strong style="color: #0284c7;">{{ ucfirst($newStatus) }}</strong>
-                    </p>
-                </div>
                 
                 <!-- Details Table -->
                 <table width="100%" cellpadding="8" cellspacing="0" style="border: 1px solid #ddd; margin-bottom: 30px;">
@@ -63,26 +39,18 @@
                         <td style="border-bottom: 1px solid #ddd; color: #000; font-size: 14px; text-align: right;">{{ ucfirst($concern->category ?? 'General') }}</td>
                     </tr>
                     <tr>
-                        <td style="color: #666; font-size: 14px;">Updated By</td>
-                        <td style="color: #000; font-size: 14px; text-align: right;">{{ $updatedByName }}</td>
+                        <td style="border-bottom: 1px solid #ddd; color: #666; font-size: 14px;">Severity</td>
+                        <td style="border-bottom: 1px solid #ddd; color: #000; font-size: 14px; text-align: right;">{{ ucfirst($concern->severity ?? 'Low') }}</td>
+                    </tr>
+                    <tr style="background-color: #f9f9f9;">
+                        <td style="color: #666; font-size: 14px;">Assigned To</td>
+                        <td style="color: #000; font-size: 14px; text-align: right;">{{ $leaderName }}</td>
                     </tr>
                 </table>
                 
-                @if($remarks)
-                <!-- Remarks -->
-                <div style="padding: 15px; background-color: #fffbeb; border: 1px solid #fbbf24; border-radius: 4px; margin-bottom: 20px;">
-                    <p style="margin: 0 0 5px 0; color: #92400e; font-size: 12px; font-weight: bold;">
-                        REMARKS
-                    </p>
-                    <p style="margin: 0; color: #78350f; font-size: 14px; font-style: italic;">
-                        "{{ $remarks }}"
-                    </p>
-                </div>
-                @endif
-                
                 <!-- Footer Message -->
-                <p style="margin: 0; color: #555; font-size: 14px; line-height: 1.6;">
-                    You'll receive updates whenever there are changes to your concern status.
+                <p style="margin: 0 0 10px 0; color: #555; font-size: 14px; line-height: 1.6;">
+                    Your Purok Leader will review and take action on your concern. You'll receive updates on any status changes.
                 </p>
                 
                 <!-- Footer -->

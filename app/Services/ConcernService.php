@@ -41,7 +41,7 @@ class ConcernService
         }
 
         $query = Concern::where('citizen_id', $userId)
-            ->where('is_duplicate', false) // Only show Parent Concerns
+            ->whereNull('parent_concern_id') // Only show Parent Concerns
             ->withCount('duplicates')
             ->select([
                 'id',
@@ -106,7 +106,7 @@ class ConcernService
 
         $query = Concern::onlyTrashed()
             ->where('citizen_id', $userId)
-            ->where('is_duplicate', false)
+            ->whereNull('parent_concern_id')
             ->withCount('duplicates')
             ->select([
                 'id',
@@ -168,7 +168,7 @@ class ConcernService
         }
 
         $query = Concern::where('citizen_id', $userId)
-            ->where('is_duplicate', false); // Count only distinct incidents
+            ->whereNull('parent_concern_id'); // Count only distinct incidents
 
         // Apply the same filters as getUserConcerns
         if (! empty($filters['status'])) {
@@ -204,7 +204,7 @@ class ConcernService
 
         $query = Concern::onlyTrashed()
             ->where('citizen_id', $userId)
-            ->where('is_duplicate', false);
+            ->whereNull('parent_concern_id');
 
         // Apply the same filters
         if (! empty($filters['status'])) {
@@ -447,10 +447,9 @@ class ConcernService
                 $parentConcern = $this->findParentConcern($concern);
 
                 if ($parentConcern) {
-                    // It's a duplicate
+                    // It's a duplicate (parent_concern_id serves as the flag)
                     $concern->update([
                         'parent_concern_id' => $parentConcern->id,
-                        'is_duplicate' => true,
                     ]);
 
                     ConcernHistory::create([
@@ -554,11 +553,22 @@ class ConcernService
             ));
         }
 
+        // 4. Send Email Notification to Citizen (Async)
+        $concern->load('citizen');
+        if ($concern->citizen && $concern->citizen->email) {
+            \Illuminate\Support\Facades\Mail::to($concern->citizen->email)
+                ->queue(new \App\Mail\ConcernAssignedMail($concern, $purokLeaderDetails));
+        }
+
         return $distribution;
     }
 
     /**
      * Mark a concern as valid after AI analysis.
+     *
+     * Implements Weighted Coherence/Detail scoring with rejection thresholds:
+     * - Coherence < 0.60: Reject (Title/Description/Image mismatch)
+     * - Detail < 0.50: Reject (Insufficient context: Who, What, Where)
      */
     public function markAsValid(int $concernId, array $analysis)
     {
@@ -568,26 +578,56 @@ class ConcernService
         }
 
         $confidence = $analysis['confidence'] ?? 0;
+        $coherenceScore = $analysis['coherence_score'] ?? 0.8; // Default to passing if not provided
+        $detailScore = $analysis['detail_score'] ?? 0.8; // Default to passing if not provided
         $isFallback = $analysis['is_fallback'] ?? false;
 
-        // If AI analysis is present and NOT a system fallback, but the confidence is too low (< 0.4),
-        // treat it as invalid/spam.
-        if (! empty($analysis) && ! $isFallback && $confidence < 0.4) {
-            Log::info("Concern #{$concernId} rejected due to low AI confidence: {$confidence}");
+        // Weighted Score Calculation: Coherence (40%) + Detail (40%) + Confidence (20%)
+        $weightedScore = ($coherenceScore * 0.4) + ($detailScore * 0.4) + ($confidence * 0.2);
 
-            return $this->markAsInvalid($concernId, 'Ang iyong ulat ay hindi sapat ang detalye o hindi wasto para sa aming system.', $analysis);
+        // Rejection Logic based on thresholds
+        if (! $isFallback) {
+            if ($coherenceScore < 0.60) {
+                Log::info("Concern #{$concernId} rejected: Low coherence score ({$coherenceScore})");
+
+                return $this->markAsInvalid(
+                    $concernId,
+                    'Hindi tugma ang detalye ng ulat. Paki-check kung tama ang title, description, at image.',
+                    $analysis
+                );
+            }
+
+            if ($detailScore < 0.50) {
+                Log::info("Concern #{$concernId} rejected: Low detail score ({$detailScore})");
+
+                return $this->markAsInvalid(
+                    $concernId,
+                    'Kulang ang detalye ng ulat. Paki-lagay ng mas specific na location at description.',
+                    $analysis
+                );
+            }
+
+            if ($weightedScore < 0.70) {
+                Log::info("Concern #{$concernId} rejected: Low weighted score ({$weightedScore})");
+
+                return $this->markAsInvalid(
+                    $concernId,
+                    'Ang iyong ulat ay hindi sapat ang detalye o hindi wasto para sa aming system.',
+                    $analysis
+                );
+            }
         }
 
-        // Hierarchy: AI Result (if high confidence) > User Selection > Existing Value
+        // Hierarchy: AI Result (if high confidence) > Existing Value
         $isHighConfidence = $confidence >= 0.7;
 
         $finalCategory = ($isHighConfidence && ! empty($analysis['category']))
             ? $analysis['category']
-            : ($concern->user_selected_category ?? $concern->category);
+            : $concern->category;
 
         $finalSeverity = ($isHighConfidence && ! empty($analysis['severity']))
             ? $analysis['severity']
-            : ($concern->user_selected_severity ?? $concern->severity);
+            : $concern->severity;
 
         $concern->update([
             'is_valid' => true,
@@ -598,6 +638,8 @@ class ConcernService
             'ai_category' => $analysis['category'] ?? null,
             'ai_severity' => $analysis['severity'] ?? null,
             'ai_confidence' => $confidence,
+            'coherence_score' => $coherenceScore,
+            'detail_score' => $detailScore,
             'ai_processed_at' => now(),
             'ai_analysis_raw' => $analysis,
         ]);
@@ -665,6 +707,12 @@ class ConcernService
 
             // Broadcast failure to citizen
             event(new \App\Events\ConcernValidationFailed($concern, $reason, $strikes));
+
+            // Send Email Notification to Citizen (Async)
+            if ($user->email) {
+                \Illuminate\Support\Facades\Mail::to($user->email)
+                    ->queue(new \App\Mail\ConcernValidationResultMail($concern, false, $reason));
+            }
         }
     }
 
@@ -715,7 +763,7 @@ class ConcernService
             ->select('concerns.*')
             ->selectRaw('(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance', [$concern->latitude, $concern->longitude, $concern->latitude])
             ->where('id', '!=', $concern->id) // Not itself
-            ->where('is_duplicate', false) // Only link to parents
+            ->whereNull('parent_concern_id') // Only link to parents
             ->where(function ($query) use ($concern) {
                 // Use specific type if available for better precision
                 if ($concern->specific_type) {

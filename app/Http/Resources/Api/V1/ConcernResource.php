@@ -26,11 +26,11 @@ class ConcernResource extends JsonResource
             'category' => $this->category,
             'type' => $this->type,
             // AI Category Detection Fields
-            'userSelectedCategory' => $this->user_selected_category,
-            'userSelectedSeverity' => $this->user_selected_severity,
             'aiCategory' => $this->ai_category,
             'aiSeverity' => $this->ai_severity,
             'aiConfidence' => $this->ai_confidence,
+            'coherenceScore' => $this->coherence_score,
+            'detailScore' => $this->detail_score,
             'aiProcessedAt' => $this->ai_processed_at?->toIso8601String(),
 
             // 2. Conditional Location (Only send if latitude exists)
@@ -94,7 +94,7 @@ class ConcernResource extends JsonResource
 
             'createdAt' => $this->created_at->diffForHumans(),
             'duplicatesCount' => $this->duplicates_count ?? $this->duplicates()->count() ?? 0,
-            'isDuplicate' => (bool) $this->is_duplicate,
+            'isDuplicate' => ! is_null($this->parent_concern_id),
         ];
     }
 }

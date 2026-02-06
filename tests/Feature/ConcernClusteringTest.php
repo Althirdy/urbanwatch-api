@@ -90,8 +90,7 @@ test('it creates a new concern and assigns it when no parent exists', function (
 
     $concern->refresh();
 
-    expect($concern->is_duplicate)->toBeFalse()
-        ->and($concern->parent_concern_id)->toBeNull()
+    expect($concern->parent_concern_id)->toBeNull()
         ->and($concern->status)->toBe('pending');
 
     // Check Distribution
@@ -132,8 +131,7 @@ test('it clusters a nearby same-category concern as duplicate', function () {
 
     $concern->refresh();
 
-    expect($concern->is_duplicate)->toBeTrue()
-        ->and($concern->parent_concern_id)->toBe($parent->id);
+    expect($concern->parent_concern_id)->toBe($parent->id);
 
     // Assert NO distribution created for duplicate
     $distribution = ConcernDistribution::where('concern_id', $concern->id)->first();
@@ -167,8 +165,7 @@ test('it does NOT cluster concerns with different categories', function () {
 
     $concern->refresh();
 
-    expect($concern->is_duplicate)->toBeFalse()
-        ->and($concern->parent_concern_id)->toBeNull();
+    expect($concern->parent_concern_id)->toBeNull();
 });
 
 test('it does NOT cluster concerns far away', function () {
@@ -199,7 +196,7 @@ test('it does NOT cluster concerns far away', function () {
 
     $concern->refresh();
 
-    expect($concern->is_duplicate)->toBeFalse();
+    expect($concern->parent_concern_id)->toBeNull();
 });
 
 test('purok leader sees related reports count in api response', function () {
@@ -228,7 +225,6 @@ test('purok leader sees related reports count in api response', function () {
     Concern::factory()->count(3)->create([
         'citizen_id' => $this->citizen->id,
         'parent_concern_id' => $parent->id,
-        'is_duplicate' => true,
         'category' => 'safety',
     ]);
 
