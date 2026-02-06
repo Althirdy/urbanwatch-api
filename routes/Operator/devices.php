@@ -14,7 +14,7 @@ Route::middleware('auth')->group(function () {
         $status = request()->get('status', 'all');
         $package = request()->get('package', 'all');
         $yolo = request()->get('yolo', 'all');
-        
+
         // Build cache key with all filters
         $cacheKey = "devices_list_page_{$page}_search_{$search}_status_{$status}_package_{$package}_yolo_{$yolo}";
 
@@ -23,32 +23,32 @@ Route::middleware('auth')->group(function () {
         $data = \Illuminate\Support\Facades\Cache::tags(['cctv_devices', 'uw_devices'])->remember($cacheKey, now()->addHours(1), function () use ($page, $search, $status, $package, $yolo) {
             // Build CCTV query with filters
             $cctvQuery = cctvDevices::query();
-            
+
             // Apply search filter
             if ($search) {
-                $cctvQuery->where(function($q) use ($search) {
+                $cctvQuery->where(function ($q) use ($search) {
                     $q->where('location_name', 'like', "%{$search}%")
-                      ->orWhere('primary_rtsp_url', 'like', "%{$search}%")
-                      ->orWhere('package', 'like', "%{$search}%");
+                        ->orWhere('primary_rtsp_url', 'like', "%{$search}%")
+                        ->orWhere('package', 'like', "%{$search}%");
                 });
             }
-            
+
             // Apply status filter
             if ($status !== 'all') {
                 $cctvQuery->where('status', $status);
             }
-            
+
             // Apply package filter
             if ($package !== 'all') {
                 $cctvQuery->where('package', $package);
             }
-            
+
             // Apply YOLO filter
             if ($yolo !== 'all') {
                 $yoloEnabled = $yolo === 'enabled';
                 $cctvQuery->where('yolo_enabled', $yoloEnabled);
             }
-            
+
             $cctvDevices = $cctvQuery->paginate(10, ['*'], 'page', $page)->withQueryString();
 
             // Get UW Devices

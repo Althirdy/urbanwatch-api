@@ -63,7 +63,7 @@ class IoTBoxController extends BaseApiController
             // Authenticate IoT box via Token in Header
             $token = $request->header('X-Device-Token');
 
-            if (!$token) {
+            if (! $token) {
                 return $this->sendError('Device token is missing.', null, 401);
             }
 
@@ -73,7 +73,7 @@ class IoTBoxController extends BaseApiController
             // use service to verify and update heartbeat
             $iotBox = $this->uwDeviceService->verifyAndHeartbeat($deviceId, $token);
 
-            if (!$iotBox) {
+            if (! $iotBox) {
                 Log::warning('Unregistered, inactive, or invalid token IoT box attempted to send data', [
                     'device_id' => $deviceId,
                     'ip' => $request->ip(),
@@ -90,7 +90,7 @@ class IoTBoxController extends BaseApiController
                     $directory = 'anomaly_logs';
                     $disk = \Illuminate\Support\Facades\Storage::disk('public');
 
-                    if (!$disk->exists($directory)) {
+                    if (! $disk->exists($directory)) {
                         $disk->makeDirectory($directory);
                     }
 
@@ -102,7 +102,7 @@ class IoTBoxController extends BaseApiController
                     $imagePath = $uploadResult['storage_path'];
 
                     // Verify file was actually saved
-                    if (!$disk->exists($imagePath)) {
+                    if (! $disk->exists($imagePath)) {
                         // Fallback: Direct storage if service failed
                         Log::warning('FileUploadService failed, using fallback storage');
                         $imagePath = $request->file('image')->store($directory, 'public');
@@ -160,7 +160,7 @@ class IoTBoxController extends BaseApiController
             event(new AnomalyLogCreated($anomalyLog));
 
             // Send push notifications only for new parent anomalies (not duplicates)
-            if (!$isDuplicate) {
+            if (! $isDuplicate) {
                 $this->notificationService->notifyAnomalyDetected($anomalyLog, $iotBox);
             }
 
@@ -188,7 +188,7 @@ class IoTBoxController extends BaseApiController
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return $this->sendError('Failed to record anomaly log: ' . $e->getMessage());
+            return $this->sendError('Failed to record anomaly log: '.$e->getMessage());
         }
     }
 
@@ -276,7 +276,7 @@ class IoTBoxController extends BaseApiController
                 ->withCount('relatedAnomalies')
                 ->find($id);
 
-            if (!$anomalyLog) {
+            if (! $anomalyLog) {
                 return $this->sendNotFound('Anomaly log not found');
             }
 
@@ -302,13 +302,13 @@ class IoTBoxController extends BaseApiController
         try {
             $anomalyLog = AnomalyLog::find($id);
 
-            if (!$anomalyLog || !$anomalyLog->image) {
+            if (! $anomalyLog || ! $anomalyLog->image) {
                 abort(404, 'Image not found');
             }
 
             $disk = \Illuminate\Support\Facades\Storage::disk('public');
 
-            if (!$disk->exists($anomalyLog->image)) {
+            if (! $disk->exists($anomalyLog->image)) {
                 abort(404, 'Image file not found');
             }
 
@@ -346,7 +346,7 @@ class IoTBoxController extends BaseApiController
         try {
             $anomalyLog = AnomalyLog::find($id);
 
-            if (!$anomalyLog) {
+            if (! $anomalyLog) {
                 return $this->sendNotFound('Anomaly log not found');
             }
 
@@ -410,7 +410,7 @@ class IoTBoxController extends BaseApiController
             $childIds = $request->child_anomaly_ids;
 
             // Filter out the parent ID if accidentally included
-            $childIds = array_filter($childIds, fn($id) => $id != $parentAnomaly->id);
+            $childIds = array_filter($childIds, fn ($id) => $id != $parentAnomaly->id);
 
             if (empty($childIds)) {
                 return $this->sendError('No valid child anomalies to merge.');
@@ -449,7 +449,7 @@ class IoTBoxController extends BaseApiController
                 'error' => $e->getMessage(),
             ]);
 
-            return $this->sendError('Failed to merge anomaly logs: ' . $e->getMessage());
+            return $this->sendError('Failed to merge anomaly logs: '.$e->getMessage());
         }
     }
 
@@ -463,11 +463,11 @@ class IoTBoxController extends BaseApiController
         try {
             $anomalyLog = AnomalyLog::find($id);
 
-            if (!$anomalyLog) {
+            if (! $anomalyLog) {
                 return $this->sendNotFound('Anomaly log not found');
             }
 
-            if (!$anomalyLog->is_duplicate) {
+            if (! $anomalyLog->is_duplicate) {
                 return $this->sendError('This anomaly is not a duplicate and cannot be unmerged.');
             }
 
@@ -520,10 +520,10 @@ class IoTBoxController extends BaseApiController
         // Use service to verify and heartbeat
         $iotBox = $this->uwDeviceService->verifyAndHeartbeat($request->device_id, $token);
 
-        if (!$iotBox) {
+        if (! $iotBox) {
             // Check if device exists at all to give better error
             $exists = $this->uwDeviceService->getDeviceById($request->device_id);
-            if (!$exists) {
+            if (! $exists) {
                 return $this->sendError('Device not registered', null, 404);
             }
 
