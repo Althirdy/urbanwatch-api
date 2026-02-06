@@ -1,18 +1,9 @@
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import DashboardMap from '@/components/dashboard-map';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, Map, Users, ChevronDown, ChevronUp, MapPin, Send } from 'lucide-react';
-import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useForm } from '@inertiajs/react';
-import { toast } from '@/components/use-toast';
-import { Spinner } from '@/components/ui/spinner';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AlertTriangle, Map, Users } from 'lucide-react';
 import { assign } from '@/routes/dashboard';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -29,8 +20,6 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ unmappedConcerns, puroks, purokLeaders }: DashboardProps) {
-    const [isMapOpen, setIsMapOpen] = useState(false);
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
@@ -78,144 +67,31 @@ export default function Dashboard({ unmappedConcerns, puroks, purokLeaders }: Da
                     </Card>
                 </div>
 
-                {/* Unassigned Queue Section */}
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <h2 className="text-xl font-bold tracking-tight">Unassigned Queue</h2>
-                            <p className="text-sm text-muted-foreground">
-                                These concerns could not be automatically routed. Please assign them to a Purok Leader.
+                {/* Live Citizen Concern Map */}
+                <div className="rounded-xl border shadow-sm bg-card overflow-hidden">
+                    <div className="flex items-center gap-3 p-4 border-b bg-muted/20">
+                        <div className="rounded-md bg-primary/10 p-2.5 text-primary">
+                            <Map className="h-6 w-6" />
+                        </div>
+                        <div className="flex-1">
+                            <h2 className="text-xl font-bold tracking-tight">Geographic Concern Overview</h2>
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                                {unmappedConcerns.length === 0 
+                                    ? 'All concerns have been assigned to officials. Great work!' 
+                                    : `${unmappedConcerns.length} unmapped concern${unmappedConcerns.length === 1 ? '' : 's'} requiring assignment. Click any marker to route to a Purok Leader.`
+                                }
                             </p>
                         </div>
                     </div>
-
-                    {unmappedConcerns.length === 0 ? (
-                        <Card className="border-dashed flex items-center justify-center p-12 text-center">
-                            <div className="space-y-2">
-                                <MapPin className="h-8 w-8 text-muted-foreground/50 mx-auto" />
-                                <p className="text-muted-foreground">No unassigned concerns at the moment.</p>
-                            </div>
-                        </Card>
-                    ) : (
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {unmappedConcerns.map((concern) => (
-                                <UnassignedConcernCard
-                                    key={concern.id}
-                                    concern={concern}
-                                    purokLeaders={purokLeaders}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* Collapsible Map Section */}
-                <Collapsible
-                    open={isMapOpen}
-                    onOpenChange={setIsMapOpen}
-                    className="rounded-xl border shadow-sm bg-card overflow-hidden"
-                >
-                    <div className="flex items-center justify-between p-4 border-b">
-                        <div className="flex items-center gap-3">
-                            <div className="rounded-md bg-primary/10 p-2 text-primary">
-                                <Map className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <h3 className="font-bold tracking-tight">Live Incident Map</h3>
-                                <p className="text-xs text-muted-foreground">Geographic overview of all incidents and boundaries within the barangay.</p>
-                            </div>
-                        </div>
-                        <CollapsibleTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                {isMapOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                            </Button>
-                        </CollapsibleTrigger>
+                    <div className="h-[calc(100vh-320px)] min-h-[600px]">
+                        <DashboardMap
+                            puroks={puroks}
+                            concerns={unmappedConcerns}
+                            purokLeaders={purokLeaders}
+                        />
                     </div>
-                    <CollapsibleContent>
-                        <div className="p-0 h-[500px]">
-                            <DashboardMap
-                                puroks={puroks}
-                                concerns={unmappedConcerns}
-                                purokLeaders={purokLeaders}
-                            />
-                        </div>
-                    </CollapsibleContent>
-                </Collapsible>
+                </div>
             </div>
         </AppLayout>
-    );
-}
-
-function UnassignedConcernCard({ concern, purokLeaders }: { concern: any, purokLeaders: any[] }) {
-    const { data, setData, post, processing, reset } = useForm({
-        leader_id: '',
-    });
-
-    const handleAssign = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!data.leader_id) return;
-
-        post(assign(concern.id).url, {
-            onSuccess: () => {
-                toast({
-                    title: "Assigned Successfully",
-                    description: "The concern has been routed.",
-                });
-                reset();
-            },
-            preserveScroll: true
-        });
-    };
-
-    return (
-        <Card className="flex flex-col h-full border-muted-foreground/10 hover:border-primary/30 hover:shadow-lg transition-all duration-300 overflow-hidden group">
-            <CardHeader className="pb-3 border-b bg-muted/20">
-                <div className="flex items-start justify-between gap-2">
-                    <Badge variant="secondary" className="px-2 py-0 text-[10px] uppercase font-bold tracking-wider">{concern.category}</Badge>
-                    <span className="text-[10px] text-muted-foreground font-semibold bg-muted px-1.5 py-0.5 rounded">ID #{concern.id}</span>
-                </div>
-                <CardTitle className="text-base font-bold line-clamp-1 mt-2 text-foreground group-hover:text-primary transition-colors">{concern.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 space-y-4 pt-4">
-                <p className="text-sm text-muted-foreground/90 line-clamp-3 min-h-[4.5em] leading-relaxed italic">
-                    "{concern.description}"
-                </p>
-
-                <form onSubmit={handleAssign} className="space-y-4 pt-2 border-t border-dashed">
-                    <div className="space-y-1.5">
-                        <label className="text-[10px] font-black uppercase text-muted-foreground/70 tracking-widest flex items-center gap-1.5">
-                            <Users className="h-3 w-3" /> Assign to Official
-                        </label>
-                        <Select
-                            value={data.leader_id}
-                            onValueChange={(val) => setData('leader_id', val)}
-                        >
-                            <SelectTrigger className="h-10 text-xs bg-muted/30 border-muted-foreground/20 focus:ring-primary/20">
-                                <SelectValue placeholder="Select Purok Leader" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {purokLeaders.map((leader) => (
-                                    <SelectItem key={leader.id} value={leader.id.toString()}>
-                                        <div className="flex flex-col">
-                                            <span className="font-semibold">{leader.name}</span>
-                                            <span className="text-[10px] text-muted-foreground"> {leader.purok_name}</span>
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <Button
-                        type="submit"
-                        size="sm"
-                        className="w-full text-xs font-bold tracking-tighter shadow-sm transition-all active:scale-[0.98]"
-                        disabled={processing || !data.leader_id}
-                    >
-                        {processing ? <Spinner className="w-3 h-3 mr-2" /> : <Send className="w-3 h-3 mr-2" />}
-                        Route Concern
-                    </Button>
-                </form>
-            </CardContent>
-        </Card>
     );
 }
