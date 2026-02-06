@@ -4,7 +4,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Maharlika 1",
+                "name": "PKG 3 - MAHARLIKA 1",
                 "color": "#FFD700"
             },
             "geometry": {
@@ -52,7 +52,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Damayan",
+                "name": "PKG 3 - DAMAYAN",
                 "description": "Primary area of interest in Bagong Silang"
             },
             "geometry": {
@@ -136,7 +136,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "kaunlaran"
+                "name": "PKG 3 - KAUNLARAN"
             },
             "geometry": {
                 "coordinates": [
@@ -195,7 +195,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Pkg2"
+                "name": "Pkg 2 - GK STAGING"
             },
             "geometry": {
                 "coordinates": [
@@ -250,7 +250,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Botlog Pkg 2"
+                "name": "Pkg 2 - BOTLOG"
             },
             "geometry": {
                 "coordinates": [
@@ -293,7 +293,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Sampalucan"
+                "name": "PKG 1C - SAMPALUKAN"
             },
             "geometry": {
                 "coordinates": [
@@ -368,7 +368,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "powerLineKangkungan"
+                "name": "PKG 1B - POWERLINE"
             },
             "geometry": {
                 "coordinates": [
@@ -419,7 +419,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Pkg 1"
+                "name": "PKG 1"
             },
             "geometry": {
                 "coordinates": [
@@ -474,7 +474,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "powerLine kangkungan "
+                "name": "PKG 1B - POWERLINE"
             },
             "geometry": {
                 "coordinates": [
@@ -545,7 +545,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Pkg 4"
+                "name": "PKG 4B - AKLAN WIRE"
             },
             "geometry": {
                 "coordinates": [
@@ -660,7 +660,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "pkg 4"
+                "name": "PKG 4A - ATLANTICA"
             },
             "geometry": {
                 "coordinates": [
@@ -775,7 +775,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Maharlika 2"
+                "name": "PKG 3 - MAHARLIKA 2"
             },
             "geometry": {
                 "coordinates": [
@@ -850,7 +850,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Gatnai"
+                "name": "PKG 5 - GATNAI"
             },
             "geometry": {
                 "coordinates": [
@@ -921,7 +921,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Gatnai Pkg 5"
+                "name": "PKG 5 - GATNAI"
             },
             "geometry": {
                 "coordinates": [
@@ -996,7 +996,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "REd Bofalo"
+                "name": "PKG 5 - CRASHER"
             },
             "geometry": {
                 "coordinates": [
@@ -1063,7 +1063,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Bayanihan"
+                "name": "PKG 6 - BAYANIHAN"
             },
             "geometry": {
                 "coordinates": [
@@ -1162,7 +1162,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "San Roque"
+                "name": "PKG 5 - SAN ROQUE"
             },
             "geometry": {
                 "coordinates": [
@@ -1241,7 +1241,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Annex"
+                "name": "PKG 5 - BRGY ANNEX (BFP)"
             },
             "geometry": {
                 "coordinates": [
@@ -1324,7 +1324,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Ultrapok pkg 7-c"
+                "name": "PKG 7C - BS COURT"
             },
             "geometry": {
                 "coordinates": [
@@ -1502,7 +1502,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Khulits"
+                "name": "PKG 7B - KHULITS COURT"
             },
             "geometry": {
                 "coordinates": [
@@ -1545,7 +1545,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Dating Daan"
+                "name": "PKG 7B - DATING DAAN"
             },
             "geometry": {
                 "coordinates": [
@@ -1628,7 +1628,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Friul"
+                "name": "PKG 7B - PHILRADS"
             },
             "geometry": {
                 "coordinates": [
@@ -1679,7 +1679,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Upper"
+                "name": "PKG 9 - UPPER"
             },
             "geometry": {
                 "coordinates": [
@@ -1754,7 +1754,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "Plaza Mania"
+                "name": "PKG 9 - PLAZA MANIA"
             },
             "geometry": {
                 "coordinates": [
