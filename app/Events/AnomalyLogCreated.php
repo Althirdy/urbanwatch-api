@@ -20,7 +20,7 @@ class AnomalyLogCreated implements ShouldBroadcastNow
      */
     public function __construct(AnomalyLog $anomalyLog)
     {
-        $this->anomalyLog = $anomalyLog->load('iotBox.location');
+        $this->anomalyLog = $anomalyLog->load('iotBox');
     }
 
     /**
@@ -45,7 +45,6 @@ class AnomalyLogCreated implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         $iotBox = $this->anomalyLog->iotBox;
-        $location = $iotBox?->location;
 
         return [
             'id' => $this->anomalyLog->id,
@@ -59,16 +58,14 @@ class AnomalyLogCreated implements ShouldBroadcastNow
             'iot_box' => [
                 'id' => $iotBox?->id,
                 'device_name' => $iotBox?->device_name ?? 'Unknown Device',
-                'display_location' => $iotBox?->display_location ?? 'Unknown Location',
+                'location' => $iotBox?->display_location ?? 'Unknown Location',
                 'latitude' => $iotBox?->latitude,
                 'longitude' => $iotBox?->longitude,
                 'is_online' => $iotBox?->is_online ?? false,
             ],
-            'location' => $location ? [
-                'id' => $location->id,
-                'location_name' => $location->location_name,
-                'barangay' => $location->barangay,
-            ] : null,
+            'location' => $iotBox?->display_location ?? 'Unknown Location',
+            'latitude' => $iotBox?->latitude,
+            'longitude' => $iotBox?->longitude,
         ];
     }
 
