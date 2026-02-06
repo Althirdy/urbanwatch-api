@@ -28,12 +28,19 @@ interface DevicesPageProps {
     devices: Device_T;
     uwDevices: UWDevice_T;
     cctvDevices: cctv_T[];
+    filters?: {
+        search: string;
+        status: string;
+        package: string;
+        yolo: string;
+    };
 }
 
 export default function Devices({
     devices,
     uwDevices,
     cctvDevices,
+    filters,
 }: DevicesPageProps) {
     const [viewMode, setViewMode] = useState<'cctv' | 'uwDevice'>('cctv');
 
@@ -70,7 +77,7 @@ export default function Devices({
 
                 {/* Content */}
                 {viewMode === 'cctv' ? (
-                    <CCTVDisplay devices={devices} />
+                    <CCTVDisplay devices={devices} filters={filters} />
                 ) : (
                     <UWDeviceDisplay devices={uwDevices} />
                 )}

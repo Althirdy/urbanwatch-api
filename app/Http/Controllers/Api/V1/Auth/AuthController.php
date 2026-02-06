@@ -97,6 +97,11 @@ class AuthController extends BaseApiController
                 return $this->sendError('ID verification failed: '.($analysis['reasoning'] ?? 'Image not recognized as a valid PhilID'), 400);
             }
 
+            // Check if user is outside allowed area (Barangay 176-E restriction)
+            if ($analysis['isOutsideAllowedArea'] ?? false) {
+                return $this->sendError($analysis['locationRestrictionReason'] ?? 'Registration is currently restricted to Barangay 176-E residents only.', 403);
+            }
+
             if ($this->authService->checkPcnNumberExists($analysis['data']['pcnNumber'])) {
                 return $this->sendError('PhilSys ID Verification failed. Please ensure your ID is not already registered or contact support.', 400);
             }

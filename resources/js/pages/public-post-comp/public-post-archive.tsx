@@ -62,7 +62,7 @@ function ArchivePublicPost({ post, children }: ArchivePublicPostProps) {
     return (
         <AlertDialog>
             <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
-            <AlertDialogContent className="sm:max-w-md">
+            <AlertDialogContent className="">
                 <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2 text-muted-foreground">
                         <Archive className="h-6 w-6" />
@@ -77,7 +77,6 @@ function ArchivePublicPost({ post, children }: ArchivePublicPostProps) {
                     {/* Post Details Card */}
                     <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                         <div className="flex items-start gap-3">
-
                             <div className="flex-1 min-w-0">
                                 <h3 className="text-lg font-bold truncate text-foreground">
                                     {post.title || `Post #${post.id}`}
@@ -133,29 +132,32 @@ function ArchivePublicPost({ post, children }: ArchivePublicPostProps) {
                                         </div>
                                     )}
                                 </div>
-                                {post.content && (
-                                    <div className="mt-3">
-                                        <p className="line-clamp-4 text-sm text-muted-foreground leading-relaxed">
-                                            {post.content}
-                                        </p>
-                                    </div>
-                                )}
                                 {post.image_path && (
                                     <div className="mt-3">
                                         <img
                                             src={post.image_path}
                                             alt={post.title}
-                                            className="h-36 w-full rounded-[var(--radius)] object-cover"
+                                            className="h-32 w-full rounded-md object-cover"
                                         />
+                                    </div>
+                                )}
+                                {post.content && (
+                                    <div className="mt-3">
+                                        <p className="line-clamp-3 text-sm text-muted-foreground leading-relaxed">
+                                            {post.content}
+                                        </p>
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    <div className="text-sm font-medium text-destructive">
-                        This action cannot be undone. The post will
-                        be permanently removed from public view.
+                    <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-3 border border-destructive/20">
+                        <TriangleAlert className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                        <div className="text-sm text-destructive">
+                            <p className="font-semibold">Warning</p>
+                            <p className="mt-0.5">This action cannot be undone. The post will be permanently removed from public view.</p>
+                        </div>
                     </div>
                 </div>
 

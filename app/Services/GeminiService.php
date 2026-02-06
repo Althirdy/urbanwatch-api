@@ -464,6 +464,12 @@ class GeminiService
                     - INFER the 4-digit Postal Code based on the City/Barangay.
                     - INFER the value of province based on the City.
 
+                    PHASE 9 (PH 9) DETECTION - IMPORTANT:
+                    - Check if the address contains "PH 9", "PH9", "PH. 9", "Phase 9", or "Phase Nine".
+                    - Phase 9 (PH 9) is the area code for Barangay 176-E in Caloocan City.
+                    - Common address patterns: "Pkg. [Name] PH 9, Caloocan City" or "PH 9 [Street], Caloocan" or similar.
+                    - Set isPhase9Resident to true ONLY if the address clearly contains PH 9 or Phase 9.
+
                     JSON OUTPUT FORMAT (Strictly follow this):
                     {
                         "isAuthentic": boolean,
@@ -471,11 +477,12 @@ class GeminiService
                         "imageQualityIssue": boolean,
                         "confidence": number (0-100),
                         "reasoning": "string",
+                        "isPhase9Resident": boolean,
                         "data": {
                             "pcnNumber": "string" or null,
                             "lastName": "string" or null,
                             "firstName": "string" or null,
-                            "suffix": string" or null,  
+                            "suffix": "string" or null,  
                             "middleName": "string" or null,
                             "dateOfBirth": "MM/DD/YYYY" or null,
                             "address": "string" or null,
@@ -535,15 +542,28 @@ class GeminiService
             $result['locationRestrictionReason'] = null;
 
             if ($restrictToBarangay && $result['isAuthentic']) {
+                $isPhase9Resident = $result['isPhase9Resident'] ?? false;
                 $address = $result['data']['address'] ?? null;
 
-                // Check if address starts with "PH9" (Barangay 176 area format)
-                if (! $address || ! str_starts_with(strtoupper(trim($address)), 'PH9')) {
-                    $result['isOutsideAllowedArea'] = true;
-                    $result['locationRestrictionReason'] = 'Registration is currently restricted to Barangay 176 residents only. Your address must start with PH9.';
+                // Check using Gemini's detection or fallback to pattern matching
+                $isWithinAllowedArea = $isPhase9Resident;
 
-                    Log::info('National ID validation: Outside allowed area', [
+                // Fallback: Check address for PH 9, PH9, Phase 9 patterns
+                if (! $isWithinAllowedArea && $address) {
+                    $addressUpper = strtoupper($address);
+                    // Match patterns: PH 9, PH9, PH. 9, PHASE 9, PHASE9
+                    if (preg_match('/\bPH\.?\s*9\b|\bPHASE\s*9\b/i', $addressUpper)) {
+                        $isWithinAllowedArea = true;
+                    }
+                }
+
+                if (! $isWithinAllowedArea) {
+                    $result['isOutsideAllowedArea'] = true;
+                    $result['locationRestrictionReason'] = 'Registration is only available to Phase 9 (PH 9) residents. Your address is not in Phase 9.';
+
+                    Log::info('National ID validation: Outside allowed area (not PH 9)', [
                         'address' => $address,
+                        'isPhase9Resident' => $isPhase9Resident,
                         'restriction_enabled' => $restrictToBarangay,
                     ]);
                 }

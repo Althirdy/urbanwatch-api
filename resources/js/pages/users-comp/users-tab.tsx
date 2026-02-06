@@ -13,7 +13,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
-import { locations } from '@/lib/packages';
+import { getPackageDropdownOptions } from '@/lib/geojson-packages';
 import { cn } from '@/lib/utils';
 import { Check, ChevronsUpDown, Filter, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -50,9 +50,9 @@ const UserActionTab = ({
             .sort();
     }, [users.data]);
 
-    // Sort locations alphabetically by name
+    // Get locations from geojson and sort alphabetically
     const sortedLocations = useMemo(() => {
-        return [...locations].sort((a, b) =>
+        return getPackageDropdownOptions().sort((a, b) =>
             a.name.localeCompare(b.name)
         );
     }, []);
@@ -83,7 +83,7 @@ const UserActionTab = ({
 
         // Filter by location
         if (locationFilter) {
-            const selectedLocation = locations.find(loc => loc.id.toString() === locationFilter);
+            const selectedLocation = sortedLocations.find(loc => loc.id === locationFilter);
             if (selectedLocation) {
                 filteredResults = filteredResults.filter(
                     (user: users_T) =>
@@ -114,7 +114,7 @@ const UserActionTab = ({
         }
 
         setFilteredUsers(filteredResults);
-    }, [roleFilter, statusFilter, locationFilter, searchQuery, users.data, locations, setFilteredUsers]);
+    }, [roleFilter, statusFilter, locationFilter, searchQuery, users.data, sortedLocations, setFilteredUsers]);
 
     // Clear all filters
     const clearFilters = () => {
@@ -140,7 +140,7 @@ const UserActionTab = ({
             filtered = filtered.filter((user) => user.status?.toLowerCase() === statusFilter.toLowerCase());
         }
         if (locationFilter) {
-            const selectedLocation = locations.find(loc => loc.id.toString() === locationFilter);
+            const selectedLocation = sortedLocations.find(loc => loc.id === locationFilter);
             if (selectedLocation) {
                 filtered = filtered.filter(
                     (user) =>
@@ -162,7 +162,7 @@ const UserActionTab = ({
             });
         }
         return filtered.length;
-    }, [users.data, roleFilter, statusFilter, locationFilter, searchQuery, locations]);
+    }, [users.data, roleFilter, statusFilter, locationFilter, searchQuery, sortedLocations]);
 
     return (
         <div className="flex flex-col gap-3 rounded-[var(--radius)] border bg-card p-3 dark:border-zinc-800">
@@ -297,7 +297,7 @@ const UserActionTab = ({
                                 className="h-8 w-[150px] justify-between text-xs cursor-pointer"
                             >
                                 {locationFilter
-                                    ? sortedLocations.find((l) => l.id.toString() === locationFilter)?.name
+                                    ? sortedLocations.find((l) => l.id === locationFilter)?.name
                                     : 'Location'}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
@@ -330,9 +330,9 @@ const UserActionTab = ({
                                                 value={location.name}
                                                 onSelect={() => {
                                                     setLocationFilter(
-                                                        location.id.toString() === locationFilter
+                                                        location.id === locationFilter
                                                             ? null
-                                                            : location.id.toString()
+                                                            : location.id
                                                     );
                                                     setLocationOpen(false);
                                                 }}
@@ -341,7 +341,7 @@ const UserActionTab = ({
                                                 <Check
                                                     className={cn(
                                                         'ml-auto h-4 w-4',
-                                                        locationFilter === location.id.toString()
+                                                        locationFilter === location.id
                                                             ? 'opacity-100'
                                                             : 'opacity-0',
                                                     )}

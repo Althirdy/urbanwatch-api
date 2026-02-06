@@ -379,43 +379,12 @@ class NotificationService
 
         try {
             // Load the location relationship if not already loaded
-            $iotBox->load('location');
+            // $iotBox->load('location'); // Relationship removed
 
             $purokLeaders = collect();
 
-            // Strategy 1: Try to find purok leaders via device's location
-            if ($iotBox->location_id && $iotBox->location) {
-                Log::info('Attempting to find purok leaders via location relationship', [
-                    'anomaly_log_id' => $anomalyLog->id,
-                    'iot_box_id' => $iotBox->id,
-                    'location_id' => $iotBox->location_id,
-                    'location_name' => $iotBox->location->location_name ?? 'Unknown',
-                ]);
-
-                // Try to find purok based on location's coordinates using spatial query
-                $latitude = $iotBox->location->latitude;
-                $longitude = $iotBox->location->longitude;
-
-                if ($latitude && $longitude) {
-                    $purok = Purok::whereRaw('ST_Contains(boundary, POINT(?, ?))', [$longitude, $latitude])
-                        ->first();
-
-                    if ($purok) {
-                        $purokLeaders = User::where('role_id', 2)
-                            ->whereHas('officialDetails', function ($query) use ($purok) {
-                                $query->where('status', 'active')
-                                    ->where('purok_id', $purok->id);
-                            })
-                            ->get();
-
-                        Log::info('Found purok leaders via location coordinates', [
-                            'purok_id' => $purok->id,
-                            'purok_name' => $purok->name,
-                            'leader_count' => $purokLeaders->count(),
-                        ]);
-                    }
-                }
-            }
+            // Strategy 1: Removed as UwDevice does not have direct location relationship
+            // We now rely on Strategy 2 (Direct Coordinates)
 
             // Strategy 2: Fall back to device's direct coordinates if Strategy 1 failed
             if ($purokLeaders->isEmpty()) {

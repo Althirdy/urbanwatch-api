@@ -42,7 +42,7 @@ import {
     X,
     Locate,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     cctv_T,
     paginated_T,
@@ -55,6 +55,12 @@ interface CCTVDisplayProps {
     onDelete?: (device: cctv_T) => void;
     onViewStream?: (device: cctv_T) => void;
     devices: paginated_T<cctv_T>;
+    filters?: {
+        search: string;
+        status: string;
+        package: string;
+        yolo: string;
+    };
 }
 
 function CCTVDisplay({
@@ -62,12 +68,65 @@ function CCTVDisplay({
     onDelete,
     onViewStream,
     devices,
+    filters,
 }: CCTVDisplayProps) {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [packageFilter, setPackageFilter] = useState<string>('all');
-    const [yoloFilter, setYoloFilter] = useState<string>('all');
+    const [searchQuery, setSearchQuery] = useState(filters?.search || '');
+    const [statusFilter, setStatusFilter] = useState<string>(filters?.status || 'all');
+    const [packageFilter, setPackageFilter] = useState<string>(filters?.package || 'all');
+    const [yoloFilter, setYoloFilter] = useState<string>(filters?.yolo || 'all');
     const [togglingYolo, setTogglingYolo] = useState<number | null>(null);
+
+    // Debounced search handler
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            updateFilters();
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Update filters via URL navigation
+    const updateFilters = () => {
+        router.get('/devices', {
+            search: searchQuery,
+            status: statusFilter,
+            package: packageFilter,
+            yolo: yoloFilter,
+            page: 1, // Reset to page 1 when filters change
+        }, {
+            preserveState: true,
+            preserveScroll: true,
+            only: ['devices', 'filters'],
+        });
+    };
+
+    // Handle filter changes (non-search)
+    const handleFilterChange = (filterType: string, value: string) => {
+        const newFilters = {
+            search: searchQuery,
+            status: statusFilter,
+            package: packageFilter,
+            yolo: yoloFilter,
+            page: 1,
+        };
+
+        if (filterType === 'status') {
+            setStatusFilter(value);
+            newFilters.status = value;
+        } else if (filterType === 'package') {
+            setPackageFilter(value);
+            newFilters.package = value;
+        } else if (filterType === 'yolo') {
+            setYoloFilter(value);
+            newFilters.yolo = value;
+        }
+
+        router.get('/devices', newFilters, {
+            preserveState: true,
+            preserveScroll: true,
+            only: ['devices', 'filters'],
+        });
+    };
 
     // Handle YOLO toggle
     const handleYoloToggle = (device: cctv_T) => {
@@ -93,43 +152,24 @@ function CCTVDisplay({
         );
     };
 
-    // Filter devices based on search and filters
-    const filteredDevices = useMemo(() => {
-        if (!devices?.data) return [];
-
-        return devices.data.filter((device) => {
-            // Search filter
-            const searchLower = searchQuery.toLowerCase();
-            const matchesSearch =
-                searchQuery === '' ||
-                device.location_name?.toLowerCase().includes(searchLower);
-
-            // Status filter
-            const matchesStatus =
-                statusFilter === 'all' ||
-                device.status.toLowerCase() === statusFilter.toLowerCase();
-
-            // Package filter
-            const matchesPackage =
-                packageFilter === 'all' ||
-                device.package === packageFilter;
-
-            // YOLO filter
-            const matchesYolo =
-                yoloFilter === 'all' ||
-                (yoloFilter === 'enabled' && device.yolo_enabled) ||
-                (yoloFilter === 'disabled' && !device.yolo_enabled);
-
-            return matchesSearch && matchesStatus && matchesPackage && matchesYolo;
-        });
-    }, [devices?.data, searchQuery, statusFilter, packageFilter, yoloFilter]);
-
     // Clear all filters
     const clearFilters = () => {
         setSearchQuery('');
         setStatusFilter('all');
         setPackageFilter('all');
         setYoloFilter('all');
+        
+        router.get('/devices', {
+            search: '',
+            status: 'all',
+            package: 'all',
+            yolo: 'all',
+            page: 1,
+        }, {
+            preserveState: true,
+            preserveScroll: true,
+            only: ['devices', 'filters'],
+        });
     };
 
     const hasActiveFilters =
@@ -163,7 +203,7 @@ function CCTVDisplay({
                         </div>
 
                         {/* Status Filter */}
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <Select value={statusFilter} onValueChange={(value) => handleFilterChange('status', value)}>
                             <SelectTrigger className="h-8 w-[110px] text-xs">
                                 <SelectValue placeholder="Status" />
                             </SelectTrigger>
@@ -176,7 +216,7 @@ function CCTVDisplay({
                         </Select>
 
                         {/* Package Filter */}
-                        <Select value={packageFilter} onValueChange={setPackageFilter}>
+                        <Select value={packageFilter} onValueChange={(value) => handleFilterChange('package', value)}>
                             <SelectTrigger className="h-8 w-[130px] text-xs">
                                 <SelectValue placeholder="Package" />
                             </SelectTrigger>
@@ -191,7 +231,7 @@ function CCTVDisplay({
                         </Select>
 
                         {/* YOLO Filter */}
-                        <Select value={yoloFilter} onValueChange={setYoloFilter}>
+                        <Select value={yoloFilter} onValueChange={(value) => handleFilterChange('yolo', value)}>
                             <SelectTrigger className="h-8 w-[110px] text-xs">
                                 <SelectValue placeholder="YOLO" />
                             </SelectTrigger>
@@ -220,7 +260,7 @@ function CCTVDisplay({
                 {/* Results count */}
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>
-                        Showing {filteredDevices.length} of {devices?.total || 0} devices
+                        Showing {devices?.data?.length || 0} of {devices?.total || 0} devices
                         {devices?.last_page > 1 && ` (Page ${devices?.current_page} of ${devices?.last_page})`}
                     </span>
                     {hasActiveFilters && (
@@ -231,7 +271,7 @@ function CCTVDisplay({
 
             {/* CCTV Cards Grid - Compact Design */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredDevices.map((device) => (
+                {devices?.data?.map((device) => (
                     <Card
                         key={device.id}
                         className="group py-0 relative overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700"
@@ -348,7 +388,7 @@ function CCTVDisplay({
 
             {/* Empty State */}
             {
-                filteredDevices.length === 0 && (
+                devices?.data?.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                         <Camera className="h-12 w-12 text-muted-foreground/50 mb-3" />
                         <h3 className="text-sm font-medium text-foreground">No devices found</h3>
@@ -373,13 +413,30 @@ function CCTVDisplay({
 
             {/* Pagination Controls */}
             {
-                devices && devices.links && filteredDevices.length > 0 && (
+                devices && devices.links && devices.data && devices.data.length > 0 && (
                     <Pagination className="flex justify-end">
                         <PaginationContent>
                             <PaginationItem>
                                 <PaginationPrevious
-                                    href={devices.prev_page_url || '#'}
-                                    className="h-8 text-xs"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        if (devices.prev_page_url) {
+                                            const url = new URL(devices.prev_page_url);
+                                            const page = url.searchParams.get('page') || '1';
+                                            router.get('/devices', {
+                                                search: searchQuery,
+                                                status: statusFilter,
+                                                package: packageFilter,
+                                                yolo: yoloFilter,
+                                                page: page,
+                                            }, {
+                                                preserveState: true,
+                                                preserveScroll: true,
+                                                only: ['devices', 'filters'],
+                                            });
+                                        }
+                                    }}
+                                    className={`h-8 text-xs ${!devices.prev_page_url ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
                                 />
                             </PaginationItem>
                             {devices.links
@@ -393,8 +450,25 @@ function CCTVDisplay({
                                             <PaginationItem key={index}>
                                                 <PaginationLink
                                                     isActive={link.active}
-                                                    href={link.url || '#'}
-                                                    className="h-8 w-8 text-xs"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        if (link.url) {
+                                                            const url = new URL(link.url);
+                                                            const page = url.searchParams.get('page') || '1';
+                                                            router.get('/devices', {
+                                                                search: searchQuery,
+                                                                status: statusFilter,
+                                                                package: packageFilter,
+                                                                yolo: yoloFilter,
+                                                                page: page,
+                                                            }, {
+                                                                preserveState: true,
+                                                                preserveScroll: true,
+                                                                only: ['devices', 'filters'],
+                                                            });
+                                                        }
+                                                    }}
+                                                    className="h-8 w-8 text-xs cursor-pointer"
                                                 >
                                                     {link.label}
                                                 </PaginationLink>
@@ -413,8 +487,25 @@ function CCTVDisplay({
                                 })}
                             <PaginationItem>
                                 <PaginationNext
-                                    href={devices.next_page_url || '#'}
-                                    className="h-8 text-xs"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        if (devices.next_page_url) {
+                                            const url = new URL(devices.next_page_url);
+                                            const page = url.searchParams.get('page') || '1';
+                                            router.get('/devices', {
+                                                search: searchQuery,
+                                                status: statusFilter,
+                                                package: packageFilter,
+                                                yolo: yoloFilter,
+                                                page: page,
+                                            }, {
+                                                preserveState: true,
+                                                preserveScroll: true,
+                                                only: ['devices', 'filters'],
+                                            });
+                                        }
+                                    }}
+                                    className={`h-8 text-xs ${!devices.next_page_url ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
                                 />
                             </PaginationItem>
                         </PaginationContent>
