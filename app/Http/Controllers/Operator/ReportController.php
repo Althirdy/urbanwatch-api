@@ -79,16 +79,16 @@ class ReportController extends Controller
 
             // Filter by status
             if ($request->has('acknowledged') && $request->acknowledged !== '') {
-                $statusFilter = $request->acknowledged === 'true' ? 'Resolved' : 'Pending';
+                $statusFilter = $request->acknowledged === 'true' ? 'resolved' : 'pending';
                 $query->where('status', $statusFilter);
             }
 
-            // Order by status (Pending first, then In Progress, then Resolved last) and then by created_at
+            // Order by status (pending first, then in progress, then resolved last) and then by created_at
             $accidents = $query
                 ->orderByRaw("CASE 
-                    WHEN status = 'Pending' THEN 1 
-                    WHEN status = 'In Progress' THEN 2 
-                    WHEN status = 'Resolved' THEN 3 
+                    WHEN status = 'pending' THEN 1 
+                    WHEN status = 'in progress' THEN 2 
+                    WHEN status = 'resolved' THEN 3 
                     ELSE 4 
                 END")
                 ->orderBy('created_at', 'desc')
@@ -136,7 +136,7 @@ class ReportController extends Controller
             'currentView' => $viewType,
             'filters' => $request->only(['search', 'report_type', 'acknowledged', 'view']),
             'reportTypes' => ['Accident', 'Fire', 'Flood'], // Accident types
-            'statusOptions' => ['Pending', 'Ongoing', 'Resolved', 'Archived'],
+            'statusOptions' => ['pending', 'in progress', 'resolved'],
         ]);
     }
 
@@ -186,7 +186,7 @@ class ReportController extends Controller
                 'latitude' => 'required|numeric|between:-90,90',
                 'longtitude' => 'required|numeric|between:-180,180',
                 'user_id' => 'nullable|exists:users,id',
-                'status' => 'nullable|string|in:Pending,Ongoing,Resolved,Archived',
+                'status' => 'nullable|string|in:pending,in progress,resolved',
             ]);
 
             // Set user_id to current user if not provided
@@ -196,7 +196,7 @@ class ReportController extends Controller
 
             // Set default status if not provided
             if (! isset($validated['status'])) {
-                $validated['status'] = 'Pending';
+                $validated['status'] = 'pending';
             }
 
             $validated['is_acknowledge'] = false;
@@ -256,13 +256,8 @@ class ReportController extends Controller
                 'description' => 'required|string|max:1000',
                 'latitude' => 'required|numeric|between:-90,90',
                 'longtitude' => 'required|numeric|between:-180,180',
-                'status' => 'nullable|string|in:Pending,Ongoing,In Progress,Resolved',
+                'status' => 'nullable|string|in:pending,in progress,resolved',
             ]);
-
-            // Normalize status: convert "In Progress" to "Ongoing" for consistency
-            if (isset($validated['status']) && $validated['status'] === 'In Progress') {
-                $validated['status'] = 'Ongoing';
-            }
 
             DB::beginTransaction();
             try {
@@ -311,8 +306,7 @@ class ReportController extends Controller
 
             DB::beginTransaction();
             try {
-                // Set status to 'archived' before deleting
-                $accident->update(['status' => 'archived']);
+                // Soft delete the accident (archiving)
                 $accident->delete();
                 DB::commit();
 
