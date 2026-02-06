@@ -21,6 +21,10 @@ class StoreConcernRequest extends FormRequest
      */
     public function rules(): array
     {
+        // Check if geofencing is enabled
+        $geofencingEnabled = \App\Models\SystemSetting::get('geofencing_enabled') === 'true';
+        $locationRule = $geofencingEnabled ? 'required' : 'nullable';
+
         return [
             'type' => 'required|string|in:manual,voice',
             'title' => 'required_if:type,manual|nullable|string|max:100',
@@ -28,8 +32,8 @@ class StoreConcernRequest extends FormRequest
             'category' => 'required|string|in:safety,security,infrastructure,environment,noise,other',
             'severity' => 'nullable|string|in:low,medium,high',
             'transcript_text' => 'nullable|string',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => "{$locationRule}|numeric|between:-180,180",
+            'latitude' => "{$locationRule}|numeric|between:-90,90",
             'address' => 'nullable|string',
             'custom_location' => 'nullable|string',
             'files' => 'nullable|array|min:1|max:3',
@@ -54,8 +58,10 @@ class StoreConcernRequest extends FormRequest
             'severity.string' => 'Severity must be a string.',
             'severity.in' => 'Severity must be one of: low, medium, high.',
             'transcript_text.string' => 'Transcript text must be a string.',
+            'longitude.required' => 'Location is required. Please enable GPS/location services.',
             'longitude.numeric' => 'Longitude must be a number.',
             'longitude.between' => 'Longitude must be between -180 and 180.',
+            'latitude.required' => 'Location is required. Please enable GPS/location services.',
             'latitude.numeric' => 'Latitude must be a number.',
             'latitude.between' => 'Latitude must be between -90 and 90.',
             'files.array' => 'Files must be an array.',
