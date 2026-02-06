@@ -25,7 +25,7 @@ class StoreConcernRequest extends FormRequest
         $geofencingEnabled = \App\Models\SystemSetting::get('geofencing_enabled') === 'true';
         $locationRule = $geofencingEnabled ? 'required' : 'nullable';
 
-        return [    
+        return [
             'type' => 'required|string|in:manual,voice',
             'title' => 'required_if:type,manual|nullable|string|max:100',
             'description' => 'required_if:type,manual|nullable|string',
