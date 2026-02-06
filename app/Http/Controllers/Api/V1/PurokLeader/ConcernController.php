@@ -182,16 +182,36 @@ class ConcernController extends BaseApiController
 
                 ConcernHistory::create([
                     'concern_id' => $duplicate->id,
-                    'acted_by' => auth()->id(), // Recorded as action by the official
+                    'acted_by' => auth()->id(),
                     'status' => $status,
                     'remarks' => "Status mirrored from Parent Concern #{$concern->tracking_code}: {$remarks}",
                 ]);
 
-                // Notify the citizen of this duplicate concern
+                // Notify the citizen of this duplicate concern (in-app + WebSocket + email)
+                // 1. In-app notification (database)
+                $this->notificationService->notifyConcernStatusChanged(
+                    $duplicate,
+                    $previousStatus,
+                    $status,
+                    $purokLeader,
+                    "Status mirrored from Parent Concern #{$concern->tracking_code}: {$remarks}"
+                );
+
+                // 2. WebSocket broadcast for real-time toast on duplicate's citizen app
+                event(new ConcernStatusUpdated(
+                    $duplicate->fresh(),
+                    $distribution->fresh(), // Use parent's distribution as reference
+                    $previousStatus,
+                    $status,
+                    $purokLeader,
+                    "Status mirrored from Parent Concern #{$concern->tracking_code}: {$remarks}"
+                ));
+
+                // 3. Email notification via job queue
                 SendConcernStatusNotificationJob::dispatch(
                     $duplicate,
                     $purokLeader,
-                    $previousStatus, // Assuming previous status matches parent, or just 'pending'
+                    $previousStatus,
                     $status,
                     $remarks
                 );
@@ -199,7 +219,8 @@ class ConcernController extends BaseApiController
 
             DB::commit();
 
-            // Create in-app notification for citizen about status change
+            // --- Notify parent concern's citizen ---
+            // 1. Create in-app notification (database)
             $this->notificationService->notifyConcernStatusChanged(
                 $concern->fresh(),
                 $previousStatus,
@@ -208,7 +229,7 @@ class ConcernController extends BaseApiController
                 $remarks
             );
 
-            // Trigger event to notify citizen of status update (Pusher broadcast)
+            // 2. Broadcast WebSocket event for real-time toast on citizen app
             event(new ConcernStatusUpdated(
                 $concern->fresh(),
                 $distribution->fresh(),
@@ -218,7 +239,7 @@ class ConcernController extends BaseApiController
                 $remarks
             ));
 
-            // Dispatch job to send email notification to citizen
+            // 3. Send email notification via job queue
             SendConcernStatusNotificationJob::dispatch(
                 $concern->fresh(),
                 $purokLeader,

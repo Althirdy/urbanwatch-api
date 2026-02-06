@@ -25,15 +25,24 @@ class DashboardController extends Controller
         $unmappedConcerns = Concern::with(['media'])
             ->where('status', 'pending')
             ->whereDoesntHave('distribution')
+            ->whereNull('parent_concern_id')
+            ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($concern) {
                 return [
                     'id' => $concern->id,
+                    'tracking_code' => $concern->tracking_code,
                     'title' => $concern->title,
                     'category' => $concern->category,
+                    'severity' => $concern->severity,
                     'latitude' => $concern->latitude,
                     'longitude' => $concern->longitude,
+                    'address' => $concern->address,
+                    'custom_location' => $concern->custom_location,
                     'description' => $concern->description,
+                    'type' => $concern->type,
+                    'created_at' => $concern->created_at?->toIso8601String(),
+                    'duplicates_count' => $concern->duplicates()->count(),
                 ];
             });
 

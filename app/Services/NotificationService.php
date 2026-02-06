@@ -146,14 +146,17 @@ class NotificationService
                 default => Notification::TYPE_CONCERN_STATUS_UPDATE,
             };
 
-            // Custom title for rejection
-            if ($newStatus === 'rejected') {
-                $statusLabel = 'Rejected';
-                $message = "Your concern ({$concern->tracking_code}) has been reviewed and marked as invalid.";
-            } else {
-                $statusLabel = ucfirst(str_replace('_', ' ', $newStatus));
-                $message = "Your concern ({$concern->tracking_code}) status has been updated to {$statusLabel}.";
-            }
+            // Determine status label and message
+            [$statusLabel, $message] = match ($newStatus) {
+                'rejected' => [
+                    'Rejected',
+                    "Your concern ({$concern->tracking_code}) has been reviewed and marked as invalid.",
+                ],
+                default => [
+                    ucfirst(str_replace('_', ' ', $newStatus)),
+                    "Your concern ({$concern->tracking_code}) status has been updated to ".ucfirst(str_replace('_', ' ', $newStatus)).'.',
+                ],
+            };
 
             return Notification::create([
                 'user_id' => $citizenId,
