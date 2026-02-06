@@ -544,20 +544,20 @@ class GeminiService
             if ($restrictToBarangay && $result['isAuthentic']) {
                 $isPhase9Resident = $result['isPhase9Resident'] ?? false;
                 $address = $result['data']['address'] ?? null;
-                
+
                 // Check using Gemini's detection or fallback to pattern matching
                 $isWithinAllowedArea = $isPhase9Resident;
-                
+
                 // Fallback: Check address for PH 9, PH9, Phase 9 patterns
-                if (!$isWithinAllowedArea && $address) {
+                if (! $isWithinAllowedArea && $address) {
                     $addressUpper = strtoupper($address);
                     // Match patterns: PH 9, PH9, PH. 9, PHASE 9, PHASE9
                     if (preg_match('/\bPH\.?\s*9\b|\bPHASE\s*9\b/i', $addressUpper)) {
                         $isWithinAllowedArea = true;
                     }
                 }
-                
-                if (!$isWithinAllowedArea) {
+
+                if (! $isWithinAllowedArea) {
                     $result['isOutsideAllowedArea'] = true;
                     $result['locationRestrictionReason'] = 'Registration is only available to Phase 9 (PH 9) residents. Your address is not in Phase 9.';
 
