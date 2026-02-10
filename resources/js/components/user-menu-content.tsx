@@ -18,6 +18,7 @@ interface UserMenuContentProps {
 
 export function UserMenuContent({ user }: UserMenuContentProps) {
     const cleanup = useMobileNavigation();
+    const roleName = String(user.role?.name ?? '').toLowerCase();
 
     const handleLogout = () => {
         cleanup();
@@ -45,9 +46,7 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                         Settings
                     </Link>
                 </DropdownMenuItem>
-                
-                {/* System Settings for Operator/Admin */}
-                {(user.role_id === 1) && (
+                {roleName === 'superadmin' && (
                     <DropdownMenuItem asChild>
                         <Link
                             className="block w-full"

@@ -48,6 +48,24 @@ type EditUserForm = {
 
 function EditUser({ user, roles, puroks = [], children }: EditUserProps) {
     const [open, setOpen] = useState(false);
+    const normalizePhoneForInput = (phone: string) => {
+        const digits = phone.replace(/\D/g, '');
+        if (!digits) {
+            return '';
+        }
+
+        if (digits.startsWith('63') && digits.length === 12) {
+            return `0${digits.slice(2)}`;
+        }
+        if (digits.startsWith('9') && digits.length === 10) {
+            return `0${digits}`;
+        }
+        if (digits.startsWith('0') && digits.length >= 11) {
+            return digits.slice(0, 11);
+        }
+
+        return digits.slice(0, 11);
+    };
 
     const getUserFullName = (user: users_T) => {
         if (user.official_details) {
@@ -65,7 +83,7 @@ function EditUser({ user, roles, puroks = [], children }: EditUserProps) {
             last_name: user.official_details?.last_name || user.citizen_details?.last_name || '',
             suffix: user.official_details?.suffix || user.citizen_details?.suffix || '',
             email: user.email || '',
-            phone_number: (user.official_details?.contact_number || user.citizen_details?.phone_number || '').replace(/^\+63|^63|^0/, ''),
+            phone_number: normalizePhoneForInput(user.official_details?.contact_number || user.citizen_details?.phone_number || ''),
             role_id: user.role?.id?.toString() || '',
             status: user.official_details?.status || user.citizen_details?.status || 'active',
             date_of_birth: user.citizen_details?.date_of_birth || '',
@@ -85,18 +103,24 @@ function EditUser({ user, roles, puroks = [], children }: EditUserProps) {
     const isPurokLeader = user.role?.name?.toLowerCase() === 'purok leader';
 
     const handlePhoneChange = (value: string) => {
-        let val = value.replace(/\D/g, '');
-        if (val.startsWith('0')) val = val.substring(1);
-        if (val.length > 10) val = val.substring(0, 10);
-        setData('phone_number', val);
+        let digits = value.replace(/\D/g, '');
+        if (digits.startsWith('63')) {
+            digits = `0${digits.substring(2)}`;
+        } else if (digits.startsWith('9')) {
+            digits = `0${digits}`;
+        }
+        if (!digits.startsWith('0') && digits.length > 0) {
+            digits = `0${digits}`;
+        }
+        if (digits.length > 11) {
+            digits = digits.substring(0, 11);
+        }
+        setData('phone_number', digits);
     };
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
-        transform((data) => ({
-            ...data,
-            phone_number: `+63${data.phone_number}`,
-        }));
+        transform((payload) => payload);
         put(`/user/${user.id}`, {
             onSuccess: () => {
                 toast({
@@ -221,7 +245,7 @@ function EditUser({ user, roles, puroks = [], children }: EditUserProps) {
                                                 id="contact"
                                                 value={data.phone_number}
                                                 onChange={(e) => handlePhoneChange(e.target.value)}
-                                                placeholder="9123456789"
+                                                placeholder="09123456789"
                                                 className={errors.phone_number ? 'border-red-500 focus:ring-red-500' : ''}
                                             />
                                             {errors.phone_number && <span className="mt-1 block text-xs text-red-500">{errors.phone_number}</span>}

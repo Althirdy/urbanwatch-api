@@ -3,11 +3,24 @@ on:
   push:
     branches:
       - staging
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
 jobs:
   deploy:
-    runs-on: self-hosted  # 👈 This is the most important change
+    runs-on: self-hosted
+    environment: staging
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Run Deployment Script
         run: |
-          cd ~/urbanwatch/uat-api
+          APP_DIR="$HOME/urbanwatch/uat-api"
+          mkdir -p "$APP_DIR"
+          rsync -a --delete --exclude '.git' "$GITHUB_WORKSPACE"/ "$APP_DIR"/
+          cd "$APP_DIR"
+          chmod +x deploy-staging.sh
           ./deploy-staging.sh

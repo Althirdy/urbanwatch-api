@@ -16,8 +16,8 @@ import {
     reports,
     users,
 } from '@/routes';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
+import { type NavItem, SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
 import {
     File,
     FlagTriangleRight,
@@ -25,10 +25,11 @@ import {
     LayoutDashboard,
     User,
     Users,
+    Wrench,
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
-const mainNavItems: NavItem[] = [
+const operatorNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: '/dashboard',
@@ -39,16 +40,15 @@ const mainNavItems: NavItem[] = [
         href: users().url,
         icon: User,
     },
-
-    {
-        title: 'Barangay Updates',
-        href: publicPosts().url,
-        icon: FlagTriangleRight,
-    },
     {
         title: 'Incidents',
         href: reports().url,
         icon: File,
+    },
+    {
+        title: 'Barangay Updates',
+        href: publicPosts().url,
+        icon: FlagTriangleRight,
     },
     {
         title: 'Devices',
@@ -62,27 +62,34 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-// const footerNavItems: NavItem[] = [
-//     {
-//         title: 'Repository',
-//         href: 'https://github.com/laravel/react-starter-kit',
-//         icon: Folder,
-//     },
-//     {
-//         title: 'Documentation',
-//         href: 'https://laravel.com/docs/starter-kits#react',
-//         icon: BookOpen,
-//     },
-// ];
+const superadminNavItems: NavItem[] = [
+    {
+        title: 'Users',
+        href: users().url,
+        icon: User,
+    },
+    {
+        title: 'System Config',
+        href: '/system-settings',
+        icon: Wrench,
+    },
+];
 
 export function AppSidebar() {
+    const { auth } = usePage<SharedData>().props;
+    const roleName = String(auth.user?.role?.name ?? '').toLowerCase();
+    const isSuperadmin = roleName === 'superadmin';
+    const mainNavItems = isSuperadmin ? superadminNavItems : operatorNavItems;
+    const navLabel = isSuperadmin ? 'Superadmin Panel' : 'Operator Dashboard';
+    const homeHref = isSuperadmin ? users().url : '/dashboard';
+
     return (
         <Sidebar collapsible="icon" variant="inset" className="py-4">
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href="/dashboard" prefetch>
+                            <Link href={homeHref} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
@@ -91,7 +98,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={mainNavItems} label={navLabel} />
             </SidebarContent>
 
             <SidebarFooter>

@@ -7,7 +7,7 @@ use App\Models\UwDevice;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified', 'role:operator'])->group(function () {
     Route::get('devices', function () {
         $page = request()->get('page', 1);
         $search = request()->get('search', '');

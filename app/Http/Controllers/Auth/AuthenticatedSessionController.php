@@ -31,11 +31,13 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $user = $request->validateCredentials();
+        $user->loadMissing('role:id,name');
+        $roleName = strtolower((string) ($user->role?->name ?? ''));
 
-        // Check if user has operator role (role_id = 1)
-        if ($user->role_id !== 1) {
+        // Restrict web panel access to Superadmin and Operator.
+        if (! in_array($roleName, ['operator', 'superadmin'], true)) {
             return back()->withErrors([
-                'email' => 'Access denied. Only operators can access this system.',
+                'email' => 'Access denied. This account cannot access the web management panel.',
             ])->onlyInput('email');
         }
 
@@ -62,7 +64,11 @@ class AuthenticatedSessionController extends Controller
             'role' => $userWithDetails->role,
         ]);
 
-        return redirect()->intended(route('users', absolute: false));
+        $defaultRoute = $roleName === 'superadmin'
+            ? route('users', absolute: false)
+            : route('dashboard', absolute: false);
+
+        return redirect()->intended($defaultRoute);
     }
 
     /**

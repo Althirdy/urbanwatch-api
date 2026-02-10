@@ -2,11 +2,16 @@
 
 namespace App\Http\Requests\Operator;
 
+use App\Models\CitizenDetails;
+use App\Models\OfficialsDetails;
+use App\Models\Roles;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 
 class UserRequest extends FormRequest
 {
+    private ?bool $isPurokLeaderTarget = null;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -24,7 +29,7 @@ class UserRequest extends FormRequest
     {
         $userId = $this->route('user') ? $this->route('user')->id : null;
         $isUpdate = $this->isMethod('PUT') || $this->isMethod('PATCH');
-        $isPurokLeader = $this->input('role_id') == 2;
+        $isPurokLeader = $this->isPurokLeaderTarget();
 
         // Different password validation for Purok Leader (PIN) vs other roles
         if ($isUpdate) {
@@ -49,11 +54,13 @@ class UserRequest extends FormRequest
             'suffix' => 'nullable|string|max:10',
             'email' => [
                 'required',
-                'email:rfc,dns',
+                'email:rfc',
                 'max:255',
                 $isUpdate ? 'unique:users,email,'.$userId : 'unique:users',
             ],
-            'phone_number' => 'nullable|regex:/^[0-9+\-\s]{10,20}$/',
+            'phone_number' => $isPurokLeader
+                ? 'required|regex:/^09\d{9}$/'
+                : 'nullable|regex:/^[0-9+\-\s]{10,20}$/',
             'role_id' => $isUpdate ? 'nullable|exists:roles,id' : 'required|numeric|exists:roles,id',
             'password' => $passwordRules,
             'status' => 'nullable|string|in:Active,Inactive,Archived',
@@ -80,7 +87,7 @@ class UserRequest extends FormRequest
      */
     public function messages(): array
     {
-        $isPurokLeader = $this->input('role_id') == 2;
+        $isPurokLeader = $this->isPurokLeaderTarget();
         $passwordFieldName = $isPurokLeader ? 'PIN' : 'Password';
 
         return [
@@ -97,7 +104,10 @@ class UserRequest extends FormRequest
             'email.email' => 'Please provide a valid email address.',
             'email.unique' => 'This email address is already registered.',
             'email.max' => 'Email cannot exceed 255 characters.',
-            'phone_number.regex' => 'Phone number must be a valid format (10-20 digits, can include +, -, and spaces).',
+            'phone_number.required' => 'Phone number is required for Purok Leader.',
+            'phone_number.regex' => $isPurokLeader
+                ? 'Phone number must be a valid PH mobile number (09XXXXXXXXX).'
+                : 'Phone number must be a valid format (10-20 digits, can include +, -, and spaces).',
             'role_id.required' => 'User role is required.',
             'role_id.exists' => 'The selected role is invalid.',
             'password.required' => $passwordFieldName.' is required.',
@@ -140,5 +150,91 @@ class UserRequest extends FormRequest
             'postal_code' => 'postal code',
             'is_verified' => 'verification status',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if (! $this->isPurokLeaderTarget()) {
+            return;
+        }
+
+        $normalizedPhone = $this->normalizePhilippineMobileNumber($this->input('phone_number'));
+        if ($normalizedPhone !== null) {
+            $this->merge(['phone_number' => $normalizedPhone]);
+        }
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            if (! $this->isPurokLeaderTarget()) {
+                return;
+            }
+
+            $phoneNumber = $this->input('phone_number');
+            if (! $phoneNumber || ! preg_match('/^09\d{9}$/', $phoneNumber)) {
+                return;
+            }
+
+            $userId = $this->route('user')?->id;
+
+            $existsInOfficials = OfficialsDetails::all()
+                ->contains(function (OfficialsDetails $details) use ($phoneNumber, $userId) {
+                    if ($userId && (int) $details->user_id === (int) $userId) {
+                        return false;
+                    }
+
+                    return $details->contact_number === $phoneNumber;
+                });
+
+            $existsInCitizens = CitizenDetails::all()
+                ->contains(function (CitizenDetails $details) use ($phoneNumber, $userId) {
+                    if ($userId && (int) $details->user_id === (int) $userId) {
+                        return false;
+                    }
+
+                    return $details->phone_number === $phoneNumber;
+                });
+
+            if ($existsInOfficials || $existsInCitizens) {
+                $validator->errors()->add('phone_number', 'Phone number is already registered.');
+            }
+        });
+    }
+
+    private function isPurokLeaderTarget(): bool
+    {
+        if ($this->isPurokLeaderTarget !== null) {
+            return $this->isPurokLeaderTarget;
+        }
+
+        $targetRoleId = $this->input('role_id') ?: $this->route('user')?->role_id;
+        if (! $targetRoleId) {
+            return $this->isPurokLeaderTarget = false;
+        }
+
+        $role = Roles::find($targetRoleId);
+
+        return $this->isPurokLeaderTarget = strtolower((string) $role?->name) === 'purok leader';
+    }
+
+    private function normalizePhilippineMobileNumber(?string $rawPhone): ?string
+    {
+        if (! is_string($rawPhone)) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $rawPhone);
+        if (! $digits) {
+            return null;
+        }
+
+        if (str_starts_with($digits, '63') && strlen($digits) === 12) {
+            $digits = '0'.substr($digits, 2);
+        } elseif (str_starts_with($digits, '9') && strlen($digits) === 10) {
+            $digits = '0'.$digits;
+        }
+
+        return $digits;
     }
 }

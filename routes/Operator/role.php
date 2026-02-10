@@ -5,7 +5,7 @@ use App\Models\Roles;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified', 'role:superadmin'])->group(function () {
     Route::get('roles', function () {
         $roles = Roles::withCount('users')
             ->latest()
