@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/popover';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
-import { roles } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import { Check, ChevronsUpDown } from 'lucide-react';
@@ -36,7 +35,7 @@ import EditRoles from './roles-comp/edit-roles';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Roles',
-        href: roles().url,
+        href: '/roles',
     },
 ];
 
