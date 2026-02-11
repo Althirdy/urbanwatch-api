@@ -16,9 +16,7 @@ class ProcessNationalIdOcrJob implements ShouldQueue
 
     public int $tries = 3;
 
-    public function __construct(public int $idVerificationId)
-    {
-    }
+    public function __construct(public int $idVerificationId) {}
 
     /**
      * Execute the job.

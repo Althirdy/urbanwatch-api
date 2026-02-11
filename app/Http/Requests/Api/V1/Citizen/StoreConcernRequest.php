@@ -54,6 +54,7 @@ class StoreConcernRequest extends FormRequest
             if ($type === 'voice') {
                 if (empty($files) || count($files) !== 1) {
                     $validator->errors()->add('files', 'Voice concern requires exactly 1 audio file.');
+
                     return;
                 }
 

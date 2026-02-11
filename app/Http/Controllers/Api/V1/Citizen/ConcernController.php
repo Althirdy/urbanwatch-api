@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1\Citizen;
 
+use App\Exceptions\UrbanWatchException;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\Citizen\StoreConcernRequest;
 use App\Http\Requests\Api\V1\Citizen\UpdateConcernRequest;
 use App\Http\Resources\Api\V1\ConcernResource;
-use App\Exceptions\UrbanWatchException;
 use App\Services\ConcernService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
