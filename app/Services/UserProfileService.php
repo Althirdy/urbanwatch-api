@@ -93,7 +93,7 @@ class UserProfileService
         }
 
         // 3. Generate and Send OTP
-        $otp = (string) rand(100000, 999999);
+        $otp = (string) random_int(100000, 999999);
         $cacheKey = "profile_update_otp_{$user->id}_{$type}";
 
         // Store OTP with new value in cache (expires in 10 mins)

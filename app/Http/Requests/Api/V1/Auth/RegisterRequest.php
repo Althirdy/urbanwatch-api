@@ -37,6 +37,7 @@ class RegisterRequest extends FormRequest
             'postalCode' => 'required|string|max:10',
             'pcnNumber' => 'required|string|max:50|unique:citizen_details,pcn_number',
             'verificationToken' => 'required|string',
+            'verificationId' => 'required|string',
         ];
     }
 
@@ -67,6 +68,7 @@ class RegisterRequest extends FormRequest
             'phoneNumber.unique' => 'This phone number is already registered',
             'pcnNumber.required' => 'PCN Number is required',
             'verificationToken.required' => 'Phone verification is required',
+            'verificationId.required' => 'ID verification is required',
         ];
     }
 }

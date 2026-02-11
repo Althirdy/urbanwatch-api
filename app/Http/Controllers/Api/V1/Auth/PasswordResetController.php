@@ -88,7 +88,7 @@ class PasswordResetController extends Controller
         }
 
         // Generate 6-digit OTP
-        $code = rand(100000, 999999);
+        $code = random_int(100000, 999999);
 
         // Store OTP in cache for 5 minutes (password reset gets longer expiry)
         Cache::put('password_reset_otp_'.$phone, $code, 300);
