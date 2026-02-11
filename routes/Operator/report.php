@@ -3,7 +3,7 @@
 use App\Http\Controllers\Operator\ReportController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified', 'role:operator'])->group(function () {
     Route::get('reports', [ReportController::class, 'index'])->name('reports');
 
     Route::resource('report', ReportController::class);

@@ -74,6 +74,17 @@ function CreateUsers({
         {},
     );
 
+    const getRoleNameById = (roleId?: string) => {
+        const role = roles.find((item) => item.id.toString() === (roleId || data.role_id));
+        return role?.name.toLowerCase() ?? '';
+    };
+
+    const isSelectedPurokLeader = (roleId?: string) =>
+        getRoleNameById(roleId) === 'purok leader';
+
+    const isSelectedOperator = (roleId?: string) =>
+        getRoleNameById(roleId) === 'operator';
+
     // Validation functions
     const validateName = (
         value: string,
@@ -100,10 +111,14 @@ function CreateUsers({
         return '';
     };
 
-    const validatePhoneNumber = (value: string) => {
-        if (!value.trim()) {
-            return 'Phone number is required';
+    const validatePhoneNumber = (value: string, required: boolean) => {
+        if (required && !value.trim()) {
+            return 'Phone number is required for Purok Leader';
         }
+        if (!required && !value.trim()) {
+            return '';
+        }
+
         if (!/^09\d{9}$/.test(value)) {
             return 'Phone number must be 11 digits starting with 09 (e.g., 09123456789)';
         }
@@ -111,7 +126,7 @@ function CreateUsers({
     };
 
     const validatePassword = (value: string, roleId?: string) => {
-        const isPurokLeader = (roleId || data.role_id) === '2';
+        const isPurokLeader = isSelectedPurokLeader(roleId);
         const fieldName = isPurokLeader ? 'PIN' : 'Password';
 
         if (!value) {
@@ -150,7 +165,7 @@ function CreateUsers({
         password: string,
         roleId?: string,
     ) => {
-        const isPurokLeader = (roleId || data.role_id) === '2';
+        const isPurokLeader = isSelectedPurokLeader(roleId);
         const fieldName = isPurokLeader ? 'PIN' : 'Password';
 
         if (!value) {
@@ -185,7 +200,7 @@ function CreateUsers({
                 error = validateEmail(value);
                 break;
             case 'phone_number':
-                error = validatePhoneNumber(value);
+                error = validatePhoneNumber(value, isSelectedPurokLeader());
                 break;
             case 'password':
                 error = validatePassword(value);
@@ -225,7 +240,7 @@ function CreateUsers({
             validateName(data.last_name, 'Last name') || undefined;
         validationErrors.email = validateEmail(data.email) || undefined;
         validationErrors.phone_number =
-            validatePhoneNumber(data.phone_number) || undefined;
+            validatePhoneNumber(data.phone_number, isSelectedPurokLeader()) || undefined;
         validationErrors.password =
             validatePassword(data.password) || undefined;
         validationErrors.password_confirmation =
@@ -517,7 +532,7 @@ function CreateUsers({
                                                     role_id: undefined,
                                                 }));
                                                 // Auto-set location for Operator, reset for others
-                                                if (value === '1') {
+                                                if (isSelectedOperator(value)) {
                                                     // Operator: Auto-assign to BRGY 176 E
                                                     setData(prev => ({ ...prev, assigned_brgy: 'BRGY 176 E', purok_id: '' }));
                                                 } else {
@@ -567,14 +582,14 @@ function CreateUsers({
                                 <div className="grid flex-1 gap-2">
                                     <Label htmlFor="location">Location / Assignment</Label>
                                     <div>
-                                        {data.role_id === '1' ? (
+                                        {isSelectedOperator() ? (
                                             // Operator: Fixed location BRGY 176 E
                                             <Input
                                                 value="BRGY 176 E"
                                                 readOnly
                                                 className="bg-muted cursor-not-allowed"
                                             />
-                                        ) : data.role_id === '2' ? (
+                                        ) : isSelectedPurokLeader() ? (
                                             // Purok Leader: Read-only display of selected Purok
                                             <Input
                                                 value={data.assigned_brgy || "Select from map below"}
@@ -633,7 +648,7 @@ function CreateUsers({
                         </div>
 
                         {/* Map Selector for Purok Leaders */}
-                        {data.role_id === '2' && (
+                        {isSelectedPurokLeader() && (
                             <div className="grid flex-1 auto-rows-min gap-2">
                                 <Label>Select Territory (Purok)</Label>
                                 <div className="rounded-md border p-1">
@@ -667,7 +682,7 @@ function CreateUsers({
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="password">
-                                    {data.role_id === '2' ? 'PIN' : 'Password'}
+                                    {isSelectedPurokLeader() ? 'PIN' : 'Password'}
                                 </Label>
                                 <div>
                                     <Input
@@ -701,7 +716,7 @@ function CreateUsers({
                             </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="password-confirmation">
-                                    {data.role_id === '2'
+                                    {isSelectedPurokLeader()
                                         ? 'Confirm PIN'
                                         : 'Confirm Password'}
                                 </Label>

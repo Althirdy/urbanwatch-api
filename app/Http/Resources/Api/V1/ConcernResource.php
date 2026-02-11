@@ -94,6 +94,8 @@ class ConcernResource extends JsonResource
 
             'createdAt' => $this->created_at->diffForHumans(),
             'duplicatesCount' => $this->duplicates_count ?? $this->duplicates()->count() ?? 0,
+            'followupsCount' => $this->followups_count ?? 0,
+            'lastFollowupAt' => $this->last_followup_at?->toIso8601String(),
             'isDuplicate' => ! is_null($this->parent_concern_id),
         ];
     }

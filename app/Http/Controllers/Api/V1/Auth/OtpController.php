@@ -61,7 +61,7 @@ class OtpController extends Controller
         }
 
         // Generate 6-digit OTP
-        $code = rand(100000, 999999);
+        $code = random_int(100000, 999999);
 
         // Store OTP in cache for 1 minute
         Cache::put('otp_'.$phone, $code, 60);
@@ -251,7 +251,7 @@ class OtpController extends Controller
         }
 
         // Generate new 6-digit OTP
-        $code = rand(100000, 999999);
+        $code = random_int(100000, 999999);
 
         // Store OTP in cache for 1 minute
         Cache::put('otp_'.$phone, $code, 60);

@@ -17,10 +17,134 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
+    private function normalizePhilippineMobileNumber(?string $rawPhone): ?string
+    {
+        if (! is_string($rawPhone) || trim($rawPhone) === '') {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $rawPhone);
+        if (! $digits) {
+            return null;
+        }
+
+        if (str_starts_with($digits, '63') && strlen($digits) === 12) {
+            $digits = '0'.substr($digits, 2);
+        } elseif (str_starts_with($digits, '9') && strlen($digits) === 10) {
+            $digits = '0'.$digits;
+        }
+
+        return $digits;
+    }
+
+    private function actorRoleName(): string
+    {
+        $user = auth()->user();
+        $user?->loadMissing('role:id,name');
+
+        return strtolower((string) ($user?->role?->name ?? ''));
+    }
+
+    private function isSuperadminActor(): bool
+    {
+        return $this->actorRoleName() === 'superadmin';
+    }
+
+    private function isOperatorActor(): bool
+    {
+        return $this->actorRoleName() === 'operator';
+    }
+
+    private function resolveRoleIdsByNames(array $names): array
+    {
+        return Roles::whereIn('name', $names)->pluck('id')->map(fn ($id) => (int) $id)->all();
+    }
+
+    private function allowedIndexRoleIds(): array
+    {
+        if ($this->isSuperadminActor()) {
+            return $this->resolveRoleIdsByNames(['Operator']);
+        }
+
+        if ($this->isOperatorActor()) {
+            return $this->resolveRoleIdsByNames(['Purok Leader', 'Citizen']);
+        }
+
+        return [];
+    }
+
+    private function allowedCreateRoleIds(): array
+    {
+        if ($this->isSuperadminActor()) {
+            return $this->resolveRoleIdsByNames(['Operator']);
+        }
+
+        if ($this->isOperatorActor()) {
+            return $this->resolveRoleIdsByNames(['Purok Leader']);
+        }
+
+        return [];
+    }
+
+    private function allowedEditableTargetRoleIds(): array
+    {
+        if ($this->isSuperadminActor()) {
+            return $this->resolveRoleIdsByNames(['Operator']);
+        }
+
+        if ($this->isOperatorActor()) {
+            return $this->resolveRoleIdsByNames(['Purok Leader']);
+        }
+
+        return [];
+    }
+
+    private function ensureCanCreateRole(int $roleId): void
+    {
+        if (! in_array($roleId, $this->allowedCreateRoleIds(), true)) {
+            abort(403, 'Unauthorized action.');
+        }
+    }
+
+    private function ensureCanEditUser(User $user): void
+    {
+        if (! in_array((int) $user->role_id, $this->allowedEditableTargetRoleIds(), true)) {
+            abort(403, 'Unauthorized action.');
+        }
+    }
+
+    private function ensureCanViewUser(User $user): void
+    {
+        if (! in_array((int) $user->role_id, $this->allowedIndexRoleIds(), true)) {
+            abort(403, 'Unauthorized action.');
+        }
+    }
+
+    private function ensureOperatorCitizenSuspensionPermission(User $user): void
+    {
+        $user->loadMissing('role:id,name');
+        $targetRole = strtolower((string) ($user->role?->name ?? ''));
+
+        if (! $this->isOperatorActor() || $targetRole !== 'citizen') {
+            abort(403, 'Unauthorized action.');
+        }
+    }
+
+    private function ensureSuperadminOperatorOnly(User $user): void
+    {
+        $user->loadMissing('role:id,name');
+        $targetRole = strtolower((string) ($user->role?->name ?? ''));
+
+        if (! $this->isSuperadminActor() || $targetRole !== 'operator') {
+            abort(403, 'Unauthorized action.');
+        }
+    }
+
     public function index(Request $request): Response
     {
         $query = User::with(['role', 'officialDetails.purok:id,name', 'citizenDetails'])
-            ->where('id', '!=', auth()->id()); // Exclude logged-in user
+            ->where('id', '!=', auth()->id())
+            ->whereIn('role_id', $this->allowedIndexRoleIds()); // Exclude logged-in user and scope by actor
 
         // Search functionality
         if ($request->has('search') && $request->search) {
@@ -58,7 +182,7 @@ class UserController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $roles = Roles::all();
+        $roles = Roles::whereIn('id', $this->allowedCreateRoleIds())->get();
 
         // Fetch Puroks with geometry and status
         $puroksRaw = \App\Models\Purok::select('id', 'name', DB::raw('ST_AsGeoJSON(boundary) as geometry'))->get();
@@ -88,7 +212,7 @@ class UserController extends Controller
 
     public function create(): Response
     {
-        $roles = Roles::all();
+        $roles = Roles::whereIn('id', $this->allowedCreateRoleIds())->get();
 
         return Inertia::render('Users/Create', [
             'roles' => $roles,
@@ -111,6 +235,8 @@ class UserController extends Controller
 
         // Convert role_id to integer
         $validated['role_id'] = (int) $validated['role_id'];
+        $this->ensureCanCreateRole($validated['role_id']);
+        $normalizedPhone = $this->normalizePhilippineMobileNumber($validated['phone_number'] ?? null);
 
         DB::beginTransaction();
         try {
@@ -132,7 +258,7 @@ class UserController extends Controller
                     'middle_name' => $validated['middle_name'],
                     'last_name' => $validated['last_name'],
                     'suffix' => $validated['suffix'] ?? null,
-                    'contact_number' => $validated['phone_number'] ?? '',
+                    'contact_number' => $normalizedPhone ?? '',
                     'office_address' => $validated['office_address'] ?? 'N/A',
                     'assigned_brgy' => $validated['assigned_brgy'] ?? $validated['barangay'] ?? '',
                     'latitude' => $validated['latitude'] ?? null,
@@ -175,6 +301,7 @@ class UserController extends Controller
 
     public function show(User $user): Response
     {
+        $this->ensureCanViewUser($user);
         $user->load(['role', 'officialDetails', 'citizenDetails']);
 
         return Inertia::render('Users/Show', [
@@ -184,8 +311,9 @@ class UserController extends Controller
 
     public function edit(User $user): Response
     {
+        $this->ensureCanEditUser($user);
         $user->load(['role', 'officialDetails', 'citizenDetails']);
-        $roles = Roles::all();
+        $roles = Roles::whereIn('id', $this->allowedCreateRoleIds())->get();
 
         return Inertia::render('Users/Edit', [
             'user' => $user,
@@ -195,8 +323,10 @@ class UserController extends Controller
 
     public function update(UserRequest $request, User $user)
     {
+        $this->ensureCanEditUser($user);
         $validated = $request->validated();
         $validated['purok_id'] = $request->input('purok_id');
+        $normalizedPhone = $this->normalizePhilippineMobileNumber($validated['phone_number'] ?? null);
 
         // Combine names for the user table
         $validated['name'] = trim(
@@ -211,7 +341,7 @@ class UserController extends Controller
             $user->update([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
-                'role_id' => $validated['role_id'] ?? $user->role_id,
+                'role_id' => $user->role_id,
             ]);
 
             // Update role-specific details
@@ -227,7 +357,7 @@ class UserController extends Controller
                         'middle_name' => $validated['middle_name'],
                         'last_name' => $validated['last_name'],
                         'suffix' => $validated['suffix'],
-                        'contact_number' => $validated['phone_number'],
+                        'contact_number' => $normalizedPhone ?? '',
                         'office_address' => $validated['office_address'],
                         'assigned_brgy' => $assignedBrgy,
                         'latitude' => $validated['latitude'],
@@ -273,6 +403,7 @@ class UserController extends Controller
 
     public function archive(User $user)
     {
+        $this->ensureCanEditUser($user);
         try {
             DB::beginTransaction();
             try {
@@ -301,6 +432,7 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        $this->ensureCanEditUser($user);
         try {
             DB::beginTransaction();
             try {
@@ -331,6 +463,7 @@ class UserController extends Controller
      */
     public function getAvailablePunishments(User $user)
     {
+        $this->ensureOperatorCitizenSuspensionPermission($user);
         try {
             $availablePunishments = UserSuspension::getAvailablePunishments($user->id);
 
@@ -391,6 +524,7 @@ class UserController extends Controller
      */
     public function applySuspension(Request $request, User $user)
     {
+        $this->ensureOperatorCitizenSuspensionPermission($user);
         try {
 
             $validated = $request->validate([
@@ -476,6 +610,7 @@ class UserController extends Controller
      */
     public function revokeSuspension(User $user)
     {
+        $this->ensureOperatorCitizenSuspensionPermission($user);
         try {
             $activeSuspension = UserSuspension::getActiveSuspension($user->id);
 
@@ -516,9 +651,7 @@ class UserController extends Controller
      */
     public function getOperatorDetails(User $user)
     {
-        if ($user->role_id !== 1) {
-            return response()->json(['error' => 'User is not an operator'], 400);
-        }
+        $this->ensureSuperadminOperatorOnly($user);
 
         $user->load(['officialDetails', 'role']);
 
@@ -565,9 +698,7 @@ class UserController extends Controller
      */
     public function resetOperatorPassword(Request $request, User $user)
     {
-        if ($user->role_id !== 1) {
-            return back()->with('error', 'User is not an operator');
-        }
+        $this->ensureSuperadminOperatorOnly($user);
 
         $request->validate([
             'new_password' => 'required|string|min:8|confirmed',

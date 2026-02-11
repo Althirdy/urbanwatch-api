@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\UrbanWatchException;
 use App\Models\CitizenDetails;
+use App\Models\IdVerification;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Crypt;
@@ -31,8 +32,7 @@ class AuthService
             ->where('role_id', 2)
             ->get();
 
-        \Log::info('Purok Leader Login Attempt. Pin provided: '.$pin);
-        \Log::info('Found '.$purokLeaders->count().' purok leaders.');
+        \Log::info('Purok Leader Login Attempt');
 
         $user = null;
         foreach ($purokLeaders as $leader) {
@@ -43,11 +43,8 @@ class AuthService
                     throw new UrbanWatchException('Your account is currently inactive. Please contact your administrator.', 403);
                 }
 
-                \Log::info('Match found for user ID: '.$leader->id);
                 $user = $leader;
                 break;
-            } else {
-                \Log::info('No match for user ID: '.$leader->id);
             }
         }
         if (! $user) {
@@ -61,6 +58,25 @@ class AuthService
 
     public function register(array $data)
     {
+        $verification = IdVerification::where('verification_id', $data['verificationId'])->first();
+        if (! $verification) {
+            throw new UrbanWatchException('ID verification not found. Please upload your ID again.', 403);
+        }
+
+        if ($verification->expires_at && Carbon::parse($verification->expires_at)->isPast()) {
+            throw new UrbanWatchException('ID verification has expired. Please upload your ID again.', 403);
+        }
+
+        if ($verification->status !== 'completed') {
+            throw new UrbanWatchException('ID verification is not complete yet. Please wait.', 403);
+        }
+
+        $verificationResult = $verification->result_json ?? [];
+        $verifiedPcn = $verificationResult['data']['pcnNumber'] ?? null;
+        if (! $verifiedPcn || $verifiedPcn !== $data['pcnNumber']) {
+            throw new UrbanWatchException('PCN does not match verified ID data.', 403);
+        }
+
         // 1. Verify OTP Token (Verified Token Pattern)
         try {
             $decryptedToken = Crypt::decryptString($data['verificationToken']);
@@ -118,6 +134,11 @@ class AuthService
                 'province' => $data['province'],
                 'postal_code' => $data['postalCode'],
                 'is_verified' => true,
+            ]);
+
+            $verification->update([
+                'status' => 'expired',
+                'failure_reason' => null,
             ]);
 
             DB::commit();

@@ -216,6 +216,38 @@ class NotificationService
     }
 
     /**
+     * Create a digest notification for new follow-up reports merged into a parent concern.
+     */
+    public function notifyConcernFollowupDigest(Concern $parentConcern, ConcernDistribution $distribution, int $newFollowups): ?Notification
+    {
+        try {
+            $purokLeaderId = $distribution->purok_leader_id;
+
+            return Notification::create([
+                'user_id' => $purokLeaderId,
+                'user_type' => Notification::USER_TYPE_PUROK_LEADER,
+                'type' => Notification::TYPE_CONCERN_FOLLOWUP_DIGEST,
+                'title' => 'Concern Follow-up Digest',
+                'message' => "Concern {$parentConcern->tracking_code} received {$newFollowups} new follow-up report(s).",
+                'data' => [
+                    'concern_id' => $parentConcern->id,
+                    'tracking_code' => $parentConcern->tracking_code,
+                    'new_followups' => $newFollowups,
+                    'total_followups' => $parentConcern->followups_count,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to create concern_followup_digest notification', [
+                'error' => $e->getMessage(),
+                'concern_id' => $parentConcern->id,
+                'distribution_id' => $distribution->id,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
      * Create notifications for a new public safety post.
      * Notifies all citizens in the affected area.
      */

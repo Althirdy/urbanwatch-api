@@ -52,6 +52,8 @@ class Notification extends Model
 
     public const TYPE_CONCERN_MERGED = 'concern_merged';
 
+    public const TYPE_CONCERN_FOLLOWUP_DIGEST = 'concern_followup_digest';
+
     public const TYPE_NEW_SAFETY_POST = 'new_safety_post';
 
     public const TYPE_SYSTEM_ANNOUNCEMENT = 'system_announcement';

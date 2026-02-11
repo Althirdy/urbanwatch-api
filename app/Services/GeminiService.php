@@ -112,7 +112,7 @@ class GeminiService
                 return null;
             }
 
-            return $result;
+            return $this->normalizeConcernAiResult($result);
 
         } catch (\Exception $e) {
             Log::error('GeminiService Exception', [
@@ -228,7 +228,7 @@ class GeminiService
                 return null;
             }
 
-            return $result;
+            return $this->normalizeConcernAiResult($result);
 
         } catch (\Exception $e) {
             Log::error('GeminiService Exception (Category Analysis)', [
@@ -338,7 +338,7 @@ class GeminiService
                 'confidence' => $result['confidence'] ?? null,
             ]);
 
-            return $result;
+            return $this->normalizeConcernAiResult($result);
 
         } catch (\Exception $e) {
             Log::error('GeminiService Exception (Image Analysis)', [
@@ -447,57 +447,38 @@ class GeminiService
             throw new \Exception('Gemini API configuration error');
         }
 
-        // 1. Prepare Prompt (Heredoc)
         $prompt = <<<'PROMPT'
-                    You are an expert document verification AI specialized in Philippine National ID (PhilSys ID).
+You are a fast PhilSys ID verifier.
+Return ONLY strict JSON (no markdown, no extra keys).
+Prioritize speed and core extraction.
 
-                    TASK: Analyze the provided image for AUTHENTICITY and DATA EXTRACTION.
-
-                    AUTHENTICITY CHECKS:
-                    - Header: "REPUBLIKA NG PILIPINAS" / "Republic of the Philippines"
-                    - Title: "PAMBANSANG PAGKAKAKILANLAN"
-                    - Security: Holographic gradient background, Ghost image on left, PHL code.
-                    - Format: PCN must be 16 digits (XXXX-XXXX-XXXX-XXXX).
-
-                    DATA EXTRACTION:
-                    - Extract all visible fields (Name, DOB, Address).
-                    - INFER the 4-digit Postal Code based on the City/Barangay.
-                    - INFER the value of province based on the City.
-
-                    PHASE 9 (PH 9) DETECTION - IMPORTANT:
-                    - Check if the address contains "PH 9", "PH9", "PH. 9", "Phase 9", or "Phase Nine".
-                    - Phase 9 (PH 9) is the area code for Barangay 176-E in Caloocan City.
-                    - Common address patterns: "Pkg. [Name] PH 9, Caloocan City" or "PH 9 [Street], Caloocan" or similar.
-                    - Set isPhase9Resident to true ONLY if the address clearly contains PH 9 or Phase 9.
-
-                    JSON OUTPUT FORMAT (Strictly follow this):
-                    {
-                        "isAuthentic": boolean,
-                        "backSideDetected": boolean,
-                        "imageQualityIssue": boolean,
-                        "confidence": number (0-100),
-                        "reasoning": "string",
-                        "isPhase9Resident": boolean,
-                        "data": {
-                            "pcnNumber": "string" or null,
-                            "lastName": "string" or null,
-                            "firstName": "string" or null,
-                            "suffix": "string" or null,  
-                            "middleName": "string" or null,
-                            "dateOfBirth": "MM/DD/YYYY" or null,
-                            "address": "string" or null,
-                            "barangay": "string" or null,
-                            "city": "string" or null,
-                            "province": "string" or null,
-                            "region": "string" or null,
-                            "postalCode": "string" or null
-                        }
-                    }
-                PROMPT;
+{
+  "isAuthentic": boolean,
+  "backSideDetected": boolean,
+  "imageQualityIssue": boolean,
+  "confidence": number,
+  "reasoning": "short string",
+  "isPhase9Resident": boolean,
+  "data": {
+    "pcnNumber": "string|null",
+    "lastName": "string|null",
+    "firstName": "string|null",
+    "suffix": "string|null",
+    "middleName": "string|null",
+    "dateOfBirth": "MM/DD/YYYY|null",
+    "address": "string|null",
+    "barangay": "string|null",
+    "city": "string|null",
+    "province": "string|null",
+    "region": "string|null",
+    "postalCode": "string|null"
+  }
+}
+PROMPT;
 
         try {
-            // 2. Send Request
-            $response = Http::timeout(45) // 45s timeout usually sufficient for Flash
+            $response = Http::connectTimeout(5)
+                ->timeout(30)
                 ->withHeaders(['Content-Type' => 'application/json'])
                 ->post("{$this->baseUrl}?key={$this->apiKey}", [
                     'contents' => [
@@ -514,8 +495,9 @@ class GeminiService
                         ],
                     ],
                     'generationConfig' => [
-                        'response_mime_type' => 'application/json', // Forces JSON response
-                        'temperature' => 0.2,
+                        'response_mime_type' => 'application/json',
+                        'temperature' => 0.1,
+                        'maxOutputTokens' => 450,
                     ],
                 ]);
 
@@ -536,23 +518,21 @@ class GeminiService
                 throw new \Exception('Failed to parse Gemini JSON: '.json_last_error_msg());
             }
 
+            $result = $this->normalizeNationalIdResult($result);
+
             // Check location restriction if system setting is enabled
             $restrictToBarangay = \App\Models\SystemSetting::get('restrict_registration_to_brgy_176', 'false') === 'true';
             $result['isOutsideAllowedArea'] = false;
             $result['locationRestrictionReason'] = null;
 
             if ($restrictToBarangay && $result['isAuthentic']) {
-                $isPhase9Resident = $result['isPhase9Resident'] ?? false;
                 $address = $result['data']['address'] ?? null;
+                $isPhase9Resident = $result['isPhase9Resident'] ?? false;
 
-                // Check using Gemini's detection or fallback to pattern matching
                 $isWithinAllowedArea = $isPhase9Resident;
 
-                // Fallback: Check address for PH 9, PH9, Phase 9 patterns
                 if (! $isWithinAllowedArea && $address) {
-                    $addressUpper = strtoupper($address);
-                    // Match patterns: PH 9, PH9, PH. 9, PHASE 9, PHASE9
-                    if (preg_match('/\bPH\.?\s*9\b|\bPHASE\s*9\b/i', $addressUpper)) {
+                    if (preg_match('/\bPH\.?\s*9\b|\bPHASE\s*9\b/i', strtoupper($address))) {
                         $isWithinAllowedArea = true;
                     }
                 }
@@ -578,6 +558,34 @@ class GeminiService
         }
     }
 
+    private function normalizeNationalIdResult(array $result): array
+    {
+        $result['isAuthentic'] = (bool) ($result['isAuthentic'] ?? false);
+        $result['backSideDetected'] = (bool) ($result['backSideDetected'] ?? false);
+        $result['imageQualityIssue'] = (bool) ($result['imageQualityIssue'] ?? false);
+        $result['confidence'] = max(0, min((int) ($result['confidence'] ?? 0), 100));
+        $result['reasoning'] = (string) ($result['reasoning'] ?? '');
+        $result['isPhase9Resident'] = (bool) ($result['isPhase9Resident'] ?? false);
+
+        $data = $result['data'] ?? [];
+        $result['data'] = [
+            'pcnNumber' => $data['pcnNumber'] ?? null,
+            'lastName' => $data['lastName'] ?? null,
+            'firstName' => $data['firstName'] ?? null,
+            'suffix' => $data['suffix'] ?? null,
+            'middleName' => $data['middleName'] ?? null,
+            'dateOfBirth' => $data['dateOfBirth'] ?? null,
+            'address' => $data['address'] ?? null,
+            'barangay' => $data['barangay'] ?? null,
+            'city' => $data['city'] ?? null,
+            'province' => $data['province'] ?? null,
+            'region' => $data['region'] ?? null,
+            'postalCode' => $data['postalCode'] ?? null,
+        ];
+
+        return $result;
+    }
+
     /**
      * Compare two concern descriptions/transcripts to see if they refer to the same incident.
      */
@@ -585,7 +593,7 @@ class GeminiService
     {
         try {
             if (! $this->apiKey) {
-                return true; // Default to old behavior (merge) if AI is unavailable to prevent spam
+                return $this->hasStrongTextOverlap($text1, $text2);
             }
 
             $prompt = "You are an incident deduplication assistant. Compare the following two citizen reports and determine if they refer to the SAME specific incident/event.\n\n".
@@ -610,7 +618,7 @@ class GeminiService
             if ($response->failed()) {
                 Log::error('Gemini API Error (Comparison)', ['status' => $response->status()]);
 
-                return true;
+                return $this->hasStrongTextOverlap($text1, $text2);
             }
 
             $responseData = $response->json();
@@ -618,13 +626,67 @@ class GeminiService
             $jsonString = preg_replace('/^```json\s*|\s*```$/', '', trim($jsonString));
             $result = json_decode($jsonString, true);
 
-            return (bool) ($result['is_same_incident'] ?? true);
+            return (bool) ($result['is_same_incident'] ?? $this->hasStrongTextOverlap($text1, $text2));
 
         } catch (\Exception $e) {
             Log::error('Gemini Comparison Exception', ['error' => $e->getMessage()]);
 
-            return true;
+            return $this->hasStrongTextOverlap($text1, $text2);
         }
+    }
+
+    /**
+     * Normalize concern AI response into a consistent contract for both manual and voice concerns.
+     */
+    private function normalizeConcernAiResult(array $result): array
+    {
+        return [
+            'transcription_text' => $result['transcription_text'] ?? null,
+            'title' => $result['title'] ?? null,
+            'description' => $result['description'] ?? null,
+            'is_valid' => (bool) ($result['is_valid'] ?? false),
+            'rejection_reason' => $result['rejection_reason'] ?? null,
+            'category' => $result['category'] ?? null,
+            'specific_type' => $result['specific_type'] ?? null,
+            'severity' => $result['severity'] ?? null,
+            'confidence' => isset($result['confidence']) ? (float) $result['confidence'] : 0.0,
+            'coherence_score' => isset($result['coherence_score']) ? (float) $result['coherence_score'] : 0.0,
+            'detail_score' => isset($result['detail_score']) ? (float) $result['detail_score'] : 0.0,
+            'reasoning' => $result['reasoning'] ?? null,
+            'raw' => $result,
+        ];
+    }
+
+    /**
+     * Deterministic fallback comparator when model output is unavailable.
+     */
+    private function hasStrongTextOverlap(string $text1, string $text2): bool
+    {
+        $tokens1 = $this->tokenizeForCompare($text1);
+        $tokens2 = $this->tokenizeForCompare($text2);
+        if (empty($tokens1) || empty($tokens2)) {
+            return false;
+        }
+
+        $intersection = array_intersect($tokens1, $tokens2);
+        $union = array_unique(array_merge($tokens1, $tokens2));
+        $score = count($union) > 0 ? count($intersection) / count($union) : 0.0;
+
+        return $score >= 0.40;
+    }
+
+    private function tokenizeForCompare(string $text): array
+    {
+        $normalized = strtolower(trim($text));
+        if ($normalized === '') {
+            return [];
+        }
+
+        $cleaned = preg_replace('/[^a-z0-9\\s]/', ' ', $normalized);
+        $parts = preg_split('/\\s+/', (string) $cleaned);
+        $parts = array_filter($parts, fn ($part) => strlen($part) >= 3);
+
+        return array_values(array_unique($parts));
     }
 
     /**

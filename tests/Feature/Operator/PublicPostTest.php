@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Operator;
 
+use App\Models\Roles;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -12,9 +13,24 @@ class PublicPostTest extends TestCase
 {
     use RefreshDatabase;
 
+    private Roles $operatorRole;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->operatorRole = Roles::firstOrCreate(
+            ['name' => 'Operator'],
+            ['description' => 'Operator role']
+        );
+    }
+
     public function test_can_create_public_post_without_image()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'role_id' => $this->operatorRole->id,
+            'email_verified_at' => now(),
+        ]);
 
         $response = $this->actingAs($user)->postJson(route('public-post.store'), [
             'title' => 'Test Post',
@@ -35,7 +51,10 @@ class PublicPostTest extends TestCase
     public function test_can_create_public_post_with_image()
     {
         Storage::fake('public');
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'role_id' => $this->operatorRole->id,
+            'email_verified_at' => now(),
+        ]);
         $file = UploadedFile::fake()->image('post.jpg');
 
         $response = $this->actingAs($user)->postJson(route('public-post.store'), [
@@ -52,7 +71,10 @@ class PublicPostTest extends TestCase
 
     public function test_validation_fails_for_missing_fields()
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'role_id' => $this->operatorRole->id,
+            'email_verified_at' => now(),
+        ]);
 
         $response = $this->actingAs($user)->postJson(route('public-post.store'), [
             'status' => 'draft',

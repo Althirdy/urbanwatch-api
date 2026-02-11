@@ -8,11 +8,10 @@ use App\Http\Requests\Api\V1\Auth\LoginRequest;
 use App\Http\Requests\Api\V1\Auth\PurokLeaderLoginRequest;
 use App\Http\Requests\Api\V1\Auth\RegisterRequest;
 use App\Http\Resources\Api\V1\AuthUserResource;
-use App\Models\CitizenDetails;
-use App\Models\User;
 use App\Services\AbstractApiService;
 use App\Services\AuthService;
 use App\Services\GeminiService;
+use App\Services\IdVerificationService;
 use App\Services\ImageProcessingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -27,12 +26,15 @@ class AuthController extends BaseApiController
 
     protected $imageService;
 
-    public function __construct(AuthService $authService, AbstractApiService $abstractApiService, GeminiService $geminiService, ImageProcessingService $imageService)
+    protected $idVerificationService;
+
+    public function __construct(AuthService $authService, AbstractApiService $abstractApiService, GeminiService $geminiService, ImageProcessingService $imageService, IdVerificationService $idVerificationService)
     {
         $this->authService = $authService;
         $this->abstractApiService = $abstractApiService;
         $this->geminiService = $geminiService;
         $this->imageService = $imageService;
+        $this->idVerificationService = $idVerificationService;
     }
 
     // ****LOGIN METHODD */
@@ -112,11 +114,63 @@ class AuthController extends BaseApiController
                 'confidence_score' => $analysis['confidence'],
             ], 'ID uploaded and verified successfully.');
 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             Log::error('ID Upload Error', ['msg' => $e->getMessage()]);
 
             return $this->sendError('Unable to process ID card at this time.', 500);
         }
+    }
+
+    public function startNationalIdVerification(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'image' => 'required|file|mimes:jpeg,png,jpg,gif|max:5120',
+            'deviceFingerprint' => 'nullable|string|max:191',
+        ]);
+
+        try {
+            $verification = $this->idVerificationService->start(
+                $request->file('image'),
+                $request->ip(),
+                $request->input('deviceFingerprint')
+            );
+
+            \App\Jobs\ProcessNationalIdOcrJob::dispatch($verification->id);
+
+            return $this->sendResponse([
+                'verificationId' => $verification->verification_id,
+                'status' => $verification->status,
+                'expiresAt' => $verification->expires_at?->toIso8601String(),
+            ], 'ID verification started successfully.', 202);
+        } catch (\Throwable $e) {
+            Log::error('Start ID verification failed', ['error' => $e->getMessage()]);
+
+            return $this->sendError('Unable to start ID verification. Please try again.', null, 500);
+        }
+    }
+
+    public function getNationalIdVerificationStatus(string $verificationId): \Illuminate\Http\JsonResponse
+    {
+        $verification = \App\Models\IdVerification::where('verification_id', $verificationId)->first();
+
+        if (! $verification) {
+            return $this->sendNotFound('Verification request not found.');
+        }
+
+        $verification = $this->idVerificationService->markExpiredIfNeeded($verification);
+
+        $result = $verification->result_json ?? [];
+
+        return $this->sendResponse([
+            'verificationId' => $verification->verification_id,
+            'status' => $verification->status,
+            'expiresAt' => $verification->expires_at?->toIso8601String(),
+            'completedAt' => $verification->processed_at?->toIso8601String(),
+            'failureReason' => $verification->failure_reason,
+            'confidenceScore' => $verification->confidence,
+            'extractedData' => $verification->status === 'completed' ? ($result['data'] ?? null) : null,
+            'flags' => $verification->flags,
+        ]);
     }
 
     // Login for Purok Leader

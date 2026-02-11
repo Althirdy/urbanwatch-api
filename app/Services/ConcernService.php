@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\ConcernAssigned;
+use App\Events\ConcernFollowupDigest;
 use App\Events\ConcernUnassigned;
 use App\Exceptions\UrbanWatchException;
 use App\Jobs\ProcessManualConcernJob;
@@ -58,6 +59,8 @@ class ConcernService
                 'ai_confidence',
                 'created_at',
                 'rejection_reason',
+                'followups_count',
+                'last_followup_at',
             ]);
 
         // Apply filters
@@ -124,6 +127,8 @@ class ConcernService
                 'created_at',
                 'deleted_at',
                 'rejection_reason',
+                'followups_count',
+                'last_followup_at',
             ]);
 
         // Apply same filters
@@ -258,6 +263,8 @@ class ConcernService
                 'created_at',
                 'rejection_reason',
                 'is_valid',
+                'followups_count',
+                'last_followup_at',
             ])
             ->withCount('duplicates')
             ->with([
@@ -322,8 +329,6 @@ class ConcernService
                 'status' => 'analyzing',
                 'category' => $data['category'],
                 'severity' => $data['severity'] ?? 'low',
-                'user_selected_category' => $data['category'], // Store user's selection
-                'user_selected_severity' => $data['severity'] ?? 'low', // Store user's selection
                 'transcript_text' => $data['transcript_text'] ?? null,
                 'longitude' => $data['longitude'] ?? null,
                 'latitude' => $data['latitude'] ?? null,
@@ -336,6 +341,8 @@ class ConcernService
 
             // Handle Media Uploads
             if ($files) {
+                $this->assertFileTypesForConcernType($concernType, $files);
+
                 $isMultiple = is_array($files);
                 $uploadResults = $isMultiple
                     ? $this->fileUploadService->uploadMultiple($files, 'concerns')
@@ -431,7 +438,7 @@ class ConcernService
         // Use a lock to prevent race conditions during deduplication
         // We use a broad lock per concern to ensure only one finalization happens at a time
         // for potential duplicates. A more granular lock could be used based on coordinates.
-        $lock = Cache::lock('finalize_concern_processing', 10);
+        $lock = Cache::lock("finalize_concern_processing:{$concernId}", 10);
 
         try {
             return $lock->block(5, function () use ($concernId) {
@@ -452,6 +459,8 @@ class ConcernService
                         'parent_concern_id' => $parentConcern->id,
                     ]);
 
+                    $this->trackFollowupOnParent($parentConcern);
+
                     ConcernHistory::create([
                         'concern_id' => $concern->id,
                         'status' => $concern->status,
@@ -463,6 +472,8 @@ class ConcernService
 
                     // Notify the citizen that their concern was merged
                     event(new \App\Events\ConcernMerged($concern, $parentConcern));
+
+                    $this->maybeSendFollowupDigest($parentConcern);
 
                     return; // Stop here. No notifications.
                 }
@@ -717,6 +728,30 @@ class ConcernService
     }
 
     /**
+     * Mark concern as needs_review when AI processing is unavailable or inconsistent.
+     */
+    public function markNeedsReview(int $concernId, string $reason, ?array $rawAnalysis = null): void
+    {
+        $concern = Concern::find($concernId);
+        if (! $concern) {
+            return;
+        }
+
+        $concern->update([
+            'status' => 'needs_review',
+            'rejection_reason' => $reason,
+            'ai_analysis_raw' => $rawAnalysis,
+            'ai_processed_at' => now(),
+        ]);
+
+        ConcernHistory::create([
+            'concern_id' => $concern->id,
+            'status' => 'needs_review',
+            'remarks' => "Needs manual review: {$reason}",
+        ]);
+    }
+
+    /**
      * Apply automated suspension based on strike count.
      */
     private function applyAutomatedSuspension(User $user)
@@ -772,7 +807,7 @@ class ConcernService
                     $query->where('category', $concern->category);
                 }
             })
-            ->where('created_at', '>=', now()->subHour()) // Within last 1 hour
+            ->where('created_at', '>=', now()->subHours(6)) // Within last 6 hours
             // 3. Exclude Rejected, Resolved, and Archived concerns from being parents
             ->whereNotIn('status', ['rejected', 'resolved', 'archived'])
             ->having('distance', '<', $radius)
@@ -822,6 +857,80 @@ class ConcernService
             }
 
             throw new UrbanWatchException($message);
+        }
+    }
+
+    private function trackFollowupOnParent(Concern $parentConcern): void
+    {
+        $parentConcern->increment('followups_count');
+        $parentConcern->forceFill([
+            'last_followup_at' => now(),
+        ])->save();
+    }
+
+    private function maybeSendFollowupDigest(Concern $parentConcern): void
+    {
+        $parentConcern->loadMissing('distribution');
+        $distribution = $parentConcern->distribution;
+        if (! $distribution) {
+            return;
+        }
+
+        $total = (int) $parentConcern->followups_count;
+        $lastDigestCount = (int) ($parentConcern->last_digest_count ?? 0);
+        $newFollowups = $total - $lastDigestCount;
+        if ($newFollowups <= 0) {
+            return;
+        }
+
+        $thresholds = [5, 20, 50, 100];
+        $crossedThreshold = false;
+        foreach ($thresholds as $threshold) {
+            if ($lastDigestCount < $threshold && $total >= $threshold) {
+                $crossedThreshold = true;
+                break;
+            }
+        }
+
+        $lastDigestAt = $parentConcern->last_digest_notified_at;
+        $timeBasedEligible = $lastDigestAt === null || $lastDigestAt->lte(now()->subMinutes(10));
+        if (! $crossedThreshold && ! $timeBasedEligible) {
+            return;
+        }
+
+        $this->notificationService->notifyConcernFollowupDigest($parentConcern, $distribution, $newFollowups);
+        event(new ConcernFollowupDigest($parentConcern, $distribution, $newFollowups, $total));
+
+        $parentConcern->forceFill([
+            'last_digest_count' => $total,
+            'last_digest_notified_at' => now(),
+        ])->save();
+    }
+
+    private function assertFileTypesForConcernType(string $concernType, $files): void
+    {
+        $fileList = is_array($files) ? $files : [$files];
+
+        if ($concernType === 'voice') {
+            if (count($fileList) !== 1) {
+                throw new UrbanWatchException('Voice concern requires exactly one audio file.', 422);
+            }
+
+            foreach ($fileList as $file) {
+                $mimeType = (string) ($file->getMimeType() ?? '');
+                if (! str_starts_with($mimeType, 'audio/')) {
+                    throw new UrbanWatchException('Voice concern accepts audio files only.', 422);
+                }
+            }
+
+            return;
+        }
+
+        foreach ($fileList as $file) {
+            $mimeType = (string) ($file->getMimeType() ?? '');
+            if (! str_starts_with($mimeType, 'image/')) {
+                throw new UrbanWatchException('Manual concern accepts image files only.', 422);
+            }
         }
     }
 

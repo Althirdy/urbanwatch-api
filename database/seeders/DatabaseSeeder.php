@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Roles;
-use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -20,6 +19,7 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Operator', 'description' => 'Operator role with limited access'],
             ['name' => 'Purok Leader', 'description' => 'Purok Leader role with moderate access'],
             ['name' => 'Citizen', 'description' => 'Citizen role with basic access'],
+            ['name' => 'Superadmin', 'description' => 'Global system management role'],
         ];
 
         foreach ($roles as $role) {
@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SystemSettingsSeeder::class,
             UserSeeder::class,
+            SuperadminSeeder::class,
             CctvDeviceSeeder::class,
             ReportSeeder::class,
             PublicPostSeeder::class,

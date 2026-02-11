@@ -3,7 +3,7 @@
 use App\Http\Controllers\Operator\PublicPostController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified', 'role:operator'])->group(function () {
     Route::get('public-posts', [PublicPostController::class, 'index'])->name('public-posts');
 
     Route::resource('public-post', PublicPostController::class);
