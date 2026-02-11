@@ -258,4 +258,45 @@ class ConcernValidationTest extends TestCase
         $this->assertEquals('safety', $concern->ai_category);
         $this->assertEquals('safety', $concern->category); // Auto-update if high confidence
     }
+
+    public function test_manual_concern_ai_failure_is_routed_to_needs_review()
+    {
+        $user = User::factory()->create();
+        $concern = Concern::factory()->create([
+            'citizen_id' => $user->id,
+            'status' => 'analyzing',
+            'title' => 'Possible Incident',
+            'description' => 'Something happened',
+        ]);
+
+        $this->mock(GeminiService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('validateAndClassify')
+                ->once()
+                ->andReturn(null);
+        });
+
+        $job = new ProcessManualConcernJob($concern->id);
+        $job->handle(app(GeminiService::class), app(ConcernService::class));
+
+        $concern->refresh();
+        $this->assertEquals('needs_review', $concern->status);
+        $this->assertStringContainsString('manual review', (string) $concern->rejection_reason);
+    }
+
+    public function test_voice_concern_without_audio_is_routed_to_needs_review()
+    {
+        $user = User::factory()->create();
+        $concern = Concern::factory()->create([
+            'citizen_id' => $user->id,
+            'status' => 'analyzing',
+            'type' => 'voice',
+        ]);
+
+        $job = new ProcessVoiceConcernJob($concern->id);
+        $job->handle(app(GeminiService::class), app(ConcernService::class));
+
+        $concern->refresh();
+        $this->assertEquals('needs_review', $concern->status);
+        $this->assertStringContainsString('No audio file found', (string) $concern->rejection_reason);
+    }
 }

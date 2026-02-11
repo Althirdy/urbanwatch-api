@@ -43,7 +43,17 @@ class AppServiceProvider extends ServiceProvider
 
         // Define Rate Limiter for Concern Submissions
         RateLimiter::for('concerns.submit', function (Request $request) {
-            return Limit::perHour(1000)->by($request->user()?->id ?: $request->ip());
+            $key = $request->user()?->id ? 'user:'.$request->user()->id : 'ip:'.$request->ip();
+
+            return [
+                Limit::perMinute(3)->by($key)->response(function () {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Too many submissions. Please wait before reporting again.',
+                    ], 429);
+                }),
+                Limit::perHour(30)->by($key),
+            ];
         });
     }
 }

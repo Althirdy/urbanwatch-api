@@ -108,16 +108,13 @@ class ProcessManualConcernJob implements ShouldQueue
                         $concernService->markAsInvalid($concern->id, $reason, $analysis);
                     }
                 } else {
-                    // Fallback: If AI fails or returns incomplete data, default to valid for manual review
-                    Log::warning('ProcessManualConcernJob: AI failed or returned incomplete data. Defaulting to valid.', [
+                    Log::warning('ProcessManualConcernJob: AI failed or returned incomplete data. Routing to needs_review.', [
                         'concern_id' => $concern->id,
                         'analysis' => $analysis,
                     ]);
-                    $concernService->markAsValid($concern->id, [
-                        'category' => $concern->category,
-                        'severity' => $concern->severity,
-                        'confidence' => 0,
-                        'is_fallback' => true,
+                    $concernService->markNeedsReview($concern->id, 'AI validation unavailable. Routed for manual review.', [
+                        'analysis' => $analysis,
+                        'fallback_source' => 'manual_concern_job',
                     ]);
                 }
             }
@@ -126,8 +123,7 @@ class ProcessManualConcernJob implements ShouldQueue
                 'concern_id' => $concernId,
                 'error' => $e->getMessage(),
             ]);
-            // Fallback: Mark as valid if job crashes to avoid lost reports
-            $concernService->markAsValid($concernId, [
+            $concernService->markNeedsReview($concernId, 'AI processing exception. Routed for manual review.', [
                 'is_fallback' => true,
                 'reasoning' => 'Exception during manual processing.',
             ]);
@@ -145,12 +141,11 @@ class ProcessManualConcernJob implements ShouldQueue
         ]);
 
         if ($this->concernId) {
-            // Fallback: If AI processing fails completely, mark it as valid to allow manual review
             $concernService = app(\App\Services\ConcernService::class);
-            $concernService->markAsValid($this->concernId, [
+            $concernService->markNeedsReview($this->concernId, 'AI processing failed after retries. Routed for manual review.', [
                 'is_fallback' => true,
                 'confidence' => 0,
-                'reasoning' => 'AI processing failed after multiple attempts. Defaulted to manual review.',
+                'reasoning' => 'AI processing failed after multiple attempts.',
             ]);
         }
     }

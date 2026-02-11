@@ -57,7 +57,10 @@ class ProcessVoiceConcernJob implements ShouldQueue
             if (! $audioMedia) {
                 Log::warning('ProcessVoiceConcernJob: No audio media found for concern', ['concern_id' => $concern->id]);
 
-                // Still finalize even if media is missing
+                $concernService->markNeedsReview($concern->id, 'No audio file found for voice concern. Manual review required.', [
+                    'fallback_source' => 'voice_concern_missing_audio',
+                ]);
+
                 return;
             }
 
@@ -82,6 +85,11 @@ class ProcessVoiceConcernJob implements ShouldQueue
                     'path' => $storagePath,
                     'disk' => $disk,
                     'configured_disk' => config('filesystems.default'),
+                ]);
+
+                $concernService->markNeedsReview($concern->id, 'Audio file unavailable in storage. Manual review required.', [
+                    'storage_path' => $storagePath,
+                    'disk' => $disk,
                 ]);
 
                 return;
@@ -119,8 +127,7 @@ class ProcessVoiceConcernJob implements ShouldQueue
                     'transcript_text' => 'Transcription unavailable. Please listen to the attached audio.',
                 ]);
 
-                // Fallback: Default to valid
-                $concernService->markAsValid($concern->id, [
+                $concernService->markNeedsReview($concern->id, 'Voice AI analysis unavailable. Routed for manual review.', [
                     'is_fallback' => true,
                     'reasoning' => 'Gemini analysis failed or returned null.',
                 ]);
@@ -140,8 +147,7 @@ class ProcessVoiceConcernJob implements ShouldQueue
                 ]);
             }
 
-            // Fallback: Mark as valid
-            $concernService->markAsValid($concernId, [
+            $concernService->markNeedsReview($concernId, 'Voice AI processing exception. Routed for manual review.', [
                 'is_fallback' => true,
                 'reasoning' => 'Exception during voice processing.',
             ]);
@@ -161,12 +167,11 @@ class ProcessVoiceConcernJob implements ShouldQueue
         ]);
 
         if ($concernId) {
-            // Fallback: Mark as valid
             $concernService = app(\App\Services\ConcernService::class);
-            $concernService->markAsValid($concernId, [
+            $concernService->markNeedsReview($concernId, 'Voice AI failed after retries. Routed for manual review.', [
                 'is_fallback' => true,
                 'confidence' => 0,
-                'reasoning' => 'Voice analysis failed after multiple attempts. Defaulted to manual review.',
+                'reasoning' => 'Voice analysis failed after multiple attempts.',
             ]);
         }
     }

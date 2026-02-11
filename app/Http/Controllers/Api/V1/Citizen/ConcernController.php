@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\Citizen\StoreConcernRequest;
 use App\Http\Requests\Api\V1\Citizen\UpdateConcernRequest;
 use App\Http\Resources\Api\V1\ConcernResource;
+use App\Exceptions\UrbanWatchException;
 use App\Services\ConcernService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -79,13 +80,17 @@ class ConcernController extends BaseApiController
             return $this->sendResponse([
                 'concern' => new ConcernResource($concern),
             ], 'Concern submitted successfully!', 201);
+        } catch (UrbanWatchException $e) {
+            throw $e;
         } catch (\Exception $e) {
+            $errorRef = 'concern-submit-'.now()->timestamp;
             Log::error('Error creating concern', [
+                'reference' => $errorRef,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return $this->sendError('An error occurred while submitting concern: '.$e->getMessage());
+            return $this->sendError("Unable to submit concern right now. Please try again. Reference: {$errorRef}", status: 500);
         }
     }
 

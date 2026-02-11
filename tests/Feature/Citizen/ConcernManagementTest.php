@@ -152,7 +152,7 @@ class ConcernManagementTest extends TestCase
             'category' => 'infrastructure',
         ];
 
-        $response = $this->postJson('/api/v1/concerns', $payload);
+        $response = $this->post('/api/v1/concerns', $payload, ['Accept' => 'application/json']);
 
         $response->assertStatus(201)
             ->assertJsonPath('message', 'Concern submitted successfully!');
@@ -182,7 +182,7 @@ class ConcernManagementTest extends TestCase
             'files' => [$file], // Array input
         ];
 
-        $response = $this->postJson('/api/v1/concerns', $payload);
+        $response = $this->post('/api/v1/concerns', $payload, ['Accept' => 'application/json']);
 
         $response->assertStatus(201);
 
@@ -210,7 +210,7 @@ class ConcernManagementTest extends TestCase
             'longitude' => 121.1210474,
         ];
 
-        $response = $this->postJson('/api/v1/concerns', $payload);
+        $response = $this->post('/api/v1/concerns', $payload, ['Accept' => 'application/json']);
 
         $response->assertStatus(201)
             ->assertJsonPath('message', 'Concern submitted successfully!');
@@ -222,6 +222,44 @@ class ConcernManagementTest extends TestCase
         ]);
 
         Queue::assertPushed(ProcessVoiceConcernJob::class);
+    }
+
+    public function test_voice_concern_requires_exactly_one_audio_file()
+    {
+        Sanctum::actingAs($this->citizen, ['*']);
+
+        $payload = [
+            'type' => 'voice',
+            'category' => 'safety',
+            'latitude' => 14.7785335,
+            'longitude' => 121.1210474,
+        ];
+
+        $response = $this->postJson('/api/v1/concerns', $payload);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['files']);
+    }
+
+    public function test_manual_concern_rejects_audio_files()
+    {
+        Sanctum::actingAs($this->citizen, ['*']);
+
+        $audio = UploadedFile::fake()->create('voice.mp3', 100, 'audio/mpeg');
+        $payload = [
+            'title' => 'Street Concern',
+            'description' => 'Road issue reported.',
+            'latitude' => 14.7785335,
+            'longitude' => 121.1210474,
+            'type' => 'manual',
+            'category' => 'infrastructure',
+            'files' => [$audio],
+        ];
+
+        $response = $this->postJson('/api/v1/concerns', $payload);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['files.0']);
     }
 
     public function test_validates_create_concern_request()

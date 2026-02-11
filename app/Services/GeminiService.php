@@ -112,7 +112,7 @@ class GeminiService
                 return null;
             }
 
-            return $result;
+            return $this->normalizeConcernAiResult($result);
 
         } catch (\Exception $e) {
             Log::error('GeminiService Exception', [
@@ -228,7 +228,7 @@ class GeminiService
                 return null;
             }
 
-            return $result;
+            return $this->normalizeConcernAiResult($result);
 
         } catch (\Exception $e) {
             Log::error('GeminiService Exception (Category Analysis)', [
@@ -338,7 +338,7 @@ class GeminiService
                 'confidence' => $result['confidence'] ?? null,
             ]);
 
-            return $result;
+            return $this->normalizeConcernAiResult($result);
 
         } catch (\Exception $e) {
             Log::error('GeminiService Exception (Image Analysis)', [
@@ -593,7 +593,7 @@ PROMPT;
     {
         try {
             if (! $this->apiKey) {
-                return true; // Default to old behavior (merge) if AI is unavailable to prevent spam
+                return $this->hasStrongTextOverlap($text1, $text2);
             }
 
             $prompt = "You are an incident deduplication assistant. Compare the following two citizen reports and determine if they refer to the SAME specific incident/event.\n\n".
@@ -618,7 +618,7 @@ PROMPT;
             if ($response->failed()) {
                 Log::error('Gemini API Error (Comparison)', ['status' => $response->status()]);
 
-                return true;
+                return $this->hasStrongTextOverlap($text1, $text2);
             }
 
             $responseData = $response->json();
@@ -626,13 +626,67 @@ PROMPT;
             $jsonString = preg_replace('/^```json\s*|\s*```$/', '', trim($jsonString));
             $result = json_decode($jsonString, true);
 
-            return (bool) ($result['is_same_incident'] ?? true);
+            return (bool) ($result['is_same_incident'] ?? $this->hasStrongTextOverlap($text1, $text2));
 
         } catch (\Exception $e) {
             Log::error('Gemini Comparison Exception', ['error' => $e->getMessage()]);
 
-            return true;
+            return $this->hasStrongTextOverlap($text1, $text2);
         }
+    }
+
+    /**
+     * Normalize concern AI response into a consistent contract for both manual and voice concerns.
+     */
+    private function normalizeConcernAiResult(array $result): array
+    {
+        return [
+            'transcription_text' => $result['transcription_text'] ?? null,
+            'title' => $result['title'] ?? null,
+            'description' => $result['description'] ?? null,
+            'is_valid' => (bool) ($result['is_valid'] ?? false),
+            'rejection_reason' => $result['rejection_reason'] ?? null,
+            'category' => $result['category'] ?? null,
+            'specific_type' => $result['specific_type'] ?? null,
+            'severity' => $result['severity'] ?? null,
+            'confidence' => isset($result['confidence']) ? (float) $result['confidence'] : 0.0,
+            'coherence_score' => isset($result['coherence_score']) ? (float) $result['coherence_score'] : 0.0,
+            'detail_score' => isset($result['detail_score']) ? (float) $result['detail_score'] : 0.0,
+            'reasoning' => $result['reasoning'] ?? null,
+            'raw' => $result,
+        ];
+    }
+
+    /**
+     * Deterministic fallback comparator when model output is unavailable.
+     */
+    private function hasStrongTextOverlap(string $text1, string $text2): bool
+    {
+        $tokens1 = $this->tokenizeForCompare($text1);
+        $tokens2 = $this->tokenizeForCompare($text2);
+        if (empty($tokens1) || empty($tokens2)) {
+            return false;
+        }
+
+        $intersection = array_intersect($tokens1, $tokens2);
+        $union = array_unique(array_merge($tokens1, $tokens2));
+        $score = count($union) > 0 ? count($intersection) / count($union) : 0.0;
+
+        return $score >= 0.40;
+    }
+
+    private function tokenizeForCompare(string $text): array
+    {
+        $normalized = strtolower(trim($text));
+        if ($normalized === '') {
+            return [];
+        }
+
+        $cleaned = preg_replace('/[^a-z0-9\\s]/', ' ', $normalized);
+        $parts = preg_split('/\\s+/', (string) $cleaned);
+        $parts = array_filter($parts, fn ($part) => strlen($part) >= 3);
+
+        return array_values(array_unique($parts));
     }
 
     /**
