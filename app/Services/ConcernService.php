@@ -28,7 +28,8 @@ class ConcernService
         protected NotificationService $notificationService,
         protected GeminiService $geminiService,
         protected GeographicRoutingService $routingService
-    ) {}
+    ) {
+    }
 
     /**
      * Get paginated concerns for the current user.
@@ -37,7 +38,7 @@ class ConcernService
      */
     public function getUserConcerns(int $userId, int $perPage = 15, array $filters = [])
     {
-        if (! User::find($userId)) {
+        if (!User::find($userId)) {
             throw new UrbanWatchException('User not found.');
         }
 
@@ -64,23 +65,23 @@ class ConcernService
             ]);
 
         // Apply filters
-        if (! empty($filters['status'])) {
+        if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (! empty($filters['category'])) {
+        if (!empty($filters['category'])) {
             $query->where('category', $filters['category']);
         }
 
-        if (! empty($filters['severity'])) {
+        if (!empty($filters['severity'])) {
             $query->where('severity', $filters['severity']);
         }
 
-        if (! empty($filters['date_from'])) {
+        if (!empty($filters['date_from'])) {
             $query->whereDate('created_at', '>=', $filters['date_from']);
         }
 
-        if (! empty($filters['date_to'])) {
+        if (!empty($filters['date_to'])) {
             $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 
@@ -103,7 +104,7 @@ class ConcernService
      */
     public function getUserArchivedConcerns(int $userId, int $perPage = 15, array $filters = [])
     {
-        if (! User::find($userId)) {
+        if (!User::find($userId)) {
             throw new UrbanWatchException('User not found.');
         }
 
@@ -132,23 +133,23 @@ class ConcernService
             ]);
 
         // Apply same filters
-        if (! empty($filters['status'])) {
+        if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (! empty($filters['category'])) {
+        if (!empty($filters['category'])) {
             $query->where('category', $filters['category']);
         }
 
-        if (! empty($filters['severity'])) {
+        if (!empty($filters['severity'])) {
             $query->where('severity', $filters['severity']);
         }
 
-        if (! empty($filters['date_from'])) {
+        if (!empty($filters['date_from'])) {
             $query->whereDate('created_at', '>=', $filters['date_from']);
         }
 
-        if (! empty($filters['date_to'])) {
+        if (!empty($filters['date_to'])) {
             $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 
@@ -168,7 +169,7 @@ class ConcernService
 
     public function getConcernsCount(int $userId, array $filters = [])
     {
-        if (! User::find($userId)) {
+        if (!User::find($userId)) {
             throw new UrbanWatchException('User not found.');
         }
 
@@ -176,23 +177,23 @@ class ConcernService
             ->whereNull('parent_concern_id'); // Count only distinct incidents
 
         // Apply the same filters as getUserConcerns
-        if (! empty($filters['status'])) {
+        if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (! empty($filters['category'])) {
+        if (!empty($filters['category'])) {
             $query->where('category', $filters['category']);
         }
 
-        if (! empty($filters['severity'])) {
+        if (!empty($filters['severity'])) {
             $query->where('severity', $filters['severity']);
         }
 
-        if (! empty($filters['date_from'])) {
+        if (!empty($filters['date_from'])) {
             $query->whereDate('created_at', '>=', $filters['date_from']);
         }
 
-        if (! empty($filters['date_to'])) {
+        if (!empty($filters['date_to'])) {
             $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 
@@ -203,7 +204,7 @@ class ConcernService
 
     public function getArchivedConcernsCount(int $userId, array $filters = [])
     {
-        if (! User::find($userId)) {
+        if (!User::find($userId)) {
             throw new UrbanWatchException('User not found.');
         }
 
@@ -212,23 +213,23 @@ class ConcernService
             ->whereNull('parent_concern_id');
 
         // Apply the same filters
-        if (! empty($filters['status'])) {
+        if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (! empty($filters['category'])) {
+        if (!empty($filters['category'])) {
             $query->where('category', $filters['category']);
         }
 
-        if (! empty($filters['severity'])) {
+        if (!empty($filters['severity'])) {
             $query->where('severity', $filters['severity']);
         }
 
-        if (! empty($filters['date_from'])) {
+        if (!empty($filters['date_from'])) {
             $query->whereDate('created_at', '>=', $filters['date_from']);
         }
 
-        if (! empty($filters['date_to'])) {
+        if (!empty($filters['date_to'])) {
             $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 
@@ -240,7 +241,7 @@ class ConcernService
      */
     public function getConcernDetails(string $id, int $userId)
     {
-        if (! User::find($userId)) {
+        if (!User::find($userId)) {
             throw new UrbanWatchException('User not found.');
         }
 
@@ -280,7 +281,7 @@ class ConcernService
             ])
             ->first();
 
-        if (! $concern) {
+        if (!$concern) {
             throw new UrbanWatchException('Concern not found.');
         }
 
@@ -296,7 +297,7 @@ class ConcernService
 
         // Check Geofencing (Boundary Restriction)
         if (isset($data['latitude']) && isset($data['longitude'])) {
-            if (! $this->isInsideBoundary($data['latitude'], $data['longitude'])) {
+            if (!$this->isInsideBoundary($data['latitude'], $data['longitude'])) {
                 throw new UrbanWatchException('Your location is outside the service area (Barangay 176 E). Concern submission is restricted.');
             }
         }
@@ -308,7 +309,7 @@ class ConcernService
 
             // Prepare Title & Description
             if ($concernType === 'voice') {
-                $title = $data['title'] ?? 'Voice Concern - '.now()->format('M d, Y H:i');
+                $title = $data['title'] ?? 'Voice Concern - ' . now()->format('M d, Y H:i');
                 $description = $data['description'] ?? 'Audio recording received. Transcription pending...';
             } else {
                 $title = $data['title'];
@@ -318,7 +319,7 @@ class ConcernService
             // Generate Tracking Code
             $datePart = now()->format('Ymd');
             $randomPart = Str::upper(Str::random(4));
-            $trackingCode = 'CN-'.$datePart.'-'.$randomPart;
+            $trackingCode = 'CN-' . $datePart . '-' . $randomPart;
 
             // Create Concern
             $concern = Concern::create([
@@ -401,7 +402,7 @@ class ConcernService
 
         $this->checkIfUserSuspended($userId, 'update concerns');
 
-        if (! $concern) {
+        if (!$concern) {
             throw new UrbanWatchException('Concern not found.');
         }
 
@@ -422,7 +423,7 @@ class ConcernService
 
         $this->checkIfUserSuspended($userId, 'delete concerns');
 
-        if (! $concern) {
+        if (!$concern) {
             throw new UrbanWatchException('Concern not found.');
         }
 
@@ -444,7 +445,7 @@ class ConcernService
             return $lock->block(5, function () use ($concernId) {
                 $concern = Concern::find($concernId);
 
-                if (! $concern) {
+                if (!$concern) {
                     Log::error("Concern #{$concernId} not found during finalization.");
 
                     return;
@@ -584,7 +585,7 @@ class ConcernService
     public function markAsValid(int $concernId, array $analysis)
     {
         $concern = Concern::find($concernId);
-        if (! $concern || $concern->is_valid) {
+        if (!$concern || $concern->is_valid) {
             return;
         }
 
@@ -597,7 +598,7 @@ class ConcernService
         $weightedScore = ($coherenceScore * 0.4) + ($detailScore * 0.4) + ($confidence * 0.2);
 
         // Rejection Logic based on thresholds
-        if (! $isFallback) {
+        if (!$isFallback) {
             if ($coherenceScore < 0.60) {
                 Log::info("Concern #{$concernId} rejected: Low coherence score ({$coherenceScore})");
 
@@ -632,11 +633,11 @@ class ConcernService
         // Hierarchy: AI Result (if high confidence) > Existing Value
         $isHighConfidence = $confidence >= 0.7;
 
-        $finalCategory = ($isHighConfidence && ! empty($analysis['category']))
+        $finalCategory = ($isHighConfidence && !empty($analysis['category']))
             ? $analysis['category']
             : $concern->category;
 
-        $finalSeverity = ($isHighConfidence && ! empty($analysis['severity']))
+        $finalSeverity = ($isHighConfidence && !empty($analysis['severity']))
             ? $analysis['severity']
             : $concern->severity;
 
@@ -690,7 +691,7 @@ class ConcernService
     public function markAsInvalid(int $concernId, string $reason, ?array $rawAnalysis = null)
     {
         $concern = Concern::find($concernId);
-        if (! $concern) {
+        if (!$concern) {
             return;
         }
 
@@ -733,7 +734,7 @@ class ConcernService
     public function markNeedsReview(int $concernId, string $reason, ?array $rawAnalysis = null): void
     {
         $concern = Concern::find($concernId);
-        if (! $concern) {
+        if (!$concern) {
             return;
         }
 
@@ -817,8 +818,8 @@ class ConcernService
         // 4. Gemini Cross-Check (Semantic Match)
         // If we found a spatial candidate, verify the content matches semantically.
         if ($parentConcern) {
-            $text1 = $concern->type === 'voice' ? $concern->transcript_text : ($concern->title.' '.$concern->description);
-            $text2 = $parentConcern->type === 'voice' ? $parentConcern->transcript_text : ($parentConcern->title.' '.$parentConcern->description);
+            $text1 = $concern->type === 'voice' ? $concern->transcript_text : ($concern->title . ' ' . $concern->description);
+            $text2 = $parentConcern->type === 'voice' ? $parentConcern->transcript_text : ($parentConcern->title . ' ' . $parentConcern->description);
 
             // If both reports are very brief/empty, default to merging spatially
             if (strlen($text1 ?? '') < 5 || strlen($text2 ?? '') < 5) {
@@ -827,7 +828,7 @@ class ConcernService
 
             $isSame = $this->geminiService->compareConcerns($text1, $text2);
 
-            if (! $isSame) {
+            if (!$isSame) {
                 Log::info("Gemini rejected deduplication for Concern #{$concern->id} and #{$parentConcern->id} due to semantic differences.");
 
                 return null; // Don't merge if Gemini says they are different incidents
@@ -872,7 +873,7 @@ class ConcernService
     {
         $parentConcern->loadMissing('distribution');
         $distribution = $parentConcern->distribution;
-        if (! $distribution) {
+        if (!$distribution) {
             return;
         }
 
@@ -894,7 +895,7 @@ class ConcernService
 
         $lastDigestAt = $parentConcern->last_digest_notified_at;
         $timeBasedEligible = $lastDigestAt === null || $lastDigestAt->lte(now()->subMinutes(10));
-        if (! $crossedThreshold && ! $timeBasedEligible) {
+        if (!$crossedThreshold && !$timeBasedEligible) {
             return;
         }
 
@@ -918,7 +919,7 @@ class ConcernService
 
             foreach ($fileList as $file) {
                 $mimeType = (string) ($file->getMimeType() ?? '');
-                if (! str_starts_with($mimeType, 'audio/')) {
+                if (!str_starts_with($mimeType, 'audio/')) {
                     throw new UrbanWatchException('Voice concern accepts audio files only.', 422);
                 }
             }
@@ -928,7 +929,7 @@ class ConcernService
 
         foreach ($fileList as $file) {
             $mimeType = (string) ($file->getMimeType() ?? '');
-            if (! str_starts_with($mimeType, 'image/')) {
+            if (!str_starts_with($mimeType, 'image/')) {
                 throw new UrbanWatchException('Manual concern accepts image files only.', 422);
             }
         }
@@ -945,7 +946,7 @@ class ConcernService
             return SystemSetting::get('geofencing_enabled') === 'true';
         });
 
-        if (! $isEnabled) {
+        if (!$isEnabled) {
             return true; // Bypass check if feature is OFF
         }
 
@@ -972,10 +973,136 @@ class ConcernService
                 && ($x < ($xj - $xi) * ($y - $yi) / ($yj - $yi) + $xi);
 
             if ($intersect) {
-                $inside = ! $inside;
+                $inside = !$inside;
             }
         }
 
         return $inside;
+    }
+
+    /**
+     * Handle citizen's response to a resolution confirmation request.
+     * If confirmed → flag with resolution_confirmed_at (status stays awaiting_confirmation).
+     *   The PurokLeader must still manually resolve after seeing the confirmation.
+     * If disputed → set status back to 'ongoing' with the citizen's reason.
+     */
+    public function confirmResolution(int $concernId, int $citizenId, bool $confirmed, ?string $reason = null): Concern
+    {
+        return DB::transaction(function () use ($concernId, $citizenId, $confirmed, $reason) {
+            $concern = Concern::where('id', $concernId)
+                ->where('citizen_id', $citizenId)
+                ->first();
+
+            if (!$concern) {
+                throw new UrbanWatchException('Concern not found.');
+            }
+
+            if ($concern->status !== 'awaiting_confirmation') {
+                throw new UrbanWatchException('This concern is not awaiting confirmation.', 422);
+            }
+
+            $distribution = $concern->distribution;
+            if (!$distribution) {
+                throw new UrbanWatchException('Concern distribution not found.');
+            }
+
+            $previousStatus = $concern->status;
+
+            if ($confirmed) {
+                // Citizen confirms — flag it, but do NOT change status.
+                // PurokLeader still needs to manually mark as resolved.
+                $confirmRemarks = 'Citizen confirmed resolution.';
+                if ($reason) {
+                    $confirmRemarks .= " Remarks: {$reason}";
+                }
+
+                $concern->update([
+                    'resolution_confirmed_at' => now(),
+                ]);
+
+                ConcernHistory::create([
+                    'concern_id' => $concern->id,
+                    'acted_by' => $citizenId,
+                    'status' => 'awaiting_confirmation',
+                    'remarks' => $confirmRemarks,
+                ]);
+
+                // Notify the purok leader that citizen confirmed
+                $purokLeader = $distribution->purokLeader;
+                if ($purokLeader) {
+                    $this->notificationService->notifyResolutionConfirmationResult(
+                        $concern,
+                        $purokLeader,
+                        true,
+                        $reason
+                    );
+
+                    // Broadcast update (status didn't change, but the flag did)
+                    event(new \App\Events\ConcernStatusUpdated(
+                        $concern->fresh(),
+                        $distribution->fresh(),
+                        $previousStatus,
+                        'awaiting_confirmation',
+                        $purokLeader,
+                        $confirmRemarks
+                    ));
+                }
+            } else {
+                // Citizen disputes resolution — revert to ongoing
+                $concern->update([
+                    'status' => 'ongoing',
+                    'resolution_requested_at' => null,
+                    'resolution_confirmed_at' => null,
+                ]);
+
+                $distribution->update(['status' => 'in_progress']);
+
+                $disputeRemarks = 'Citizen disputed resolution.';
+                if ($reason) {
+                    $disputeRemarks .= " Reason: {$reason}";
+                }
+
+                ConcernHistory::create([
+                    'concern_id' => $concern->id,
+                    'acted_by' => $citizenId,
+                    'status' => 'ongoing',
+                    'remarks' => $disputeRemarks,
+                ]);
+
+                // Notify the purok leader
+                $purokLeader = $distribution->purokLeader;
+                if ($purokLeader) {
+                    $this->notificationService->notifyResolutionConfirmationResult(
+                        $concern,
+                        $purokLeader,
+                        false,
+                        $reason
+                    );
+
+                    // Broadcast status change
+                    event(new \App\Events\ConcernStatusUpdated(
+                        $concern->fresh(),
+                        $distribution->fresh(),
+                        $previousStatus,
+                        'ongoing',
+                        $purokLeader,
+                        $disputeRemarks
+                    ));
+                }
+
+                // Also revert duplicates
+                foreach ($concern->duplicates as $duplicate) {
+                    $duplicate->update(['status' => 'ongoing']);
+                    ConcernHistory::create([
+                        'concern_id' => $duplicate->id,
+                        'acted_by' => $citizenId,
+                        'status' => 'ongoing',
+                        'remarks' => "Status mirrored from Parent Concern #{$concern->tracking_code}: {$disputeRemarks}",
+                    ]);
+                }
+            }
+
+            return $concern->fresh();
+        });
     }
 }
