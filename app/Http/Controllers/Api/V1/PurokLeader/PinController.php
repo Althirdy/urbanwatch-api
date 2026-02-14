@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\V1\PurokLeader;
 
 use App\Http\Controllers\Api\BaseApiController;
-use App\Http\Requests\Api\V1\ChangePinRequest;
+use App\Http\Requests\Api\V1\PurokLeader\ChangePinRequest;
 use App\Models\PurokPinLog;
 use App\Services\AuthService;
 use Illuminate\Support\Facades\DB;
@@ -27,13 +27,13 @@ class PinController extends BaseApiController
     {
         try {
             DB::beginTransaction();
-            
+
             // Lock the user row to prevent race conditions
             $user = $request->user();
             $userLocked = \App\Models\User::where('id', $user->id)->lockForUpdate()->first();
 
             // Verify current PIN AFTER acquiring lock (prevents TOCTOU race condition)
-            if (! Hash::check($request->current_pin, $userLocked->password)) {
+            if (!Hash::check($request->current_pin, $userLocked->password)) {
                 DB::rollBack();
                 return $this->sendUnauthorized('Current PIN is incorrect');
             }
@@ -69,7 +69,7 @@ class PinController extends BaseApiController
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Failed to change Purok Leader PIN: '.$e->getMessage());
+            Log::error('Failed to change Purok Leader PIN: ' . $e->getMessage());
 
             return $this->sendError('Failed to change PIN. Please try again.', null, 500);
         }
