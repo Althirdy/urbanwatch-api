@@ -23,9 +23,11 @@ import PurokSelectorMap from '@/components/purok-selector-map';
 import { toast } from '@/components/use-toast';
 import { locations } from '@/lib/packages';
 import { roles_T } from '@/types/role-types';
-import { useForm } from '@inertiajs/react';
-import { MoveLeft, Plus, UserPlus } from 'lucide-react';
-import { FormEvent, useState } from 'react';
+import { useForm, usePage, router } from '@inertiajs/react';
+import { MoveLeft, Plus, UserPlus, Info } from 'lucide-react';
+import { FormEvent, useState, useEffect } from 'react';
+import { PinDisplayModal } from '@/components/PinDisplayModal';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type CreateUserForm = {
     first_name: string;
@@ -52,6 +54,10 @@ function CreateUsers({
     puroks?: any[]; // Using any for now to avoid extensive type definitions, or define interface
 }) {
     const [open, setOpen] = useState(false);
+    const [showPinModal, setShowPinModal] = useState(false);
+    const [generatedPin, setGeneratedPin] = useState<string>('');
+    const [purokLeaderName, setPurokLeaderName] = useState<string>('');
+    const { flash } = usePage().props as any;
     const { data, setData, post, processing, errors, reset } =
         useForm<CreateUserForm>({
             first_name: '',
@@ -73,6 +79,15 @@ function CreateUsers({
     const [clientErrors, setClientErrors] = useState<Partial<CreateUserForm>>(
         {},
     );
+
+    // Handle generated PIN from backend
+    useEffect(() => {
+        if (flash?.generated_pin && flash?.purok_leader_name) {
+            setGeneratedPin(flash.generated_pin);
+            setPurokLeaderName(flash.purok_leader_name);
+            setShowPinModal(true);
+        }
+    }, [flash]);
 
     const getRoleNameById = (roleId?: string) => {
         const role = roles.find((item) => item.id.toString() === (roleId || data.role_id));
@@ -241,13 +256,17 @@ function CreateUsers({
         validationErrors.email = validateEmail(data.email) || undefined;
         validationErrors.phone_number =
             validatePhoneNumber(data.phone_number, isSelectedPurokLeader()) || undefined;
-        validationErrors.password =
-            validatePassword(data.password) || undefined;
-        validationErrors.password_confirmation =
-            validatePasswordConfirmation(
-                data.password_confirmation,
-                data.password,
-            ) || undefined;
+
+        // Password validation only for non-Purok Leaders (Purok Leaders have auto-generated PIN)
+        if (!isSelectedPurokLeader()) {
+            validationErrors.password =
+                validatePassword(data.password) || undefined;
+            validationErrors.password_confirmation =
+                validatePasswordConfirmation(
+                    data.password_confirmation,
+                    data.password,
+                ) || undefined;
+        }
 
         // Check if role_id and assigned_brgy are selected
         if (!data.role_id) {
@@ -271,7 +290,15 @@ function CreateUsers({
 
         // Clear client errors and submit
         setClientErrors({});
-        post('/user', {
+
+        // Transform data to remove password fields for Purok Leaders (auto-generated PIN)
+        let submitData = { ...data };
+        if (isSelectedPurokLeader()) {
+            const { password, password_confirmation, ...dataWithoutPassword } = data;
+            submitData = dataWithoutPassword as CreateUserForm;
+        }
+
+        router.post('/user', submitData, {
             onSuccess: () => {
                 toast({
                     title: 'Success',
@@ -313,9 +340,9 @@ function CreateUsers({
                             information and role assignment.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="flex-1 space-y-4 overflow-y-auto px-6 py-2">
-                        <div className="grid flex-1 auto-rows-min gap-2">
-                            <div className="grid">
+                    <div className="flex-1 overflow-y-auto px-6 py-2">
+                        <div className="grid flex-1 auto-rows-min">
+                            <div className="grid mb-1">
                                 <p className="text-sm font-medium text-muted-foreground">
                                     Personal Information
                                 </p>
@@ -655,11 +682,13 @@ function CreateUsers({
                                     <PurokSelectorMap
                                         puroks={puroks}
                                         selectedPurokId={data.purok_id ? parseInt(data.purok_id) : null}
-                                        onSelectPurok={(id, name) => {
+                                        onSelectPurok={(id, name, latitude, longitude) => {
                                             setData(prev => ({
                                                 ...prev,
                                                 purok_id: id.toString(),
-                                                assigned_brgy: name
+                                                assigned_brgy: name,
+                                                latitude: latitude.toString(),
+                                                longitude: longitude.toString()
                                             }));
                                             setClientErrors(prev => ({
                                                 ...prev,
@@ -674,83 +703,100 @@ function CreateUsers({
                             </div>
                         )}
 
-                        <div className="grid flex-1 auto-rows-min gap-2">
-                            <div className="grid">
-                                <p className="text-sm font-medium text-muted-foreground">
-                                    Security
-                                </p>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="password">
-                                    {isSelectedPurokLeader() ? 'PIN' : 'Password'}
-                                </Label>
-                                <div>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        value={data.password}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'password',
-                                                e.target.value,
-                                            )
-                                        }
-                                        placeholder=""
-                                        className={
-                                            errors.password ||
-                                                clientErrors.password
-                                                ? 'border-red-500 focus:ring-red-500'
-                                                : ''
-                                        }
-                                    />
-                                    <div className="h-5">
-                                        {(errors.password ||
-                                            clientErrors.password) && (
-                                                <span className="mt-1 block text-xs text-red-500">
-                                                    {errors.password ||
-                                                        clientErrors.password}
-                                                </span>
-                                            )}
+                        {/* Security Section - Only for non-Purok Leaders */}
+                        {!isSelectedPurokLeader() && (
+                            <div className="grid flex-1 auto-rows-min gap-2">
+                                <div className="grid">
+                                    <p className="text-sm font-medium text-muted-foreground">
+                                        Security
+                                    </p>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="password">Password</Label>
+                                    <div>
+                                        <Input
+                                            id="password"
+                                            type="password"
+                                            value={data.password}
+                                            onChange={(e) =>
+                                                handleInputChange(
+                                                    'password',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder=""
+                                            className={
+                                                errors.password ||
+                                                    clientErrors.password
+                                                    ? 'border-red-500 focus:ring-red-500'
+                                                    : ''
+                                            }
+                                        />
+                                        <div className="h-5">
+                                            {(errors.password ||
+                                                clientErrors.password) && (
+                                                    <span className="mt-1 block text-xs text-red-500">
+                                                        {errors.password ||
+                                                            clientErrors.password}
+                                                    </span>
+                                                )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="password-confirmation">
+                                        Confirm Password
+                                    </Label>
+                                    <div>
+                                        <Input
+                                            id="password-confirmation"
+                                            type="password"
+                                            value={data.password_confirmation}
+                                            onChange={(e) =>
+                                                handleInputChange(
+                                                    'password_confirmation',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder=""
+                                            className={
+                                                errors.password_confirmation ||
+                                                    clientErrors.password_confirmation
+                                                    ? 'border-red-500 focus:ring-red-500'
+                                                    : ''
+                                            }
+                                        />
+                                        <div className="h-5">
+                                            {(errors.password_confirmation ||
+                                                clientErrors.password_confirmation) && (
+                                                    <span className="mt-1 block text-xs text-red-500">
+                                                        {errors.password_confirmation ||
+                                                            clientErrors.password_confirmation}
+                                                    </span>
+                                                )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="password-confirmation">
-                                    {isSelectedPurokLeader()
-                                        ? 'Confirm PIN'
-                                        : 'Confirm Password'}
-                                </Label>
-                                <div>
-                                    <Input
-                                        id="password-confirmation"
-                                        type="password"
-                                        value={data.password_confirmation}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'password_confirmation',
-                                                e.target.value,
-                                            )
-                                        }
-                                        placeholder=""
-                                        className={
-                                            errors.password_confirmation ||
-                                                clientErrors.password_confirmation
-                                                ? 'border-red-500 focus:ring-red-500'
-                                                : ''
-                                        }
-                                    />
-                                    <div className="h-5">
-                                        {(errors.password_confirmation ||
-                                            clientErrors.password_confirmation) && (
-                                                <span className="mt-1 block text-xs text-red-500">
-                                                    {errors.password_confirmation ||
-                                                        clientErrors.password_confirmation}
-                                                </span>
-                                            )}
-                                    </div>
+                        )}
+
+                        {/* Auto-generated PIN info for Purok Leaders */}
+                        {isSelectedPurokLeader() && (
+                            <div className="grid flex-1 auto-rows-min gap-2">
+                                <div className="grid">
+                                    <p className="text-sm font-medium text-muted-foreground">
+                                        Security
+                                    </p>
                                 </div>
+                                <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                                    <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                    <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
+                                        <strong>Auto-Generated PIN:</strong> A secure 4-digit PIN will be automatically generated
+                                        for this Purok Leader. You'll see it once after creation to share with them.
+                                    </AlertDescription>
+                                </Alert>
                             </div>
-                        </div>
+                        )}
                     </div>
                     <DialogFooter className="flex-shrink-0 bg-background px-6 py-4">
                         <div className="flex w-full gap-2">
@@ -781,6 +827,18 @@ function CreateUsers({
                     </DialogFooter>
                 </form>
             </DialogContent>
+
+            {/* PIN Display Modal */}
+            <PinDisplayModal
+                pin={generatedPin}
+                name={purokLeaderName}
+                isOpen={showPinModal}
+                onClose={() => {
+                    setShowPinModal(false);
+                    setGeneratedPin('');
+                    setPurokLeaderName('');
+                }}
+            />
         </Dialog>
     );
 }

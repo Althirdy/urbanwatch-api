@@ -41,7 +41,7 @@ const ContactCard = ({ contacts }: { contacts: Contact[] }) => {
                                     <span className="truncate text-sm font-semibold ">
                                         {contact.branch_unit_name}
                                     </span>
-                                    <div className="text-xs flex gap-1 text-muted-foreground ">
+                                    <div className="text-xs flex gap-2 text-muted-foreground ">
                                         <MapPin className="inline h-4 w-auto " />
                                         <p className="truncate text-xs text-foreground/70 dark:text-zinc-400 "  >   {contact.location}</p>
                                     </div>
@@ -70,26 +70,26 @@ const ContactCard = ({ contacts }: { contacts: Contact[] }) => {
                         <div className="space-y-2 flex flex-col">
                             {/* Contact Person */}
                             {contact.contact_person && (
-                                <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50  rounded-md border border-zinc-100 dark:border-zinc-800/80">
+                                <div className="flex items-center gap-2 ">
                                     <div className="flex gap-2 min-w-0 items-center">
                                         <User className="h-4 w-auto text-muted-foreground shrink-0" />
-                                        <p className="font-medium text-xs text-zinc-600 dark:text-zinc-400 truncate">{contact.contact_person}</p>
+                                        <p className="font-medium text-xs text-muted-foreground truncate">{contact.contact_person}</p>
                                     </div>
                                 </div>
                             )}
 
                             {/* Phone Numbers */}
-                            <div className="flex items-center  bg-zinc-50 dark:bg-zinc-800/50 rounded-md border border-zinc-100 dark:border-zinc-800/80">
+                            <div className="flex items-center ">
                                 <Phone className="h-4 mr-2 w-auto text-muted-foreground shrink-0" />
                                 <div className="flex flex-col min-w-0">
-                                    <span className="font-medium text-xs text-zinc-600 dark:text-zinc-400 family-mono">{contact.primary_mobile}</span>
+                                    <span className="font-medium text-xs text-muted-foreground family-mono">{contact.primary_mobile}</span>
                                 </div>
 
                                 {contact.backup_mobile && (
                                     <>
                                         <Dot className="h-4 w-auto text-muted-foreground shrink-0" />
                                         <div className="flex flex-col min-w-0">
-                                            <span className="font-medium text-xs text-zinc-600 dark:text-zinc-400 family-mono">{contact.backup_mobile}</span>
+                                            <span className="font-medium text-xs text-muted-foreground family-mono">{contact.backup_mobile}</span>
                                         </div>
                                     </>
                                 )}

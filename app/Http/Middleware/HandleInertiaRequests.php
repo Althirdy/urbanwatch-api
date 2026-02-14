@@ -50,6 +50,10 @@ class HandleInertiaRequests extends Middleware
                 'error' => $request->session()->get('error'),
                 'api_token' => $request->session()->get('api_token'),
                 'device_id' => $request->session()->get('device_id'),
+                'generated_pin' => $request->session()->get('generated_pin'),
+                'purok_leader_name' => $request->session()->get('purok_leader_name'),
+                'reset_pin' => $request->session()->get('reset_pin'),
+                'reset_purok_leader_name' => $request->session()->get('reset_purok_leader_name'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

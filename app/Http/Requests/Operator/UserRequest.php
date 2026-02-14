@@ -34,17 +34,12 @@ class UserRequest extends FormRequest
         // Different password validation for Purok Leader (PIN) vs other roles
         if ($isUpdate) {
             $passwordRules = 'nullable';
+        } elseif ($isPurokLeader) {
+            // For Purok Leader creation: PIN is auto-generated, so password field should not be sent
+            $passwordRules = 'nullable|prohibited';
         } else {
-            $passwordRules = ['required', 'string', 'confirmed'];
-
-            if ($isPurokLeader) {
-                // PIN validation for Purok Leader - only numbers, min 4 digits
-                $passwordRules[] = 'regex:/^\d+$/';
-                $passwordRules[] = 'min:4';
-            } else {
-                // Regular password validation for other roles
-                $passwordRules[] = Password::min(8)->letters()->numbers()->symbols();
-            }
+            // Regular password validation for other roles (Operators, etc.)
+            $passwordRules = ['required', 'string', 'confirmed', Password::min(8)->letters()->numbers()->symbols()];
         }
 
         return [
@@ -112,8 +107,7 @@ class UserRequest extends FormRequest
             'role_id.exists' => 'The selected role is invalid.',
             'password.required' => $passwordFieldName.' is required.',
             'password.confirmed' => $passwordFieldName.' confirmation does not match.',
-            'password.regex' => $isPurokLeader ? 'PIN must contain only numbers.' : null,
-            'password.min' => $isPurokLeader ? 'PIN must be at least 4 digits.' : 'Password must be at least 8 characters.',
+            'password.prohibited' => 'PIN should not be provided. It will be auto-generated.',
             'status.in' => 'Status must be Active, Inactive, or Archived.',
             'date_of_birth.date' => 'Date of birth must be a valid date.',
             'date_of_birth.before' => 'Date of birth must be before today.',
