@@ -1009,21 +1009,24 @@ class ConcernService
             $previousStatus = $concern->status;
 
             if ($confirmed) {
-                // Citizen confirms — flag it, but do NOT change status.
-                // PurokLeader still needs to manually mark as resolved.
+                // Citizen confirms — automatically mark as resolved
                 $confirmRemarks = 'Citizen confirmed resolution.';
                 if ($reason) {
                     $confirmRemarks .= " Remarks: {$reason}";
                 }
 
                 $concern->update([
+                    'status' => 'resolved',
                     'resolution_confirmed_at' => now(),
                 ]);
+
+                // Update distribution status
+                $distribution->update(['status' => 'resolved']);
 
                 ConcernHistory::create([
                     'concern_id' => $concern->id,
                     'acted_by' => $citizenId,
-                    'status' => 'awaiting_confirmation',
+                    'status' => 'resolved',
                     'remarks' => $confirmRemarks,
                 ]);
 
@@ -1037,15 +1040,26 @@ class ConcernService
                         $reason
                     );
 
-                    // Broadcast update (status didn't change, but the flag did)
+                    // Broadcast update
                     event(new \App\Events\ConcernStatusUpdated(
                         $concern->fresh(),
                         $distribution->fresh(),
                         $previousStatus,
-                        'awaiting_confirmation',
+                        'resolved',
                         $purokLeader,
                         $confirmRemarks
                     ));
+                }
+
+                // Also update duplicates
+                foreach ($concern->duplicates as $duplicate) {
+                    $duplicate->update(['status' => 'resolved']);
+                    ConcernHistory::create([
+                        'concern_id' => $duplicate->id,
+                        'acted_by' => $citizenId,
+                        'status' => 'resolved',
+                        'remarks' => "Status mirrored from Parent Concern #{$concern->tracking_code}: {$confirmRemarks}",
+                    ]);
                 }
             } else {
                 // Citizen disputes resolution — revert to ongoing

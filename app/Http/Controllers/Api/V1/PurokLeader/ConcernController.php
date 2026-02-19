@@ -155,6 +155,9 @@ class ConcernController extends BaseApiController
                     $remarks = $remarks === 'Status updated by Purok Leader'
                         ? 'Resolved by Purok Leader (citizen did not confirm within the window)'
                         : $remarks;
+                } elseif ($previousStatus === 'resolved') {
+                    // Already resolved — just updating details/remarks
+                    $concern->update(['status' => 'resolved']);
                 } else {
                     // First time resolving — set to awaiting_confirmation
                     $status = 'awaiting_confirmation';
