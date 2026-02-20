@@ -313,7 +313,7 @@ class UserController extends Controller
             DB::commit();
 
             // For Purok Leaders, return the generated PIN (one time only)
-            if ($validated['role_id'] == 2 && $generatedPin) {
+            if ($isPurokLeader && $generatedPin) {
                 return redirect()->route('users')
                     ->with('success', 'Purok Leader created successfully.')
                     ->with('generated_pin', $generatedPin)
