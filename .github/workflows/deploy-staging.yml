@@ -20,7 +20,7 @@ jobs:
         run: |
           APP_DIR="$HOME/urbanwatch/uat-api"
           mkdir -p "$APP_DIR"
-          rsync -a --delete --exclude '.git' "$GITHUB_WORKSPACE"/ "$APP_DIR"/
+          rsync -a --delete --exclude '.git' --exclude 'vendor' --exclude 'node_modules' "$GITHUB_WORKSPACE"/ "$APP_DIR"/
           cd "$APP_DIR"
           chmod +x deploy-staging.sh
           ./deploy-staging.sh
