@@ -10,8 +10,7 @@ services:
       - ./:/var/www/html
     environment:
       - APP_ENV=uat
-      - APP_DEBUG=true 
-      - APP_KEY=${APP_KEY}
+      - APP_DEBUG=true
       - APP_URL=https://uat.urbanwatch.me
       - DB_CONNECTION=mysql
       - DB_HOST=uat-db
