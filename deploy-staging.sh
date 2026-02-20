@@ -45,8 +45,7 @@ docker compose -f docker-compose.uat.yml exec -T --user root uat-app chown -R "$
 
 echo "�📦 Installing dependencies..."
 docker compose -f docker-compose.uat.yml exec -T uat-app composer install --no-dev --no-interaction --optimize-autoloader
-echo "🔧 Fixing npm cache permissions inside container..."
-docker compose -f docker-compose.uat.yml exec -T --user root uat-app chown -R "${APP_UID:-1000}:${APP_GID:-1000}" /.npm 2>/dev/null || true
+
 docker compose -f docker-compose.uat.yml exec -T uat-app npm ci --no-audit --no-fund
 
 echo "🏗️ Building frontend assets..."
