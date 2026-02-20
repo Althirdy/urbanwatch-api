@@ -121,4 +121,45 @@ class ConcernController extends BaseApiController
             'concern_id' => $id,
         ], 'Concern deleted successfully', 200);
     }
+
+    /**
+     * Citizen confirms or disputes a resolution marked by Purok Leader.
+     * POST /api/v1/concerns/{id}/confirm-resolution
+     */
+    public function confirmResolution(Request $request, string $id)
+    {
+        $request->validate([
+            'confirmed' => 'required|boolean',
+            'reason' => 'nullable|required_if:confirmed,false|string|max:1000',
+        ], [
+            'confirmed.required' => 'Confirmation status is required.',
+            'confirmed.boolean' => 'Confirmation must be true or false.',
+            'reason.required_if' => 'A reason is required when disputing the resolution.',
+            'reason.max' => 'Reason must not exceed 1000 characters.',
+        ]);
+
+        try {
+            $concern = $this->concernService->confirmResolution(
+                (int) $id,
+                auth()->id(),
+                (bool) $request->confirmed,
+                $request->reason
+            );
+
+            $statusLabel = $request->confirmed ? 'confirmed' : 'disputed';
+
+            return $this->sendResponse([
+                'concern' => new ConcernResource($concern),
+            ], "Resolution {$statusLabel} successfully.");
+        } catch (UrbanWatchException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            Log::error('Error during resolution confirmation', [
+                'concern_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $this->sendError('Unable to process your confirmation. Please try again.', status: 500);
+        }
+    }
 }

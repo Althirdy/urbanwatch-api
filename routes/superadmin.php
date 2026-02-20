@@ -16,6 +16,9 @@ Route::middleware(['auth', 'verified', 'role:operator,superadmin'])->group(funct
     Route::get('user/{user}/operator-details', [UserController::class, 'getOperatorDetails'])->name('user.operator-details');
     Route::post('user/{user}/reset-password', [UserController::class, 'resetOperatorPassword'])->name('user.reset-password');
 
+    // Purok Leader PIN management routes
+    Route::post('user/{user}/reset-pin', [UserController::class, 'resetPurokLeaderPin'])->name('user.reset-pin');
+
     Route::patch('user/{user}/archive', [UserController::class, 'archive'])->name('user.archive');
     Route::resource('user', UserController::class);
 });

@@ -63,6 +63,13 @@ class Notification extends Model
 
     public const TYPE_ANOMALY_CONFIRMED = 'anomaly_confirmed';
 
+    // Resolve Confirmation Types
+    public const TYPE_CONCERN_AWAITING_CONFIRMATION = 'concern_awaiting_confirmation';
+
+    public const TYPE_CONCERN_RESOLUTION_CONFIRMED = 'concern_resolution_confirmed';
+
+    public const TYPE_CONCERN_RESOLUTION_DISPUTED = 'concern_resolution_disputed';
+
     /**
      * User Types
      */

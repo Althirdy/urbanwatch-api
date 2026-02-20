@@ -85,7 +85,7 @@ function EditUser({ user, roles, puroks = [], children }: EditUserProps) {
             email: user.email || '',
             phone_number: normalizePhoneForInput(user.official_details?.contact_number || user.citizen_details?.phone_number || ''),
             role_id: user.role?.id?.toString() || '',
-            status: user.official_details?.status || user.citizen_details?.status || 'active',
+            status: (user.official_details?.status || user.citizen_details?.status || 'active').charAt(0).toUpperCase() + (user.official_details?.status || user.citizen_details?.status || 'active').slice(1),
             date_of_birth: user.citizen_details?.date_of_birth || '',
             address: user.citizen_details?.address || '',
             barangay: user.official_details?.assigned_brgy || user.citizen_details?.barangay || '',
@@ -318,12 +318,14 @@ function EditUser({ user, roles, puroks = [], children }: EditUserProps) {
                                         <PurokSelectorMap
                                             puroks={puroks}
                                             selectedPurokId={data.purok_id ? parseInt(data.purok_id) : null}
-                                            onSelectPurok={(id, name) => {
+                                            onSelectPurok={(id, name, latitude, longitude) => {
                                                 setData(prev => ({
                                                     ...prev,
                                                     purok_id: id.toString(),
                                                     assigned_brgy: name,
-                                                    barangay: name // Keep both in sync for consistency
+                                                    barangay: name, // Keep both in sync for consistency
+                                                    latitude: latitude.toString(),
+                                                    longitude: longitude.toString()
                                                 }));
                                             }}
                                         />
@@ -345,8 +347,8 @@ function EditUser({ user, roles, puroks = [], children }: EditUserProps) {
                                     <div className="grid gap-2">
                                         <Label htmlFor="status">Status</Label>
                                         <Select value={data.status} onValueChange={(v) => setData('status', v)}>
-                                            <SelectTrigger>
-                                                <SelectValue />
+                                            <SelectTrigger id="status" className="bg-background">
+                                                <SelectValue placeholder="Select status" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="Active">Active</SelectItem>

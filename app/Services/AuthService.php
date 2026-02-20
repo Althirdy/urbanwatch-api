@@ -163,7 +163,7 @@ class AuthService
         ];
     }
 
-    protected function generateAuthData(User $user)
+    public function generateAuthData(User $user)
     {
         $access_token = $user->createToken('mobile-app', ['access-api'], Carbon::now()->addMinutes(config('sanctum.access_token_expiration')))->plainTextToken;
         $refresh_token = $user->createToken('mobile-app-refresh', ['refresh-token'], Carbon::now()->addMinutes(config('sanctum.refresh_token_expiration')))->plainTextToken;

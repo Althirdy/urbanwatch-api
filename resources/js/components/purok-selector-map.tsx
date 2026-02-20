@@ -29,7 +29,7 @@ function FitBounds({ puroks }: { puroks: PurokData[] }) {
                 // Create a temporary GeoJSON layer to calculate bounds
                 const tempLayer = L.geoJSON(validGeometries);
                 const bounds = tempLayer.getBounds();
-                
+
                 if (bounds.isValid()) {
                     map.fitBounds(bounds, { padding: [50, 50] });
                 }
@@ -52,7 +52,7 @@ interface PurokData {
 interface PurokSelectorMapProps {
     puroks: PurokData[];
     selectedPurokId?: number | null;
-    onSelectPurok: (purokId: number, purokName: string) => void;
+    onSelectPurok: (purokId: number, purokName: string, latitude: number, longitude: number) => void;
 }
 
 export default function PurokSelectorMap({
@@ -88,7 +88,13 @@ export default function PurokSelectorMap({
                         variant: "destructive",
                     });
                 } else {
-                    onSelectPurok(purok.id, purok.name);
+                    // Calculate centroid of the polygon
+                    const bounds = (layer as any).getBounds();
+                    const center = bounds.getCenter();
+                    const latitude = center.lat;
+                    const longitude = center.lng;
+
+                    onSelectPurok(purok.id, purok.name, latitude, longitude);
                     toast({
                         title: "Territory Selected",
                         description: `You have selected "${purok.name}".`,
@@ -109,7 +115,7 @@ export default function PurokSelectorMap({
                 // Reset style is handled by React-Leaflet re-render or we can manually reset
                 // But for simplicity, we rely on the style function below which uses state/props
                 // Actually, manual reset is safer for hover effects
-                 target.setStyle(getStyle(purok));
+                target.setStyle(getStyle(purok));
             }
         });
     };
@@ -155,7 +161,7 @@ export default function PurokSelectorMap({
 
     return (
         <div className="h-96 w-full rounded-md overflow-hidden border">
-             <MapContainer
+            <MapContainer
                 center={defaultCenter}
                 zoom={15}
                 style={{ height: '100%', width: '100%' }}

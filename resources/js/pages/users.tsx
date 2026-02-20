@@ -3,9 +3,10 @@ import AppLayout from '@/layouts/app-layout';
 import { locations } from '@/lib/packages';
 import { users } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { LayoutGrid, Table } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { PinDisplayModal } from '@/components/PinDisplayModal';
 
 import { roles_T } from '@/types/role-types';
 import { PaginatedUsers, users_T } from '@/types/user-types';
@@ -32,6 +33,19 @@ export default function Users({
 }) {
     const [filtered_users, setFilteredUsers] = useState<users_T[]>(users.data);
     const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
+    const [showPinDisplayModal, setShowPinDisplayModal] = useState(false);
+    const [generatedPin, setGeneratedPin] = useState('');
+    const [purokLeaderName, setPurokLeaderName] = useState('');
+    const { flash } = usePage().props as any;
+
+    // Handle PIN reset from flash messages (different from creation)
+    useEffect(() => {
+        if (flash?.reset_pin && flash?.reset_purok_leader_name) {
+            setGeneratedPin(flash.reset_pin);
+            setPurokLeaderName(flash.reset_purok_leader_name);
+            setShowPinDisplayModal(true);
+        }
+    }, [flash]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -83,6 +97,18 @@ export default function Users({
                     />
                 )}
             </div>
+
+            {/* PIN Display Modal - shown after successful PIN reset */}
+            <PinDisplayModal
+                pin={generatedPin}
+                name={purokLeaderName}
+                isOpen={showPinDisplayModal}
+                onClose={() => {
+                    setShowPinDisplayModal(false);
+                    setGeneratedPin('');
+                    setPurokLeaderName('');
+                }}
+            />
         </AppLayout>
     );
 }

@@ -101,12 +101,12 @@ class ConcernController extends BaseApiController
 
         try {
             $request->validate([
-                'status' => 'required|in:pending,ongoing,escalated,resolved,rejected',
+                'status' => 'required|in:pending,ongoing,escalated,resolved,rejected,awaiting_confirmation',
                 'rejection_reason' => 'required_if:status,rejected|string|max:500',
                 'remarks' => 'nullable|string|max:1000',
             ], [
                 'status.required' => 'Status is required',
-                'status.in' => 'Status must be one of: pending, ongoing, escalated, resolved, rejected',
+                'status.in' => 'Status must be one of: pending, ongoing, escalated, resolved, rejected, awaiting_confirmation',
                 'rejection_reason.required_if' => 'Rejection reason is required when status is rejected',
                 'rejection_reason.string' => 'Rejection reason must be a string',
                 'rejection_reason.max' => 'Rejection reason must not exceed 500 characters',
@@ -143,6 +143,32 @@ class ConcernController extends BaseApiController
                 $rejectionReason = $request->input('rejection_reason', 'Rejected by Purok Leader');
                 $this->concernService->rejectConcernByOfficial($concern, $rejectionReason, auth()->user());
                 $remarks = "Rejected by Purok Leader: {$rejectionReason}";
+            } elseif ($status === 'resolved') {
+                // --- Resolve Confirmation Flow ---
+                if ($previousStatus === 'awaiting_confirmation') {
+                    // Already awaiting — PurokLeader is re-resolving (frontend unlocked the button)
+                    $concern->update([
+                        'status' => 'resolved',
+                        'resolution_requested_at' => null,
+                        'resolution_confirmed_at' => null,
+                    ]);
+                    $remarks = $remarks === 'Status updated by Purok Leader'
+                        ? 'Resolved by Purok Leader (citizen did not confirm within the window)'
+                        : $remarks;
+                } elseif ($previousStatus === 'resolved') {
+                    // Already resolved — just updating details/remarks
+                    $concern->update(['status' => 'resolved']);
+                } else {
+                    // First time resolving — set to awaiting_confirmation
+                    $status = 'awaiting_confirmation';
+                    $concern->update([
+                        'status' => 'awaiting_confirmation',
+                        'resolution_requested_at' => now(),
+                    ]);
+                    $remarks = $remarks === 'Status updated by Purok Leader'
+                        ? 'Marked for resolution — awaiting citizen confirmation'
+                        : $remarks;
+                }
             } else {
                 $concern->update(['status' => $status]);
             }
@@ -151,7 +177,8 @@ class ConcernController extends BaseApiController
             // Mapping statuses if they differ, otherwise usage is direct
             $distributionStatus = match ($status) {
                 'pending' => 'assigned',
-                'ongoing' => 'in_progress', // Fix: Map 'ongoing' to 'in_progress'
+                'ongoing' => 'in_progress',
+                'awaiting_confirmation' => 'awaiting_confirmation',
                 default => $status
             };
 

@@ -107,15 +107,15 @@ const UserCard = ({
 
                         {/* User Info - Compact */}
                         <div className="space-y-2 mb-2 flex-grow">
-                            <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 px-2 border border-zinc-100 dark:border-zinc-800/80">
+                            <div className="flex items-center gap-2 px-2 ">
                                 <MapPin className="h-4 w-auto text-muted-foreground shrink-0" />
-                                <span className="truncate text-xs text-zinc-600 dark:text-zinc-400 font-medium ">
+                                <span className="truncate text-xs text-muted-foreground font-medium ">
                                     {getBarangay(user)}</span>
                             </div>
                             {/* Email */}
-                            <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800/50 px-2 border border-zinc-100 dark:border-zinc-800/80">
+                            <div className="flex items-center gap-2 px-2 ">
                                 <Mail className="h-4 w-auto text-muted-foreground shrink-0" />
-                                <span className="truncate text-xs text-zinc-600 dark:text-zinc-400 font-medium">
+                                <span className="truncate text-xs text-muted-foreground font-medium">
                                     {user.email}
                                 </span>
                             </div>

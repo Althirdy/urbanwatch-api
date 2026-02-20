@@ -978,4 +978,144 @@ class ConcernService
 
         return $inside;
     }
+
+    /**
+     * Handle citizen's response to a resolution confirmation request.
+     * If confirmed → flag with resolution_confirmed_at (status stays awaiting_confirmation).
+     *   The PurokLeader must still manually resolve after seeing the confirmation.
+     * If disputed → set status back to 'ongoing' with the citizen's reason.
+     */
+    public function confirmResolution(int $concernId, int $citizenId, bool $confirmed, ?string $reason = null): Concern
+    {
+        return DB::transaction(function () use ($concernId, $citizenId, $confirmed, $reason) {
+            $concern = Concern::where('id', $concernId)
+                ->where('citizen_id', $citizenId)
+                ->first();
+
+            if (! $concern) {
+                throw new UrbanWatchException('Concern not found.');
+            }
+
+            if ($concern->status !== 'awaiting_confirmation') {
+                throw new UrbanWatchException('This concern is not awaiting confirmation.', 422);
+            }
+
+            $distribution = $concern->distribution;
+            if (! $distribution) {
+                throw new UrbanWatchException('Concern distribution not found.');
+            }
+
+            $previousStatus = $concern->status;
+
+            if ($confirmed) {
+                // Citizen confirms — automatically mark as resolved
+                $confirmRemarks = 'Citizen confirmed resolution.';
+                if ($reason) {
+                    $confirmRemarks .= " Remarks: {$reason}";
+                }
+
+                $concern->update([
+                    'status' => 'resolved',
+                    'resolution_confirmed_at' => now(),
+                ]);
+
+                // Update distribution status
+                $distribution->update(['status' => 'resolved']);
+
+                ConcernHistory::create([
+                    'concern_id' => $concern->id,
+                    'acted_by' => $citizenId,
+                    'status' => 'resolved',
+                    'remarks' => $confirmRemarks,
+                ]);
+
+                // Notify the purok leader that citizen confirmed
+                $purokLeader = $distribution->purokLeader;
+                if ($purokLeader) {
+                    $this->notificationService->notifyResolutionConfirmationResult(
+                        $concern,
+                        $purokLeader,
+                        true,
+                        $reason
+                    );
+
+                    // Broadcast update
+                    event(new \App\Events\ConcernStatusUpdated(
+                        $concern->fresh(),
+                        $distribution->fresh(),
+                        $previousStatus,
+                        'resolved',
+                        $purokLeader,
+                        $confirmRemarks
+                    ));
+                }
+
+                // Also update duplicates
+                foreach ($concern->duplicates as $duplicate) {
+                    $duplicate->update(['status' => 'resolved']);
+                    ConcernHistory::create([
+                        'concern_id' => $duplicate->id,
+                        'acted_by' => $citizenId,
+                        'status' => 'resolved',
+                        'remarks' => "Status mirrored from Parent Concern #{$concern->tracking_code}: {$confirmRemarks}",
+                    ]);
+                }
+            } else {
+                // Citizen disputes resolution — revert to ongoing
+                $concern->update([
+                    'status' => 'ongoing',
+                    'resolution_requested_at' => null,
+                    'resolution_confirmed_at' => null,
+                ]);
+
+                $distribution->update(['status' => 'in_progress']);
+
+                $disputeRemarks = 'Citizen disputed resolution.';
+                if ($reason) {
+                    $disputeRemarks .= " Reason: {$reason}";
+                }
+
+                ConcernHistory::create([
+                    'concern_id' => $concern->id,
+                    'acted_by' => $citizenId,
+                    'status' => 'ongoing',
+                    'remarks' => $disputeRemarks,
+                ]);
+
+                // Notify the purok leader
+                $purokLeader = $distribution->purokLeader;
+                if ($purokLeader) {
+                    $this->notificationService->notifyResolutionConfirmationResult(
+                        $concern,
+                        $purokLeader,
+                        false,
+                        $reason
+                    );
+
+                    // Broadcast status change
+                    event(new \App\Events\ConcernStatusUpdated(
+                        $concern->fresh(),
+                        $distribution->fresh(),
+                        $previousStatus,
+                        'ongoing',
+                        $purokLeader,
+                        $disputeRemarks
+                    ));
+                }
+
+                // Also revert duplicates
+                foreach ($concern->duplicates as $duplicate) {
+                    $duplicate->update(['status' => 'ongoing']);
+                    ConcernHistory::create([
+                        'concern_id' => $duplicate->id,
+                        'acted_by' => $citizenId,
+                        'status' => 'ongoing',
+                        'remarks' => "Status mirrored from Parent Concern #{$concern->tracking_code}: {$disputeRemarks}",
+                    ]);
+                }
+            }
+
+            return $concern->fresh();
+        });
+    }
 }

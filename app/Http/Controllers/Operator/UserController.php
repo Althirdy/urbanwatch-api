@@ -238,18 +238,35 @@ class UserController extends Controller
         $this->ensureCanCreateRole($validated['role_id']);
         $normalizedPhone = $this->normalizePhilippineMobileNumber($validated['phone_number'] ?? null);
 
+        $purokLeaderRoleIds = $this->resolveRoleIdsByNames(['Purok Leader']);
+        $operatorRoleIds = $this->resolveRoleIdsByNames(['Operator']);
+        $isPurokLeader = in_array((int) $validated['role_id'], $purokLeaderRoleIds, true);
+        $isOperatorOrPurokLeader = in_array((int) $validated['role_id'], array_merge($operatorRoleIds, $purokLeaderRoleIds), true);
+
+        // Auto-generate PIN for Purok Leaders
+        $generatedPin = null;
+        if ($isPurokLeader) {
+            $pinService = app(\App\Services\PinService::class);
+            $pinData = $pinService->generateAndHashPin();
+            $generatedPin = $pinData['pin']; // Store plaintext PIN to return once
+            $hashedPassword = $pinData['hash']; // Use hashed version for database
+        } else {
+            // For other roles, hash the provided password
+            $hashedPassword = Hash::make($validated['password']);
+        }
+
         DB::beginTransaction();
         try {
-            // Hash the password and create basic user
+            // Create basic user
             $user = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
-                'password' => Hash::make($validated['password']),
+                'password' => $hashedPassword,
                 'role_id' => $validated['role_id'],
             ]);
 
             // Create role-specific details
-            if ($validated['role_id'] == 1 || $validated['role_id'] == 2) {
+            if ($isOperatorOrPurokLeader) {
                 // Operator or Purok Leader - create OfficialsDetails
                 OfficialsDetails::create([
                     'user_id' => $user->id,
@@ -264,6 +281,16 @@ class UserController extends Controller
                     'latitude' => $validated['latitude'] ?? null,
                     'longitude' => $validated['longitude'] ?? null,
                 ]);
+
+                // For Purok Leaders, create initial PIN log entry
+                if ($isPurokLeader) {
+                    \App\Models\PurokPinLog::create([
+                        'purok_leader_id' => $user->id,
+                        'reset_by_operator_id' => auth()->id(),
+                        'reason' => 'Initial account creation',
+                        'is_default' => true, // Operator-generated PIN requires change on mobile
+                    ]);
+                }
             } elseif ($validated['role_id'] == 3) {
                 // Citizen - create CitizenDetails
                 CitizenDetails::create([
@@ -284,6 +311,14 @@ class UserController extends Controller
             }
 
             DB::commit();
+
+            // For Purok Leaders, return the generated PIN (one time only)
+            if ($isPurokLeader && $generatedPin) {
+                return redirect()->route('users')
+                    ->with('success', 'Purok Leader created successfully.')
+                    ->with('generated_pin', $generatedPin)
+                    ->with('purok_leader_name', $validated['name']);
+            }
 
             return redirect()->route('users')
                 ->with('success', 'User created successfully.');
@@ -729,6 +764,70 @@ class UserController extends Controller
             DB::rollBack();
 
             return back()->with('error', 'Failed to reset password. Please try again.');
+        }
+    }
+
+    /**
+     * Reset a Purok Leader's PIN.
+     * Requires operator password confirmation for security.
+     * Generates a new random 4-digit PIN and invalidates existing tokens.
+     */
+    public function resetPurokLeaderPin(\App\Http\Requests\Operator\ResetPurokPinRequest $request, User $user)
+    {
+        // Ensure the target is a Purok Leader
+        $purokLeaderRoleIds = $this->resolveRoleIdsByNames(['Purok Leader']);
+        if (! in_array((int) $user->role_id, $purokLeaderRoleIds, true)) {
+            return back()->withErrors(['error' => 'Only Purok Leader PINs can be reset using this method.']);
+        }
+
+        // Verify the operator's password
+        $operator = auth()->user();
+        if (! Hash::check($request->operator_password, $operator->password)) {
+            return back()->withErrors(['operator_password' => 'Incorrect password. Please try again.']);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Lock the user row to prevent concurrent changes (race condition protection)
+            $userLocked = User::where('id', $user->id)->lockForUpdate()->first();
+
+            // Generate new PIN
+            $pinService = app(\App\Services\PinService::class);
+            $pinData = $pinService->generateAndHashPin();
+            $newPin = $pinData['pin']; // Plaintext PIN to show once
+            $hashedPin = $pinData['hash']; // Hashed for database
+
+            // Update PIN
+            $userLocked->update([
+                'password' => $hashedPin,
+            ]);
+
+            // Log the PIN reset
+            \App\Models\PurokPinLog::create([
+                'purok_leader_id' => $user->id,
+                'reset_by_operator_id' => $operator->id,
+                'reason' => $request->reason,
+                'is_default' => true, // Operator-generated PIN requires change on mobile
+            ]);
+
+            // Invalidate all existing tokens (force re-login with new PIN)
+            $userLocked->tokens()->delete();
+
+            // TODO: Broadcast logout event to Purok Leader mobile app
+            // event(new \App\Events\PurokLeaderPinReset($user));
+
+            DB::commit();
+
+            return back()
+                ->with('success', 'PIN reset successfully.')
+                ->with('reset_pin', $newPin)
+                ->with('reset_purok_leader_name', $user->name);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Failed to reset Purok Leader PIN: '.$e->getMessage());
+
+            return back()->with('error', 'Failed to reset PIN. Please try again.');
         }
     }
 }
