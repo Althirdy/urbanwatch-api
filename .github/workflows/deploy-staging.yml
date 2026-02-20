@@ -16,11 +16,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Fix existing file permissions
+        run: |
+          APP_DIR="$HOME/urbanwatch/uat-api"
+          if [ -d "$APP_DIR" ]; then
+            echo "Fixing file ownership from previous deployment..."
+            docker run --rm -v "$APP_DIR":/data alpine \
+              chown -R "$(id -u):$(id -g)" /data 2>/dev/null || true
+          fi
+
       - name: Run Deployment Script
         run: |
           APP_DIR="$HOME/urbanwatch/uat-api"
           mkdir -p "$APP_DIR"
-          rsync -a --delete --exclude '.git' --exclude 'vendor' --exclude 'node_modules' "$GITHUB_WORKSPACE"/ "$APP_DIR"/
+          rsync -rlpt --delete --exclude '.git' --exclude 'vendor' --exclude 'node_modules' "$GITHUB_WORKSPACE"/ "$APP_DIR"/
           cd "$APP_DIR"
           chmod +x deploy-staging.sh
           ./deploy-staging.sh
