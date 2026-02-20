@@ -21,6 +21,7 @@ services:
       - DB_PASSWORD=urban_password
       - CACHE_STORE=redis
       - REDIS_HOST=uat-redis
+      - NPM_CONFIG_CACHE=/var/www/html/.npm-cache
     depends_on:
       - uat-db
       - uat-redis
@@ -37,6 +38,7 @@ services:
     environment:
       - CACHE_STORE=redis
       - REDIS_HOST=uat-redis
+      - NPM_CONFIG_CACHE=/var/www/html/.npm-cache
     depends_on:
       - uat-db
       - uat-redis
