@@ -10,6 +10,10 @@ if [ -n "$CI" ] || [ -n "$GITHUB_ACTIONS" ] || [ -n "$GITLAB_CI" ] || [ -n "$JEN
     echo "🤖 CI/CD environment detected"
 fi
 
+# Ensure containers run as the host user to avoid permission issues on bind mounts.
+export APP_UID="$(id -u)"
+export APP_GID="$(id -g)"
+
 # 1. Fix writable directory permissions only.
 if [ "$IS_CI" = false ]; then
     echo "🔧 Fixing writable directory permissions..."
