@@ -17,11 +17,11 @@ export APP_GID="$(id -g)"
 # 1. Fix writable directory permissions only.
 if [ "$IS_CI" = false ]; then
     echo "🔧 Fixing writable directory permissions..."
-    sudo chown -R "$(whoami)":"$(whoami)" storage bootstrap/cache 2>/dev/null || true
-    chmod -R u+rwX storage bootstrap/cache 2>/dev/null || true
+    sudo chown -R "$(whoami)":"$(whoami)" storage bootstrap/cache vendor 2>/dev/null || true
+    chmod -R u+rwX storage bootstrap/cache vendor 2>/dev/null || true
 else
     echo "🔧 Fixing writable directory permissions (CI mode - no sudo)..."
-    chmod -R u+rwX storage bootstrap/cache 2>/dev/null || true
+    chmod -R u+rwX storage bootstrap/cache vendor 2>/dev/null || true
 fi
 
 # 2. Git operations are intentionally skipped in CI.
@@ -40,7 +40,10 @@ echo "🏗️ Applying infrastructure changes..."
 docker compose -f docker-compose.uat.yml up -d
 
 # 4. Run build and optimization commands
-echo "📦 Installing dependencies..."
+echo "� Fixing vendor directory permissions inside container..."
+docker compose -f docker-compose.uat.yml exec -T --user root uat-app chown -R "${APP_UID:-1000}:${APP_GID:-1000}" /var/www/html/vendor 2>/dev/null || true
+
+echo "�📦 Installing dependencies..."
 docker compose -f docker-compose.uat.yml exec -T uat-app composer install --no-dev --no-interaction --optimize-autoloader
 docker compose -f docker-compose.uat.yml exec -T uat-app npm ci --no-audit --no-fund
 
