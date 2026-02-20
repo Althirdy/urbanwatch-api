@@ -5,7 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -18,10 +19,10 @@ return new class extends Migration {
 
         // Add resolution_requested_at (when PL marked for resolve) and resolution_confirmed_at (when citizen confirmed)
         Schema::table('concerns', function (Blueprint $table) {
-            if (!Schema::hasColumn('concerns', 'resolution_requested_at')) {
+            if (! Schema::hasColumn('concerns', 'resolution_requested_at')) {
                 $table->timestamp('resolution_requested_at')->nullable()->after('status');
             }
-            if (!Schema::hasColumn('concerns', 'resolution_confirmed_at')) {
+            if (! Schema::hasColumn('concerns', 'resolution_confirmed_at')) {
                 $table->timestamp('resolution_confirmed_at')->nullable()->after('resolution_requested_at');
             }
         });
@@ -46,7 +47,7 @@ return new class extends Migration {
             if (Schema::hasColumn('concerns', 'resolution_confirmed_at')) {
                 $dropColumns[] = 'resolution_confirmed_at';
             }
-            if (!empty($dropColumns)) {
+            if (! empty($dropColumns)) {
                 $table->dropColumn($dropColumns);
             }
         });

@@ -1,12 +1,16 @@
 <?php
 
 use App\Models\OfficialsDetails;
-use App\Models\PurokPinLog;
 use App\Models\Purok;
+use App\Models\PurokPinLog;
 use App\Models\Roles;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use function Pest\Laravel\{actingAs, assertDatabaseCount, assertDatabaseHas, post};
+
+use function Pest\Laravel\actingAs;
+use function Pest\Laravel\assertDatabaseCount;
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\post;
 
 beforeEach(function () {
     // Create roles
@@ -100,7 +104,7 @@ test('operator can reset purok leader PIN with correct password', function () {
 
     $response->assertRedirect();
     $response->assertSessionHas('success');
-    $response->assertSessionHas('generated_pin');
+    $response->assertSessionHas('reset_pin');
 
     // Verify PIN was changed
     $this->purokLeader->refresh();
@@ -183,7 +187,7 @@ test('generated PIN is 4 digits', function () {
         'operator_password' => 'password123',
     ]);
 
-    $generatedPin = session('generated_pin');
+    $generatedPin = session('reset_pin');
     expect($generatedPin)->not->toBeNull();
     expect(strlen($generatedPin))->toBe(4);
     expect(ctype_digit($generatedPin))->toBeTrue();
@@ -233,7 +237,7 @@ test('audit log captures optional reason', function () {
     ]);
 });
 
-test('audit log captures IP address and user agent', function () {
+test('audit log captures reset entry and default flag', function () {
     actingAs($this->operator);
 
     $response = post("/user/{$this->purokLeader->id}/reset-pin", [
@@ -241,6 +245,6 @@ test('audit log captures IP address and user agent', function () {
     ]);
 
     $log = PurokPinLog::where('purok_leader_id', $this->purokLeader->id)->first();
-    expect($log->ip_address)->not->toBeNull();
-    expect($log->user_agent)->not->toBeNull();
+    expect($log)->not->toBeNull();
+    expect($log->is_default)->toBeTrue();
 });

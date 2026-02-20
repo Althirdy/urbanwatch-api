@@ -19,7 +19,7 @@ class AuthService
             ->where('email', $email)
             ->first();
 
-        if (!$user || !Hash::check($password, $user->password)) {
+        if (! $user || ! Hash::check($password, $user->password)) {
             return null;
         }
 
@@ -47,7 +47,7 @@ class AuthService
                 break;
             }
         }
-        if (!$user) {
+        if (! $user) {
             \Log::warning('Purok leader login failed: No matching PIN found.');
 
             return null;
@@ -59,7 +59,7 @@ class AuthService
     public function register(array $data)
     {
         $verification = IdVerification::where('verification_id', $data['verificationId'])->first();
-        if (!$verification) {
+        if (! $verification) {
             throw new UrbanWatchException('ID verification not found. Please upload your ID again.', 403);
         }
 
@@ -73,7 +73,7 @@ class AuthService
 
         $verificationResult = $verification->result_json ?? [];
         $verifiedPcn = $verificationResult['data']['pcnNumber'] ?? null;
-        if (!$verifiedPcn || $verifiedPcn !== $data['pcnNumber']) {
+        if (! $verifiedPcn || $verifiedPcn !== $data['pcnNumber']) {
             throw new UrbanWatchException('PCN does not match verified ID data.', 403);
         }
 
@@ -82,7 +82,7 @@ class AuthService
             $decryptedToken = Crypt::decryptString($data['verificationToken']);
             $tokenData = json_decode($decryptedToken, true);
 
-            if (!$tokenData || !isset($tokenData['phone']) || !isset($tokenData['expires_at'])) {
+            if (! $tokenData || ! isset($tokenData['phone']) || ! isset($tokenData['expires_at'])) {
                 throw new \Exception('Invalid token format.');
             }
 
@@ -101,15 +101,15 @@ class AuthService
         } catch (UrbanWatchException $e) {
             throw $e;
         } catch (\Exception $e) {
-            throw new UrbanWatchException('Verification failed: ' . $e->getMessage(), 403);
+            throw new UrbanWatchException('Verification failed: '.$e->getMessage(), 403);
         }
 
         DB::beginTransaction();
         try {
-            $fullName = trim($data['firstName'] . ' ' .
-                ($data['middleName'] ?? '') . ' ' .
-                $data['lastName'] .
-                ($data['suffix'] ? ' ' . $data['suffix'] : ''));
+            $fullName = trim($data['firstName'].' '.
+                ($data['middleName'] ?? '').' '.
+                $data['lastName'].
+                ($data['suffix'] ? ' '.$data['suffix'] : ''));
 
             $user = User::create([
                 'name' => $fullName,
@@ -146,7 +146,7 @@ class AuthService
             return $this->generateAuthData($user);
         } catch (\Exception $e) {
             DB::rollBack();
-            throw new UrbanWatchException('Registration failed: ' . $e->getMessage());
+            throw new UrbanWatchException('Registration failed: '.$e->getMessage());
         }
     }
 

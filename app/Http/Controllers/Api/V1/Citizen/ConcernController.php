@@ -83,7 +83,7 @@ class ConcernController extends BaseApiController
         } catch (UrbanWatchException $e) {
             throw $e;
         } catch (\Exception $e) {
-            $errorRef = 'concern-submit-' . now()->timestamp;
+            $errorRef = 'concern-submit-'.now()->timestamp;
             Log::error('Error creating concern', [
                 'reference' => $errorRef,
                 'error' => $e->getMessage(),

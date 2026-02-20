@@ -238,9 +238,14 @@ class UserController extends Controller
         $this->ensureCanCreateRole($validated['role_id']);
         $normalizedPhone = $this->normalizePhilippineMobileNumber($validated['phone_number'] ?? null);
 
-        // Auto-generate PIN for Purok Leaders (role_id = 2)
+        $purokLeaderRoleIds = $this->resolveRoleIdsByNames(['Purok Leader']);
+        $operatorRoleIds = $this->resolveRoleIdsByNames(['Operator']);
+        $isPurokLeader = in_array((int) $validated['role_id'], $purokLeaderRoleIds, true);
+        $isOperatorOrPurokLeader = in_array((int) $validated['role_id'], array_merge($operatorRoleIds, $purokLeaderRoleIds), true);
+
+        // Auto-generate PIN for Purok Leaders
         $generatedPin = null;
-        if ($validated['role_id'] == 2) {
+        if ($isPurokLeader) {
             $pinService = app(\App\Services\PinService::class);
             $pinData = $pinService->generateAndHashPin();
             $generatedPin = $pinData['pin']; // Store plaintext PIN to return once
@@ -261,7 +266,7 @@ class UserController extends Controller
             ]);
 
             // Create role-specific details
-            if ($validated['role_id'] == 1 || $validated['role_id'] == 2) {
+            if ($isOperatorOrPurokLeader) {
                 // Operator or Purok Leader - create OfficialsDetails
                 OfficialsDetails::create([
                     'user_id' => $user->id,
@@ -278,7 +283,7 @@ class UserController extends Controller
                 ]);
 
                 // For Purok Leaders, create initial PIN log entry
-                if ($validated['role_id'] == 2) {
+                if ($isPurokLeader) {
                     \App\Models\PurokPinLog::create([
                         'purok_leader_id' => $user->id,
                         'reset_by_operator_id' => auth()->id(),
@@ -769,8 +774,9 @@ class UserController extends Controller
      */
     public function resetPurokLeaderPin(\App\Http\Requests\Operator\ResetPurokPinRequest $request, User $user)
     {
-        // Ensure the target is a Purok Leader (role_id = 2)
-        if ($user->role_id !== 2) {
+        // Ensure the target is a Purok Leader
+        $purokLeaderRoleIds = $this->resolveRoleIdsByNames(['Purok Leader']);
+        if (! in_array((int) $user->role_id, $purokLeaderRoleIds, true)) {
             return back()->withErrors(['error' => 'Only Purok Leader PINs can be reset using this method.']);
         }
 
@@ -784,7 +790,7 @@ class UserController extends Controller
         try {
             // Lock the user row to prevent concurrent changes (race condition protection)
             $userLocked = User::where('id', $user->id)->lockForUpdate()->first();
-            
+
             // Generate new PIN
             $pinService = app(\App\Services\PinService::class);
             $pinData = $pinService->generateAndHashPin();

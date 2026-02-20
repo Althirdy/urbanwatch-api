@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -12,10 +13,10 @@ return new class extends Migration {
     {
         Schema::table('purok_pin_logs', function (Blueprint $table) {
             $columnsToDrop = collect(['ip_address', 'user_agent'])
-                ->filter(fn($col) => Schema::hasColumn('purok_pin_logs', $col))
+                ->filter(fn ($col) => Schema::hasColumn('purok_pin_logs', $col))
                 ->all();
 
-            if (!empty($columnsToDrop)) {
+            if (! empty($columnsToDrop)) {
                 $table->dropColumn($columnsToDrop);
             }
         });

@@ -49,7 +49,7 @@ class ConcernController extends BaseApiController
                 'purok_leader_id' => auth()->id(),
             ]);
 
-            return $this->sendError('Failed to retrieve concerns: ' . $e->getMessage());
+            return $this->sendError('Failed to retrieve concerns: '.$e->getMessage());
         }
     }
 
@@ -64,7 +64,7 @@ class ConcernController extends BaseApiController
                 ->where('purok_leader_id', auth()->id())
                 ->first();
 
-            if (!$distribution) {
+            if (! $distribution) {
                 return $this->sendError('Concern not found or not assigned to you', [], 404);
             }
 
@@ -127,7 +127,7 @@ class ConcernController extends BaseApiController
                 ->where('purok_leader_id', auth()->id())
                 ->first();
 
-            if (!$distribution) {
+            if (! $distribution) {
                 return $this->sendError('Concern not found or not assigned to you', [], 404);
             }
 
@@ -287,7 +287,7 @@ class ConcernController extends BaseApiController
                 'concern_id' => $id,
             ]);
 
-            return $this->sendError('Failed to update concern status: ' . $e->getMessage());
+            return $this->sendError('Failed to update concern status: '.$e->getMessage());
         }
     }
 }
