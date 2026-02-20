@@ -14,6 +14,9 @@ Route::middleware(['auth:sanctum', 'ability.access'])->group(function () {
         // Custom throttle for concern submission
         Route::post('concerns', [ConcernController::class, 'store'])->middleware('throttle:concerns.submit');
 
+        // Citizen confirmation of resolution
+        Route::post('concerns/{id}/confirm-resolution', [ConcernController::class, 'confirmResolution']);
+
         Route::apiResource('concerns', ConcernController::class)->except(['store']);
     });
 

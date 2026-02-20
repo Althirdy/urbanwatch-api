@@ -143,6 +143,7 @@ class NotificationService
                 'acknowledged' => Notification::TYPE_CONCERN_ACKNOWLEDGED,
                 'resolved' => Notification::TYPE_CONCERN_RESOLVED,
                 'rejected' => Notification::TYPE_CONCERN_REJECTED,
+                'awaiting_confirmation' => Notification::TYPE_CONCERN_AWAITING_CONFIRMATION,
                 default => Notification::TYPE_CONCERN_STATUS_UPDATE,
             };
 
@@ -152,9 +153,13 @@ class NotificationService
                     'Rejected',
                     "Your concern ({$concern->tracking_code}) has been reviewed and marked as invalid.",
                 ],
+                'awaiting_confirmation' => [
+                    'Awaiting Confirmation',
+                    "Your concern ({$concern->tracking_code}) has been marked as resolved by the Purok Leader. Please confirm or dispute this resolution.",
+                ],
                 default => [
                     ucfirst(str_replace('_', ' ', $newStatus)),
-                    "Your concern ({$concern->tracking_code}) status has been updated to ".ucfirst(str_replace('_', ' ', $newStatus)).'.',
+                    "Your concern ({$concern->tracking_code}) status has been updated to " . ucfirst(str_replace('_', ' ', $newStatus)) . '.',
                 ],
             };
 
@@ -178,6 +183,53 @@ class NotificationService
             Log::error('Failed to create concern_status_update notification', [
                 'error' => $e->getMessage(),
                 'concern_id' => $concern->id,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Create a notification for the purok leader when a citizen confirms or disputes resolution.
+     */
+    public function notifyResolutionConfirmationResult(
+        Concern $concern,
+        User $purokLeader,
+        bool $confirmed,
+        ?string $reason = null
+    ): ?Notification {
+        try {
+            if ($confirmed) {
+                $type = Notification::TYPE_CONCERN_RESOLUTION_CONFIRMED;
+                $title = 'Resolution Confirmed';
+                $message = "The citizen has confirmed the resolution of concern ({$concern->tracking_code}).";
+            } else {
+                $type = Notification::TYPE_CONCERN_RESOLUTION_DISPUTED;
+                $title = 'Resolution Disputed';
+                $message = "The citizen has disputed the resolution of concern ({$concern->tracking_code}).";
+                if ($reason) {
+                    $message .= " Reason: {$reason}";
+                }
+            }
+
+            return Notification::create([
+                'user_id' => $purokLeader->id,
+                'user_type' => Notification::USER_TYPE_PUROK_LEADER,
+                'type' => $type,
+                'title' => $title,
+                'message' => $message,
+                'data' => [
+                    'concern_id' => $concern->id,
+                    'tracking_code' => $concern->tracking_code,
+                    'confirmed' => $confirmed,
+                    'reason' => $reason,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to create resolution_confirmation_result notification', [
+                'error' => $e->getMessage(),
+                'concern_id' => $concern->id,
+                'confirmed' => $confirmed,
             ]);
 
             return null;
@@ -269,8 +321,8 @@ class NotificationService
                     'user_id' => $user->id,
                     'user_type' => $userType,
                     'type' => Notification::TYPE_NEW_SAFETY_POST,
-                    'title' => 'Safety Alert: '.$post->title,
-                    'message' => $post->excerpt ?? substr($post->content, 0, 100).'...',
+                    'title' => 'Safety Alert: ' . $post->title,
+                    'message' => $post->excerpt ?? substr($post->content, 0, 100) . '...',
                     'data' => json_encode([
                         'post_id' => $post->id,
                         'category' => $post->category,
@@ -360,7 +412,7 @@ class NotificationService
             ->where('user_id', $userId)
             ->first();
 
-        if (! $notification) {
+        if (!$notification) {
             return false;
         }
 
