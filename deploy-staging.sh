@@ -60,8 +60,8 @@ echo "⚡ Optimizing application..."
 docker compose -f docker-compose.uat.yml exec -T uat-app php artisan optimize
 
 echo "🔒 Setting final permissions..."
-docker compose -f docker-compose.uat.yml exec -T uat-app chown -R www-data:www-data storage bootstrap/cache
-docker compose -f docker-compose.uat.yml exec -T uat-app chmod -R 775 storage bootstrap/cache
+docker compose -f docker-compose.uat.yml exec -T --user root uat-app chown -R "${APP_UID:-1000}:${APP_GID:-1000}" storage bootstrap/cache public/build
+docker compose -f docker-compose.uat.yml exec -T --user root uat-app chmod -R 775 storage bootstrap/cache public/build
 
 echo "♻️  Restarting services to apply changes..."
 docker compose -f docker-compose.uat.yml restart uat-app
