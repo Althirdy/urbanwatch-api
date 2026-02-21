@@ -1,13 +1,5 @@
 import { Button } from '@/components/ui/button';
 import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from '@/components/ui/command';
-import {
     Dialog,
     DialogClose,
     DialogContent,
@@ -20,121 +12,65 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/use-toast';
-import { cn } from '@/lib/utils';
+import { BranchUnitName, ResponderType } from '@/types/contacts-types';
 import { router, useForm, usePage } from '@inertiajs/react';
-import { Check, ChevronsUpDown, MoveLeft, Phone, Plus } from 'lucide-react';
-import React, { useState } from 'react';
-
-type ResponderType = {
-    id: number;
-    name: string;
-};
-
-type BranchUnitName = {
-    id: number;
-    name: string;
-};
-
-type Location = {
-    id: number;
-    name: string;
-};
-
-type SelectionState = {
-    value: ResponderType | BranchUnitName | Location | null;
-    open: boolean;
-};
+import { MoveLeft, Phone, Plus } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
 
 type PageProps = {
     responderTypes: ResponderType[];
-    branchUnitNames: BranchUnitName[];
+    responseUnits: BranchUnitName[];
 };
 
 function AddContacts() {
-    const { responderTypes, branchUnitNames } =
-        usePage<PageProps>().props;
-    // Dialog control state
+    const pageProps = usePage<PageProps>().props;
+    const responderTypes = pageProps.responderTypes ?? [];
+    const responseUnits = pageProps.responseUnits ?? [];
     const [dialogOpen, setDialogOpen] = useState(false);
     const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
-    // Mobile number validation function
-    const validateMobileNumber = (value: string): string => {
-        // Remove any non-digit characters
-        const cleanValue = value.replace(/\D/g, '');
-
-        // Limit to 11 digits
-        return cleanValue.slice(0, 11);
-    };
-
-    // Check if mobile number is valid (exactly 11 digits)
-    const isMobileNumberValid = (value: string): boolean => {
-        return /^\d{11}$/.test(value);
-    };
-
-    // Inertia form handling
     const { data, setData, post, processing, errors, reset } = useForm({
         branch_unit_name: '',
         contact_person: '',
         responder_type: '',
-        location: '',
         primary_mobile: '',
         backup_mobile: '',
-        latitude: '',
-        longitude: '',
         active: true,
     });
 
-    // Combined states for selectors
-    const [branchUnitNameState, setBranchUnitNameState] =
-        useState<SelectionState>({
-            value: null,
-            open: false,
-        });
+    const responseUnitOptions = useMemo(
+        () => responseUnits.map((unit) => unit.name),
+        [responseUnits],
+    );
 
-    const [responderTypeState, setResponderTypeState] =
-        useState<SelectionState>({
-            value: null,
-            open: false,
-        });
+    const validateMobileNumber = (value: string): string => {
+        const cleanValue = value.replace(/\D/g, '');
 
-    // Handlers for branch/unit name selection
-    const handleBranchUnitNameSelect = (selected: BranchUnitName | null) => {
-        setBranchUnitNameState({
-            value: selected,
-            open: false,
-        });
-        setData('branch_unit_name', selected ? selected.name : '');
+        return cleanValue.slice(0, 11);
     };
 
-    // Handlers for responder type selection
-    const handleResponderTypeSelect = (selected: ResponderType | null) => {
-        setResponderTypeState({
-            value: selected,
-            open: false,
-        });
-        setData('responder_type', selected ? selected.name : '');
-    };
-
-
+    const isMobileNumberValid = (value: string): boolean => /^\d{11}$/.test(value);
 
     const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setHasAttemptedSubmit(true);
 
-        // Validate required fields
         if (!data.branch_unit_name.trim()) {
             toast({
                 title: 'Validation Error',
-                description: 'Branch/Unit Name is required.',
+                description: 'Response Unit is required.',
                 variant: 'destructive',
             });
+
             return;
         }
 
@@ -144,25 +80,17 @@ function AddContacts() {
                 description: 'Responder Type is required.',
                 variant: 'destructive',
             });
+
             return;
         }
 
-        if (!data.primary_mobile) {
-            toast({
-                title: 'Validation Error',
-                description: 'Primary Mobile Number is required.',
-                variant: 'destructive',
-            });
-            return;
-        }
-
-        // Validate mobile numbers format
         if (!isMobileNumberValid(data.primary_mobile)) {
             toast({
                 title: 'Validation Error',
                 description: 'Primary mobile number must be exactly 11 digits.',
                 variant: 'destructive',
             });
+
             return;
         }
 
@@ -172,28 +100,25 @@ function AddContacts() {
                 description: 'Backup mobile number must be exactly 11 digits.',
                 variant: 'destructive',
             });
+
             return;
         }
 
         post('/contacts', {
             onSuccess: () => {
-                router.flushAll(); // Clear prefetch cache to prevent stale data
+                router.flushAll();
                 reset();
                 setDialogOpen(false);
                 setHasAttemptedSubmit(false);
-                // Reset all state when successful
-                setBranchUnitNameState({ value: null, open: false });
-                setResponderTypeState({ value: null, open: false });
                 toast({
                     title: 'Success',
                     description: 'Contact created successfully!',
                 });
             },
-            onError: (errors) => {
+            onError: () => {
                 toast({
                     title: 'Error',
-                    description:
-                        'An error occurred while creating the contact.',
+                    description: 'An error occurred while creating the contact.',
                     variant: 'destructive',
                 });
             },
@@ -205,11 +130,8 @@ function AddContacts() {
             open={dialogOpen}
             onOpenChange={(open) => {
                 setDialogOpen(open);
-                if (!open) {
-                    // Reset all states when closing
+                if (! open) {
                     setHasAttemptedSubmit(false);
-                    setBranchUnitNameState({ value: null, open: false });
-                    setResponderTypeState({ value: null, open: false });
                     reset();
                 }
             }}
@@ -228,337 +150,154 @@ function AddContacts() {
                     className="flex h-full flex-col overflow-hidden"
                 >
                     <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
-                        <DialogTitle>Add Contacts</DialogTitle>
+                        <DialogTitle>Add Contact</DialogTitle>
                         <DialogDescription>
-                            Responder details and communication data
+                            Add responder details and communication data.
                         </DialogDescription>
                     </DialogHeader>
+
                     <div className="flex-1 space-y-6 overflow-y-auto px-6 py-4">
                         <div className="space-y-4">
-                            {/* Contact Person (Optional) */}
                             <div>
-                                <Label htmlFor="contact_person">
-                                    Contact Person (Optional)
-                                </Label>
+                                <Label htmlFor="contact_person">Contact Person (Optional)</Label>
                                 <Input
                                     id="contact_person"
-                                    placeholder=""
                                     value={data.contact_person}
-                                    onChange={(e) =>
-                                        setData(
-                                            'contact_person',
-                                            e.target.value,
-                                        )
-                                    }
+                                    onChange={(e) => setData('contact_person', e.target.value)}
                                 />
                                 {errors.contact_person && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.contact_person}
-                                    </p>
+                                    <p className="mt-1 text-sm text-red-500">{errors.contact_person}</p>
                                 )}
                             </div>
 
-                            {/* Branch/Unit Name - Now a Dropdown */}
                             <div>
-                                <Label>Branch/Unit Name</Label>
-                                <Popover
-                                    open={branchUnitNameState.open}
-                                    onOpenChange={(open) =>
-                                        setBranchUnitNameState({
-                                            ...branchUnitNameState,
-                                            open,
-                                        })
-                                    }
-                                >
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            role="combobox"
-                                            aria-expanded={
-                                                branchUnitNameState.open
-                                            }
-                                            className={`w-full justify-between ${hasAttemptedSubmit && !data.branch_unit_name ? 'border-red-500' : ''}`}
-                                        >
-                                            {branchUnitNameState.value
-                                                ? branchUnitNameState.value.name
-                                                : 'Select Branch/Unit'}
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-full p-0">
-                                        <Command>
-                                            <CommandInput placeholder="Search branch/unit..." />
-                                            <CommandList>
-                                                <CommandEmpty>
-                                                    No branch/unit found.
-                                                </CommandEmpty>
-                                                <CommandGroup>
-                                                    {branchUnitNames.map(
-                                                        (branch) => (
-                                                            <CommandItem
-                                                                key={branch.id}
-                                                                value={
-                                                                    branch.name
-                                                                }
-                                                                onSelect={() =>
-                                                                    handleBranchUnitNameSelect(
-                                                                        branch,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <Check
-                                                                    className={cn(
-                                                                        'h-4 w-4',
-                                                                        branchUnitNameState
-                                                                            .value
-                                                                            ?.id ===
-                                                                            branch.id
-                                                                            ? 'opacity-100'
-                                                                            : 'opacity-0',
-                                                                    )}
-                                                                />
-                                                                {branch.name}
-                                                            </CommandItem>
-                                                        ),
-                                                    )}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
-                                {hasAttemptedSubmit &&
-                                    !data.branch_unit_name && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            Branch/Unit Name is required
-                                        </p>
-                                    )}
+                                <Label htmlFor="branch_unit_name">Response Unit</Label>
+                                <Input
+                                    id="branch_unit_name"
+                                    list="response-unit-options"
+                                    value={data.branch_unit_name}
+                                    onChange={(e) => setData('branch_unit_name', e.target.value)}
+                                    placeholder="Type or select response unit (e.g., BFP)"
+                                    className={hasAttemptedSubmit && !data.branch_unit_name.trim() ? 'border-red-500' : ''}
+                                />
+                                <datalist id="response-unit-options">
+                                    {responseUnitOptions.map((unitName) => (
+                                        <option key={unitName} value={unitName} />
+                                    ))}
+                                </datalist>
+                                {hasAttemptedSubmit && !data.branch_unit_name.trim() && (
+                                    <p className="mt-1 text-sm text-red-500">Response Unit is required.</p>
+                                )}
                                 {errors.branch_unit_name && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.branch_unit_name}
-                                    </p>
+                                    <p className="mt-1 text-sm text-red-500">{errors.branch_unit_name}</p>
                                 )}
                             </div>
 
-                            {/* Responder Type and Package - Side by Side */}
-                            {/* Responder Type */}
                             <div>
                                 <Label>Responder Type</Label>
-                                <Popover
-                                    open={responderTypeState.open}
-                                    onOpenChange={(open) =>
-                                        setResponderTypeState({
-                                            ...responderTypeState,
-                                            open,
-                                        })
-                                    }
+                                <Select
+                                    value={data.responder_type}
+                                    onValueChange={(value) => setData('responder_type', value)}
                                 >
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            role="combobox"
-                                            aria-expanded={
-                                                responderTypeState.open
-                                            }
-                                            className={`w-full justify-between ${hasAttemptedSubmit && !data.responder_type ? 'border-red-500' : ''}`}
-                                        >
-                                            {responderTypeState.value
-                                                ? responderTypeState.value
-                                                    .name
-                                                : 'Select Type'}
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-full p-0">
-                                        <Command>
-                                            <CommandInput placeholder="Search responder type..." />
-                                            <CommandList>
-                                                <CommandEmpty>
-                                                    No responder type found.
-                                                </CommandEmpty>
-                                                <CommandGroup>
-                                                    {responderTypes.map(
-                                                        (type: ResponderType) => (
-                                                            <CommandItem
-                                                                key={
-                                                                    type.id
-                                                                }
-                                                                value={
-                                                                    type.name
-                                                                }
-                                                                onSelect={() =>
-                                                                    handleResponderTypeSelect(
-                                                                        type,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <Check
-                                                                    className={cn(
-                                                                        'h-4 w-4',
-                                                                        responderTypeState
-                                                                            .value
-                                                                            ?.id ===
-                                                                            type.id
-                                                                            ? 'opacity-100'
-                                                                            : 'opacity-0',
-                                                                    )}
-                                                                />
-                                                                {type.name}
-                                                            </CommandItem>
-                                                        ),
-                                                    )}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
-                                {hasAttemptedSubmit &&
-                                    !data.responder_type && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            Responder Type is required
-                                        </p>
-                                    )}
+                                    <SelectTrigger className={hasAttemptedSubmit && !data.responder_type ? 'border-red-500' : ''}>
+                                        <SelectValue placeholder="Select responder type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {responderTypes.map((type) => (
+                                            <SelectItem key={type.name} value={type.name}>
+                                                {type.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {hasAttemptedSubmit && !data.responder_type && (
+                                    <p className="mt-1 text-sm text-red-500">Responder Type is required.</p>
+                                )}
                                 {errors.responder_type && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.responder_type}
-                                    </p>
+                                    <p className="mt-1 text-sm text-red-500">{errors.responder_type}</p>
                                 )}
                             </div>
 
-                            {/* Communication Data Section */}
                             <div className="space-y-1">
-                                <Label className="text-sm text-muted-foreground">
-                                    Communication Data
-                                </Label>
+                                <Label className="text-sm text-muted-foreground">Communication Data</Label>
                             </div>
 
-                            {/* Primary Mobile Number (Hotline) */}
                             <div>
-                                <Label htmlFor="primary_mobile">
-                                    Primary Mobile Number (Hotline)
-                                </Label>
+                                <Label htmlFor="primary_mobile">Primary Mobile Number</Label>
                                 <Input
                                     id="primary_mobile"
-                                    placeholder=""
                                     value={data.primary_mobile}
-                                    onChange={(e) => {
-                                        const validatedValue =
-                                            validateMobileNumber(
-                                                e.target.value,
-                                            );
-                                        setData(
-                                            'primary_mobile',
-                                            validatedValue,
-                                        );
-                                    }}
+                                    onChange={(e) => setData('primary_mobile', validateMobileNumber(e.target.value))}
                                     className={
                                         hasAttemptedSubmit &&
-                                            (!data.primary_mobile ||
-                                                !isMobileNumberValid(
-                                                    data.primary_mobile,
-                                                ))
+                                        (!data.primary_mobile || !isMobileNumberValid(data.primary_mobile))
                                             ? 'border-red-500'
                                             : ''
                                     }
                                 />
                                 {hasAttemptedSubmit && !data.primary_mobile && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        Primary Mobile Number is required
-                                    </p>
+                                    <p className="mt-1 text-sm text-red-500">Primary mobile number is required.</p>
                                 )}
-                                {hasAttemptedSubmit &&
-                                    data.primary_mobile !== '' &&
-                                    !isMobileNumberValid(
-                                        data.primary_mobile,
-                                    ) && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            Must be exactly 11 digits
-                                        </p>
-                                    )}
+                                {hasAttemptedSubmit && data.primary_mobile && !isMobileNumberValid(data.primary_mobile) && (
+                                    <p className="mt-1 text-sm text-red-500">Must be exactly 11 digits.</p>
+                                )}
                                 {errors.primary_mobile && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.primary_mobile}
-                                    </p>
+                                    <p className="mt-1 text-sm text-red-500">{errors.primary_mobile}</p>
                                 )}
                             </div>
 
-                            {/* Backup Mobile Number */}
                             <div>
-                                <Label htmlFor="backup_mobile">
-                                    Backup Mobile Number (Optional)
-                                </Label>
+                                <Label htmlFor="backup_mobile">Backup Mobile Number (Optional)</Label>
                                 <Input
                                     id="backup_mobile"
-                                    placeholder=""
                                     value={data.backup_mobile}
-                                    onChange={(e) => {
-                                        const validatedValue =
-                                            validateMobileNumber(
-                                                e.target.value,
-                                            );
-                                        setData(
-                                            'backup_mobile',
-                                            validatedValue,
-                                        );
-                                    }}
+                                    onChange={(e) => setData('backup_mobile', validateMobileNumber(e.target.value))}
                                     className={
                                         hasAttemptedSubmit &&
-                                            data.backup_mobile !== '' &&
-                                            !isMobileNumberValid(data.backup_mobile)
+                                        data.backup_mobile !== '' &&
+                                        !isMobileNumberValid(data.backup_mobile)
                                             ? 'border-red-500'
                                             : ''
                                     }
                                 />
-                                {hasAttemptedSubmit &&
-                                    data.backup_mobile !== '' &&
-                                    !isMobileNumberValid(
-                                        data.backup_mobile,
-                                    ) && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            Must be exactly 11 digits
-                                        </p>
-                                    )}
+                                {hasAttemptedSubmit && data.backup_mobile !== '' && !isMobileNumberValid(data.backup_mobile) && (
+                                    <p className="mt-1 text-sm text-red-500">Must be exactly 11 digits.</p>
+                                )}
                                 {errors.backup_mobile && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {errors.backup_mobile}
-                                    </p>
+                                    <p className="mt-1 text-sm text-red-500">{errors.backup_mobile}</p>
                                 )}
                             </div>
 
-                            {/* Active Toggle Switch */}
-                            <div className="flex items-center space-x-2">
-                                <Switch
-                                    id="active"
-                                    checked={data.active}
-                                    onCheckedChange={(checked) =>
-                                        setData('active', checked)
-                                    }
-                                />
-                                <Label htmlFor="active">Active</Label>
+                            <div className="rounded-md border border-input/70 bg-muted/20 p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="space-y-0.5">
+                                        <Label htmlFor="active" className="text-sm font-medium">
+                                            Active Status
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Active contacts are included in responder dispatch.
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        id="active"
+                                        checked={data.active}
+                                        onCheckedChange={(checked) => setData('active', checked)}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
+
                     <DialogFooter className="flex-shrink-0 px-6 py-4">
                         <div className="flex w-full gap-2">
                             <DialogClose asChild>
-                                <Button
-                                    variant="outline"
-                                    type="button"
-                                    className="flex-1"
-                                >
+                                <Button variant="outline" type="button" className="flex-1">
                                     <MoveLeft className="inline h-4 w-4" />
                                     Close
                                 </Button>
                             </DialogClose>
-                            <Button
-                                type="submit"
-                                disabled={processing}
-                                className="flex-2"
-                            >
-                                {processing ? (
-                                    <Spinner className="inline h-4 w-4" />
-                                ) : (
-                                    <Phone className="inline h-4 w-4" />
-                                )}
+                            <Button type="submit" disabled={processing} className="flex-2">
+                                {processing ? <Spinner className="inline h-4 w-4" /> : <Phone className="inline h-4 w-4" />}
                                 {processing ? 'Creating...' : 'Add Contact'}
                             </Button>
                         </div>

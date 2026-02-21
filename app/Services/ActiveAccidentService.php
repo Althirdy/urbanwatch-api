@@ -20,7 +20,7 @@ class ActiveAccidentService
      */
     public function getInProgressAccidentsForMarkers(): Collection
     {
-        $accidents = Accident::whereIn('status', ['In Progress', 'Ongoing'])
+        $accidents = Accident::whereIn('status', ['In Progress', 'in progress', 'Ongoing'])
             ->whereHas('publicPost', function ($query) {
                 $query->whereNotNull('published_at')
                     ->where('published_at', '<=', now());
@@ -51,7 +51,7 @@ class ActiveAccidentService
     public function getInProgressAccidentById(int $accidentId, int $roleId): ?Accident
     {
         $query = Accident::where('id', $accidentId)
-            ->whereIn('status', ['In Progress', 'Ongoing'])
+            ->whereIn('status', ['In Progress', 'in progress', 'Ongoing'])
             ->whereHas('publicPost', function ($query) {
                 $query->whereNotNull('published_at')
                     ->where('published_at', '<=', now());
@@ -92,7 +92,7 @@ class ActiveAccidentService
      */
     public function getInProgressAccidentsCursor(int $perPage = 10): CursorPaginator
     {
-        $accidents = Accident::whereIn('status', ['In Progress', 'Ongoing'])
+        $accidents = Accident::whereIn('status', ['In Progress', 'in progress', 'Ongoing'])
             ->whereHas('publicPost', function ($query) {
                 $query->whereNotNull('published_at')
                     ->where('published_at', '<=', now());

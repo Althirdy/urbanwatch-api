@@ -44,6 +44,8 @@ class ProcessYoloSnapshotJob implements ShouldQueue
 
     protected int $fileSize;
 
+    protected array $detectedClasses;
+
     /**
      * Create a new job instance.
      */
@@ -53,7 +55,8 @@ class ProcessYoloSnapshotJob implements ShouldQueue
         ?string $detectedAt,
         string $originalFilename,
         string $mimeType,
-        int $fileSize
+        int $fileSize,
+        array $detectedClasses = []
     ) {
         $this->tempPath = $tempPath;
         $this->deviceId = $deviceId;
@@ -61,6 +64,7 @@ class ProcessYoloSnapshotJob implements ShouldQueue
         $this->originalFilename = $originalFilename;
         $this->mimeType = $mimeType;
         $this->fileSize = $fileSize;
+        $this->detectedClasses = $detectedClasses;
     }
 
     /**
@@ -89,7 +93,8 @@ class ProcessYoloSnapshotJob implements ShouldQueue
                 $this->detectedAt,
                 $this->originalFilename,
                 $this->mimeType,
-                $this->fileSize
+                $this->fileSize,
+                $this->detectedClasses
             );
 
             Log::info('ProcessYoloSnapshotJob: Processing complete', [

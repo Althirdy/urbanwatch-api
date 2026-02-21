@@ -103,7 +103,7 @@ export default function ViewContacts({ contact, children }: ViewContactsProps) {
                 showCloseButton={false}
             >
                 <DialogHeader className="flex-shrink-0 px-6 pt-6">
-                    <DialogTitle>Contact Person Details</DialogTitle>
+                    <DialogTitle>Contact Details</DialogTitle>
                     <DialogDescription>
                         View detailed information about this contact person.
                     </DialogDescription>
@@ -149,10 +149,6 @@ export default function ViewContacts({ contact, children }: ViewContactsProps) {
                     </div>
 
                     <div className="grid auto-rows-min gap-6">
-
-
-
-
                         {/* Contact Numbers in a row */}
                         <div className="flex flex-col">
                             <span className="text-sm text-foreground">

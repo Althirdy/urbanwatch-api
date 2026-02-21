@@ -49,6 +49,7 @@ class AccidentDetected implements ShouldBroadcastNow
             'title' => $this->accident->title,
             'description' => $this->accident->description,
             'accidentType' => $this->accident->accident_type,
+            'accident_type' => $this->accident->accident_type,
             'severity' => $this->accident->severity,
             'status' => $this->accident->status,
             'latitude' => $this->accident->latitude,

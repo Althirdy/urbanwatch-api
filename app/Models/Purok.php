@@ -19,4 +19,9 @@ class Purok extends Model
     {
         return $this->hasMany(OfficialsDetails::class);
     }
+
+    public function contacts()
+    {
+        return $this->hasMany(Contact::class);
+    }
 }

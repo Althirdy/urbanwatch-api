@@ -46,7 +46,8 @@ class Contact extends Model
         return $query->where(function ($q) use ($term) {
             $q->where('branch_unit_name', 'like', "%{$term}%")
                 ->orWhere('contact_person', 'like', "%{$term}%")
-                ->orWhere('primary_mobile', 'like', "%{$term}%");
+                ->orWhere('primary_mobile', 'like', "%{$term}%")
+                ->orWhere('backup_mobile', 'like', "%{$term}%");
         });
     }
 }

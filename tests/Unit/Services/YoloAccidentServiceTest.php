@@ -2,6 +2,8 @@
 
 namespace Tests\Unit\Services;
 
+use App\Events\AccidentDetected;
+use App\Events\AccidentUpdated;
 use App\Models\Accident;
 use App\Models\cctvDevices;
 use App\Models\IncidentMedia;
@@ -61,15 +63,21 @@ class YoloAccidentServiceTest extends TestCase
     {
         $file = UploadedFile::fake()->image('test.jpg');
 
-        $this->geminiService->shouldReceive('analyzeImage')->andReturn([
-            'is_valid' => true,
-            'accident_type' => 'Fire',
-            'severity' => 'Low',
-            'title' => 'Test Fire',
-            'description' => 'Test Description',
-            'confidence' => 90,
-            'detected_objects' => ['fire'],
+        $this->geminiService->shouldReceive('analyzeYoloImage')->andReturn([
+            'overall_valid' => true,
             'reasoning' => 'Test reasoning',
+            'class_verdicts' => [[
+                'source_class' => 'Fire',
+                'normalized_class' => 'Fire',
+                'is_legit' => true,
+                'accident_type' => 'Fire',
+                'severity' => 'Low',
+                'title' => 'Test Fire',
+                'description' => 'Test Description',
+                'confidence' => 90,
+                'detected_objects' => ['fire'],
+                'reasoning' => 'Test reasoning',
+            ]],
         ]);
 
         $this->fileUploadService->shouldReceive('uploadSingle')->andReturn([
@@ -83,6 +91,7 @@ class YoloAccidentServiceTest extends TestCase
         $this->assertTrue($result['isNew']);
         $this->assertEquals('Fire', $result['accidentType']);
         $this->assertDatabaseHas('accidents', ['accident_type' => 'Fire']);
+        Event::assertDispatched(AccidentDetected::class);
     }
 
     public function test_it_updates_existing_active_accident_of_same_type()
@@ -102,15 +111,21 @@ class YoloAccidentServiceTest extends TestCase
 
         $file = UploadedFile::fake()->image('test2.jpg');
 
-        $this->geminiService->shouldReceive('analyzeImage')->andReturn([
-            'is_valid' => true,
-            'accident_type' => 'Fire', // Same type
-            'severity' => 'High', // Higher severity
-            'title' => 'Updated Fire',
-            'description' => 'More intense fire',
-            'confidence' => 95,
-            'detected_objects' => ['fire'],
+        $this->geminiService->shouldReceive('analyzeYoloImage')->andReturn([
+            'overall_valid' => true,
             'reasoning' => 'Updated reasoning',
+            'class_verdicts' => [[
+                'source_class' => 'Fire',
+                'normalized_class' => 'Fire',
+                'is_legit' => true,
+                'accident_type' => 'Fire',
+                'severity' => 'High',
+                'title' => 'Updated Fire',
+                'description' => 'More intense fire',
+                'confidence' => 95,
+                'detected_objects' => ['fire'],
+                'reasoning' => 'Updated reasoning',
+            ]],
         ]);
 
         $this->fileUploadService->shouldReceive('uploadSingle')->andReturn([
@@ -124,6 +139,7 @@ class YoloAccidentServiceTest extends TestCase
         $this->assertFalse($result['isNew']);
         $this->assertEquals($accident->id, $result['accidentId']);
         $this->assertEquals('High', $result['severity']);
+        Event::assertDispatched(AccidentUpdated::class);
 
         // Verify only 1 accident exists but 1 new media record created
         $this->assertEquals(1, Accident::count());
@@ -148,15 +164,21 @@ class YoloAccidentServiceTest extends TestCase
         $file = UploadedFile::fake()->image('flood.jpg');
 
         // New Detection is Flood
-        $this->geminiService->shouldReceive('analyzeImage')->andReturn([
-            'is_valid' => true,
-            'accident_type' => 'Flood',
-            'severity' => 'Medium',
-            'title' => 'New Flood',
-            'description' => 'Flood description',
-            'confidence' => 80,
-            'detected_objects' => ['water'],
+        $this->geminiService->shouldReceive('analyzeYoloImage')->andReturn([
+            'overall_valid' => true,
             'reasoning' => 'Flood reasoning',
+            'class_verdicts' => [[
+                'source_class' => 'Flood',
+                'normalized_class' => 'Flood',
+                'is_legit' => true,
+                'accident_type' => 'Flood',
+                'severity' => 'Medium',
+                'title' => 'New Flood',
+                'description' => 'Flood description',
+                'confidence' => 80,
+                'detected_objects' => ['water'],
+                'reasoning' => 'Flood reasoning',
+            ]],
         ]);
 
         $this->fileUploadService->shouldReceive('uploadSingle')->andReturn([
@@ -169,5 +191,99 @@ class YoloAccidentServiceTest extends TestCase
         $this->assertTrue($result['isNew']);
         $this->assertEquals('Flood', $result['accidentType']);
         $this->assertEquals(2, Accident::count());
+    }
+
+    public function test_it_matches_lowercase_active_statuses_for_existing_accidents()
+    {
+        $accident = Accident::create([
+            'cctv_device_id' => $this->device->id,
+            'accident_type' => 'Fire',
+            'status' => 'pending',
+            'severity' => 'Low',
+            'title' => 'Lowercase Pending Fire',
+            'description' => 'Existing lowercase status accident',
+            'latitude' => 10.0,
+            'longitude' => 20.0,
+            'occurred_at' => now()->subMinutes(5),
+        ]);
+
+        $file = UploadedFile::fake()->image('fire-lowercase.jpg');
+
+        $this->geminiService->shouldReceive('analyzeYoloImage')->andReturn([
+            'overall_valid' => true,
+            'reasoning' => 'Updated lowercase status',
+            'class_verdicts' => [[
+                'source_class' => 'Fire',
+                'normalized_class' => 'Fire',
+                'is_legit' => true,
+                'accident_type' => 'Fire',
+                'severity' => 'Medium',
+                'title' => 'Updated Fire',
+                'description' => 'Should update existing lowercase status accident',
+                'confidence' => 88,
+                'detected_objects' => ['fire'],
+                'reasoning' => 'Updated lowercase status',
+            ]],
+        ]);
+
+        $this->fileUploadService->shouldReceive('uploadSingle')->andReturn([
+            'public_url' => 'http://test.com/fire-lowercase.jpg',
+            'storage_path' => 'yolo/fire-lowercase.jpg',
+        ]);
+
+        $result = $this->yoloService->processDetection($file, $this->device->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertFalse($result['isNew']);
+        $this->assertEquals($accident->id, $result['accidentId']);
+        $this->assertEquals(1, Accident::count());
+    }
+
+    public function test_it_does_not_broadcast_accident_events_if_transaction_rolls_back()
+    {
+        $file = UploadedFile::fake()->image('rollback.jpg');
+
+        $this->geminiService->shouldReceive('analyzeYoloImage')->andReturn([
+            'overall_valid' => true,
+            'reasoning' => 'Rollback path',
+            'class_verdicts' => [[
+                'source_class' => 'Fire',
+                'normalized_class' => 'Fire',
+                'is_legit' => true,
+                'accident_type' => 'Fire',
+                'severity' => 'Low',
+                'title' => 'Rollback Fire',
+                'description' => 'Should be rolled back',
+                'confidence' => 90,
+                'detected_objects' => ['fire'],
+                'reasoning' => 'Rollback path',
+            ]],
+        ]);
+
+        $this->fileUploadService->shouldReceive('uploadSingle')->andReturn([
+            'public_url' => 'http://test.com/rollback.jpg',
+            'storage_path' => 'yolo/rollback.jpg',
+        ]);
+
+        $service = Mockery::mock(YoloAccidentService::class, [
+            $this->geminiService,
+            $this->fileUploadService,
+            $this->routingService,
+        ])->makePartial();
+        $service->shouldAllowMockingProtectedMethods();
+        $service->shouldReceive('dispatchLeaderNotification')
+            ->once()
+            ->andThrow(new \RuntimeException('Forced rollback'));
+
+        $this->expectException(\RuntimeException::class);
+
+        try {
+            $service->processDetection($file, $this->device->id);
+        } finally {
+            Event::assertNotDispatched(AccidentDetected::class);
+            Event::assertNotDispatched(AccidentUpdated::class);
+            $this->assertDatabaseCount('accidents', 0);
+            $this->assertDatabaseCount('incident_media', 0);
+        }
     }
 }
