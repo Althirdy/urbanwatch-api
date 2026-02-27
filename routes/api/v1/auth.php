@@ -25,6 +25,7 @@ Route::prefix('auth')->group(function () {
     Route::post('/ocr', [AuthController::class, 'uploadNationalId'])->middleware('throttle:5,1');
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/login/purok_leader', [AuthController::class, 'loginPurokLeader']);
+    Route::post('/login/purok_leader/verify-id', [AuthController::class, 'verifyPurokLeaderId']);
 
     // Phone-based password reset (for mobile app)
     Route::post('/password/request-otp', [PasswordResetController::class, 'requestResetOtp']);

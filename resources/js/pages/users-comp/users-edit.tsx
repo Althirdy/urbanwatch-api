@@ -44,6 +44,7 @@ type EditUserForm = {
     latitude: string;
     longitude: string;
     purok_id: string;
+    id_number: string;
 };
 
 function EditUser({ user, roles, puroks = [], children }: EditUserProps) {
@@ -98,6 +99,7 @@ function EditUser({ user, roles, puroks = [], children }: EditUserProps) {
             latitude: user.official_details?.latitude || '',
             longitude: user.official_details?.longitude || '',
             purok_id: user.official_details?.purok_id?.toString() || '',
+            id_number: user.official_details?.id_number || '',
         });
 
     const isPurokLeader = user.role?.name?.toLowerCase() === 'purok leader';
@@ -333,6 +335,30 @@ function EditUser({ user, roles, puroks = [], children }: EditUserProps) {
                                     <p className="text-xs text-muted-foreground">
                                         Green areas are available. Gray areas are already occupied.
                                     </p>
+                                </div>
+                            )}
+
+                            {/* ID Number for Purok Leaders */}
+                            {isPurokLeader && (
+                                <div className="grid flex-1 auto-rows-min gap-2">
+                                    <div className="grid">
+                                        <p className="text-sm font-medium text-muted-foreground">
+                                            Purok Leader Identity
+                                        </p>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="edit-id-number">ID Number</Label>
+                                        <div>
+                                            <Input
+                                                id="edit-id-number"
+                                                value={data.id_number}
+                                                onChange={(e) => setData('id_number', e.target.value)}
+                                                placeholder="Enter unique ID number"
+                                                className={errors.id_number ? 'border-red-500 focus:ring-red-500' : ''}
+                                            />
+                                            {errors.id_number && <span className="mt-1 block text-xs text-red-500">{errors.id_number}</span>}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 

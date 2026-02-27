@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\Auth\LoginRequest;
 use App\Http\Requests\Api\V1\Auth\PurokLeaderLoginRequest;
 use App\Http\Requests\Api\V1\Auth\RegisterRequest;
+use App\Http\Requests\Api\V1\Auth\VerifyPurokLeaderIdRequest;
 use App\Http\Resources\Api\V1\AuthUserResource;
 use App\Services\AbstractApiService;
 use App\Services\AuthService;
@@ -46,7 +47,7 @@ class AuthController extends BaseApiController
         try {
             $authData = $this->authService->login($validated['email'], $validated['password']);
 
-            if (! $authData) {
+            if (!$authData) {
                 throw new UrbanWatchException('Invalid credentials');
             }
 
@@ -95,8 +96,8 @@ class AuthController extends BaseApiController
                 return $this->sendError('You uploaded the back of the ID. Please upload the front.', 400);
             }
 
-            if (! $analysis['isAuthentic']) {
-                return $this->sendError('ID verification failed: '.($analysis['reasoning'] ?? 'Image not recognized as a valid PhilID'), 400);
+            if (!$analysis['isAuthentic']) {
+                return $this->sendError('ID verification failed: ' . ($analysis['reasoning'] ?? 'Image not recognized as a valid PhilID'), 400);
             }
 
             // Check if user is outside allowed area (Barangay 176-E restriction)
@@ -153,7 +154,7 @@ class AuthController extends BaseApiController
     {
         $verification = \App\Models\IdVerification::where('verification_id', $verificationId)->first();
 
-        if (! $verification) {
+        if (!$verification) {
             return $this->sendNotFound('Verification request not found.');
         }
 
@@ -179,15 +180,15 @@ class AuthController extends BaseApiController
         $validated = $request->validated();
 
         try {
-            $authData = $this->authService->loginPurokLeader($validated['pin']);
+            $authData = $this->authService->loginPurokLeader($validated['id_number'], $validated['pin']);
 
-            if (! $authData) {
-                throw new UrbanWatchException('Invalid PIN');
+            if (!$authData) {
+                throw new UrbanWatchException('Invalid ID Number or PIN');
             }
 
             $user = $authData['user'];
 
-            if (! $user->officialDetails) {
+            if (!$user->officialDetails) {
                 throw new UrbanWatchException('Official details not found for this user');
             }
 
@@ -199,7 +200,30 @@ class AuthController extends BaseApiController
         } catch (UrbanWatchException $e) {
             throw $e;
         } catch (\Exception $e) {
-            return $this->sendUnauthorized(message: 'Invalid PIN');
+            return $this->sendUnauthorized(message: 'Invalid ID Number or PIN');
+        }
+    }
+
+    // Verify Purok Leader ID Number (Step 1 of 2-step login)
+    public function verifyPurokLeaderId(VerifyPurokLeaderIdRequest $request): \Illuminate\Http\JsonResponse
+    {
+        $validated = $request->validated();
+
+        try {
+            $result = $this->authService->verifyPurokLeaderId($validated['id_number']);
+
+            if (!$result) {
+                throw new UrbanWatchException('ID Number not found. Please check and try again.');
+            }
+
+            return $this->sendResponse([
+                'name' => $result['name'],
+                'id_number' => $result['id_number'],
+            ], 'ID Number verified successfully');
+        } catch (UrbanWatchException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return $this->sendError('Verification failed. Please try again.', 500);
         }
     }
 
@@ -248,7 +272,7 @@ class AuthController extends BaseApiController
     {
         try {
             // Verify the token has 'refresh-token' ability
-            if (! $request->user()->tokenCan('refresh-token')) {
+            if (!$request->user()->tokenCan('refresh-token')) {
                 return $this->sendUnauthorized('Invalid token type. Please use refresh token.');
             }
 
@@ -275,7 +299,7 @@ class AuthController extends BaseApiController
         } catch (UrbanWatchException $e) {
             throw $e;
         } catch (\Exception $e) {
-            return $this->sendError('Registration failed: '.$e->getMessage());
+            return $this->sendError('Registration failed: ' . $e->getMessage());
         }
     }
 }

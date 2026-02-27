@@ -23,6 +23,7 @@ export type CitizenDetails = {
 export type OfficialsDetails = {
     id: number;
     user_id: number;
+    id_number?: string;
     purok_id?: number;
     first_name: string;
     middle_name?: string;

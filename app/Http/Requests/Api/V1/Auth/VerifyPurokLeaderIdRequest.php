@@ -6,7 +6,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class PurokLeaderLoginRequest extends FormRequest
+class VerifyPurokLeaderIdRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -25,7 +25,6 @@ class PurokLeaderLoginRequest extends FormRequest
     {
         return [
             'id_number' => 'required|string',
-            'pin' => 'required|string',
         ];
     }
 
@@ -34,7 +33,6 @@ class PurokLeaderLoginRequest extends FormRequest
     {
         return [
             'id_number.required' => 'ID Number is required.',
-            'pin.required' => 'PIN is required.',
         ];
     }
 
