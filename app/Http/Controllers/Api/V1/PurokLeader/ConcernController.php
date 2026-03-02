@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api\V1\PurokLeader;
 use App\Events\ConcernStatusUpdated;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Resources\Api\PurokLeader\AssignedConcernResource;
+use App\Jobs\SendExpoPushNotificationJob;
 use App\Jobs\SendConcernStatusNotificationJob;
 use App\Models\Citizen\Concern;
 use App\Models\ConcernDistribution;
 use App\Models\ConcernHistory;
+use App\Models\Notification;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -216,13 +218,14 @@ class ConcernController extends BaseApiController
 
                 // Notify the citizen of this duplicate concern (in-app + WebSocket + email)
                 // 1. In-app notification (database)
-                $this->notificationService->notifyConcernStatusChanged(
+                $duplicateNotification = $this->notificationService->notifyConcernStatusChanged(
                     $duplicate,
                     $previousStatus,
                     $status,
                     $purokLeader,
                     "Status mirrored from Parent Concern #{$concern->tracking_code}: {$remarks}"
                 );
+                $this->dispatchPushNotificationIfNeeded($duplicateNotification, $status);
 
                 // 2. WebSocket broadcast for real-time toast on duplicate's citizen app
                 event(new ConcernStatusUpdated(
@@ -235,26 +238,29 @@ class ConcernController extends BaseApiController
                 ));
 
                 // 3. Email notification via job queue
-                SendConcernStatusNotificationJob::dispatch(
-                    $duplicate,
-                    $purokLeader,
-                    $previousStatus,
-                    $status,
-                    $remarks
-                );
+                if ($this->shouldSendStatusEmail($status)) {
+                    SendConcernStatusNotificationJob::dispatch(
+                        $duplicate,
+                        $purokLeader,
+                        $previousStatus,
+                        $status,
+                        $remarks
+                    );
+                }
             }
 
             DB::commit();
 
             // --- Notify parent concern's citizen ---
             // 1. Create in-app notification (database)
-            $this->notificationService->notifyConcernStatusChanged(
+            $parentNotification = $this->notificationService->notifyConcernStatusChanged(
                 $concern->fresh(),
                 $previousStatus,
                 $status,
                 $purokLeader,
                 $remarks
             );
+            $this->dispatchPushNotificationIfNeeded($parentNotification, $status);
 
             // 2. Broadcast WebSocket event for real-time toast on citizen app
             event(new ConcernStatusUpdated(
@@ -267,13 +273,15 @@ class ConcernController extends BaseApiController
             ));
 
             // 3. Send email notification via job queue
-            SendConcernStatusNotificationJob::dispatch(
-                $concern->fresh(),
-                $purokLeader,
-                $previousStatus,
-                $status,
-                $remarks
-            );
+            if ($this->shouldSendStatusEmail($status)) {
+                SendConcernStatusNotificationJob::dispatch(
+                    $concern->fresh(),
+                    $purokLeader,
+                    $previousStatus,
+                    $status,
+                    $remarks
+                );
+            }
 
             return $this->sendResponse([
                 'concern_id' => $id,
@@ -289,5 +297,35 @@ class ConcernController extends BaseApiController
 
             return $this->sendError('Failed to update concern status: '.$e->getMessage());
         }
+    }
+
+    private function shouldSendStatusEmail(string $status): bool
+    {
+        return in_array($status, ['resolved', 'rejected'], true);
+    }
+
+    private function shouldSendPushForStatus(string $status): bool
+    {
+        return in_array($status, ['ongoing', 'escalated', 'awaiting_confirmation', 'resolved', 'rejected'], true);
+    }
+
+    private function dispatchPushNotificationIfNeeded(?Notification $notification, string $status): void
+    {
+        if (! $notification || ! $this->shouldSendPushForStatus($status)) {
+            return;
+        }
+
+        $payload = is_array($notification->data) ? $notification->data : [];
+
+        SendExpoPushNotificationJob::dispatch(
+            (int) $notification->user_id,
+            (string) $notification->user_type,
+            (string) $notification->title,
+            (string) $notification->message,
+            array_merge($payload, [
+                'notification_id' => $notification->id,
+                'notification_type' => $notification->type,
+            ])
+        )->afterCommit();
     }
 }
