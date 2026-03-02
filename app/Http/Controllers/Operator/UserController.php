@@ -270,6 +270,7 @@ class UserController extends Controller
                 // Operator or Purok Leader - create OfficialsDetails
                 OfficialsDetails::create([
                     'user_id' => $user->id,
+                    'id_number' => $validated['id_number'] ?? null,
                     'purok_id' => $validated['purok_id'] ?? null, // Save Purok ID
                     'first_name' => $validated['first_name'],
                     'middle_name' => $validated['middle_name'],
@@ -389,6 +390,7 @@ class UserController extends Controller
                 $officialDetails = $user->officialDetails()->updateOrCreate(
                     ['user_id' => $user->id],
                     [
+                        'id_number' => $validated['id_number'] ?? null,
                         'purok_id' => $validated['purok_id'] ?? null, // Update Purok ID
                         'first_name' => $validated['first_name'],
                         'middle_name' => $validated['middle_name'],

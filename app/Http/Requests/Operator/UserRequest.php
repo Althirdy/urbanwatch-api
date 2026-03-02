@@ -51,7 +51,7 @@ class UserRequest extends FormRequest
                 'required',
                 'email:rfc',
                 'max:255',
-                $isUpdate ? 'unique:users,email,'.$userId : 'unique:users',
+                $isUpdate ? 'unique:users,email,' . $userId : 'unique:users',
             ],
             'phone_number' => $isPurokLeader
                 ? 'required|regex:/^09\d{9}$/'
@@ -72,6 +72,10 @@ class UserRequest extends FormRequest
             'assigned_brgy' => 'nullable|string|max:255',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
+            // ID Number for Purok Leaders (no length restriction, just unique)
+            'id_number' => $isPurokLeader
+                ? ['required', 'string', $isUpdate ? 'unique:officials_details,id_number,' . $userId . ',user_id' : 'unique:officials_details,id_number']
+                : 'nullable',
         ];
     }
 
@@ -105,8 +109,8 @@ class UserRequest extends FormRequest
                 : 'Phone number must be a valid format (10-20 digits, can include +, -, and spaces).',
             'role_id.required' => 'User role is required.',
             'role_id.exists' => 'The selected role is invalid.',
-            'password.required' => $passwordFieldName.' is required.',
-            'password.confirmed' => $passwordFieldName.' confirmation does not match.',
+            'password.required' => $passwordFieldName . ' is required.',
+            'password.confirmed' => $passwordFieldName . ' confirmation does not match.',
             'password.prohibited' => 'PIN should not be provided. It will be auto-generated.',
             'status.in' => 'Status must be Active, Inactive, or Archived.',
             'date_of_birth.date' => 'Date of birth must be a valid date.',
@@ -122,6 +126,8 @@ class UserRequest extends FormRequest
             'latitude.between' => 'Latitude must be between -90 and 90.',
             'longitude.numeric' => 'Longitude must be a valid number.',
             'longitude.between' => 'Longitude must be between -180 and 180.',
+            'id_number.required' => 'ID Number is required for Purok Leader.',
+            'id_number.unique' => 'This ID Number is already in use by another Purok Leader.',
         ];
     }
 
@@ -148,7 +154,7 @@ class UserRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if (! $this->isPurokLeaderTarget()) {
+        if (!$this->isPurokLeaderTarget()) {
             return;
         }
 
@@ -161,12 +167,12 @@ class UserRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            if (! $this->isPurokLeaderTarget()) {
+            if (!$this->isPurokLeaderTarget()) {
                 return;
             }
 
             $phoneNumber = $this->input('phone_number');
-            if (! $phoneNumber || ! preg_match('/^09\d{9}$/', $phoneNumber)) {
+            if (!$phoneNumber || !preg_match('/^09\d{9}$/', $phoneNumber)) {
                 return;
             }
 
@@ -203,7 +209,7 @@ class UserRequest extends FormRequest
         }
 
         $targetRoleId = $this->input('role_id') ?: $this->route('user')?->role_id;
-        if (! $targetRoleId) {
+        if (!$targetRoleId) {
             return $this->isPurokLeaderTarget = false;
         }
 
@@ -214,19 +220,19 @@ class UserRequest extends FormRequest
 
     private function normalizePhilippineMobileNumber(?string $rawPhone): ?string
     {
-        if (! is_string($rawPhone)) {
+        if (!is_string($rawPhone)) {
             return null;
         }
 
         $digits = preg_replace('/\D+/', '', $rawPhone);
-        if (! $digits) {
+        if (!$digits) {
             return null;
         }
 
         if (str_starts_with($digits, '63') && strlen($digits) === 12) {
-            $digits = '0'.substr($digits, 2);
+            $digits = '0' . substr($digits, 2);
         } elseif (str_starts_with($digits, '9') && strlen($digits) === 10) {
-            $digits = '0'.$digits;
+            $digits = '0' . $digits;
         }
 
         return $digits;

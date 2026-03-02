@@ -44,6 +44,7 @@ type CreateUserForm = {
     latitude?: string;
     longitude?: string;
     purok_id?: string;
+    id_number?: string;
 };
 
 function CreateUsers({
@@ -74,6 +75,7 @@ function CreateUsers({
             latitude: '',
             longitude: '',
             purok_id: '',
+            id_number: '',
         });
 
     const [clientErrors, setClientErrors] = useState<Partial<CreateUserForm>>(
@@ -795,6 +797,31 @@ function CreateUsers({
                                         for this Purok Leader. You'll see it once after creation to share with them.
                                     </AlertDescription>
                                 </Alert>
+                                <div className="grid gap-2 mt-2">
+                                    <Label htmlFor="id-number">Purok Leader ID Number</Label>
+                                    <div>
+                                        <Input
+                                            id="id-number"
+                                            value={data.id_number}
+                                            onChange={(e) =>
+                                                setData('id_number', e.target.value)
+                                            }
+                                            placeholder="Enter a unique ID number for this Purok Leader"
+                                            className={
+                                                errors.id_number
+                                                    ? 'border-[var(--destructive)] focus:ring-[var(--ring)]'
+                                                    : ''
+                                            }
+                                        />
+                                        <div className="h-5">
+                                            {errors.id_number && (
+                                                <span className="mt-1 block text-xs text-[var(--destructive)]">
+                                                    {errors.id_number}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>

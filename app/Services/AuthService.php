@@ -26,34 +26,57 @@ class AuthService
         return $this->generateAuthData($user);
     }
 
-    public function loginPurokLeader(string $pin)
+    public function loginPurokLeader(string $idNumber, string $pin)
     {
-        $purokLeaders = User::with(['role', 'officialDetails'])
+        $user = User::with(['role', 'officialDetails'])
             ->where('role_id', 2)
-            ->get();
+            ->whereHas('officialDetails', function ($query) use ($idNumber) {
+                $query->where('id_number', $idNumber);
+            })
+            ->first();
 
-        \Log::info('Purok Leader Login Attempt');
-
-        $user = null;
-        foreach ($purokLeaders as $leader) {
-            if (Hash::check($pin, $leader->password)) {
-                // Check if user status is active
-                $status = $leader->officialDetails?->status ?? 'active';
-                if (strtolower($status) !== 'active') {
-                    throw new UrbanWatchException('Your account is currently inactive. Please contact your administrator.', 403);
-                }
-
-                $user = $leader;
-                break;
-            }
-        }
         if (!$user) {
-            \Log::warning('Purok leader login failed: No matching PIN found.');
+            \Log::warning('Purok leader login failed: No matching ID Number found.', ['id_number' => $idNumber]);
+            return null;
+        }
 
+        // Check if user status is active
+        $status = $user->officialDetails?->status ?? 'active';
+        if (strtolower($status) !== 'active') {
+            throw new UrbanWatchException('Your account is currently inactive. Please contact your administrator.', 403);
+        }
+
+        if (!Hash::check($pin, $user->password)) {
+            \Log::warning('Purok leader login failed: Invalid PIN.', ['id_number' => $idNumber]);
             return null;
         }
 
         return $this->generateAuthData($user);
+    }
+
+    public function verifyPurokLeaderId(string $idNumber)
+    {
+        $user = User::with(['role', 'officialDetails'])
+            ->where('role_id', 2)
+            ->whereHas('officialDetails', function ($query) use ($idNumber) {
+                $query->where('id_number', $idNumber);
+            })
+            ->first();
+
+        if (!$user) {
+            return null;
+        }
+
+        // Check if user status is active
+        $status = $user->officialDetails?->status ?? 'active';
+        if (strtolower($status) !== 'active') {
+            throw new UrbanWatchException('Your account is currently inactive. Please contact your administrator.', 403);
+        }
+
+        return [
+            'name' => $user->name,
+            'id_number' => $user->officialDetails->id_number,
+        ];
     }
 
     public function register(array $data)
