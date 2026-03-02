@@ -15,6 +15,7 @@ use App\Models\IncidentMedia;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\UserSuspension;
+use App\Support\VoiceAudioFileSupport;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -350,7 +351,7 @@ class ConcernService
 
                 foreach ($uploadResults['successful'] as $upload) {
                     $mimeType = $upload['mime_type'] ?? '';
-                    $mediaType = str_starts_with($mimeType, 'audio/') ? 'audio' : 'image';
+                    $mediaType = VoiceAudioFileSupport::isSupportedMimeOrExtension($mimeType, $upload['original_filename'] ?? null) ? 'audio' : 'image';
 
                     $media = IncidentMedia::create([
                         'source_type' => Concern::class,
@@ -917,9 +918,8 @@ class ConcernService
             }
 
             foreach ($fileList as $file) {
-                $mimeType = (string) ($file->getMimeType() ?? '');
-                if (! str_starts_with($mimeType, 'audio/')) {
-                    throw new UrbanWatchException('Voice concern accepts audio files only.', 422);
+                if (! VoiceAudioFileSupport::isSupportedUpload($file)) {
+                    throw new UrbanWatchException('Voice concern file must be a supported audio format (m4a, mp3, wav, aac, 3gp, mp4, ogg, webm, opus).', 422);
                 }
             }
 
@@ -928,7 +928,7 @@ class ConcernService
 
         foreach ($fileList as $file) {
             $mimeType = (string) ($file->getMimeType() ?? '');
-            if (! str_starts_with($mimeType, 'image/')) {
+            if (! VoiceAudioFileSupport::isImageMime($mimeType)) {
                 throw new UrbanWatchException('Manual concern accepts image files only.', 422);
             }
         }

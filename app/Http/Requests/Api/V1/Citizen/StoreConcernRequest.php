@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\V1\Citizen;
 
+use App\Support\VoiceAudioFileSupport;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -59,8 +60,8 @@ class StoreConcernRequest extends FormRequest
                 }
 
                 foreach ($files as $index => $file) {
-                    if (! str_starts_with((string) $file->getMimeType(), 'audio/')) {
-                        $validator->errors()->add("files.{$index}", 'Voice concern file must be an audio file.');
+                    if (! VoiceAudioFileSupport::isSupportedUpload($file)) {
+                        $validator->errors()->add("files.{$index}", 'Voice concern file must be a supported audio format (m4a, mp3, wav, aac, 3gp, mp4, ogg, webm, opus).');
                     }
                 }
 
@@ -69,7 +70,7 @@ class StoreConcernRequest extends FormRequest
 
             if ($type === 'manual' && ! empty($files)) {
                 foreach ($files as $index => $file) {
-                    if (! str_starts_with((string) $file->getMimeType(), 'image/')) {
+                    if (! VoiceAudioFileSupport::isImageMime((string) $file->getMimeType())) {
                         $validator->errors()->add("files.{$index}", 'Manual concern files must be images only.');
                     }
                 }
