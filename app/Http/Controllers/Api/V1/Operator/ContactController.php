@@ -120,7 +120,6 @@ class ContactController extends BaseApiController
             $validated = $request->validated();
 
             $contact->update($validated);
-
             DB::commit();
 
             return $this->sendResponse([

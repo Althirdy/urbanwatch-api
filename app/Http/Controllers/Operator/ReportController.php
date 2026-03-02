@@ -79,8 +79,10 @@ class ReportController extends Controller
 
             // Filter by status
             if ($request->has('acknowledged') && $request->acknowledged !== '') {
-                $statusFilter = $request->acknowledged === 'true' ? 'resolved' : 'pending';
-                $query->where('status', $statusFilter);
+                $statusFilter = $request->acknowledged === 'true'
+                    ? ['Resolved', 'resolved']
+                    : ['Pending', 'pending'];
+                $query->whereIn('status', $statusFilter);
             }
 
             // Order by status (pending first, then in progress, then resolved last) and then by created_at
@@ -89,6 +91,9 @@ class ReportController extends Controller
                     WHEN status = 'pending' THEN 1 
                     WHEN status = 'in progress' THEN 2 
                     WHEN status = 'resolved' THEN 3 
+                    WHEN status = 'Pending' THEN 1
+                    WHEN status = 'In Progress' THEN 2
+                    WHEN status = 'Resolved' THEN 3
                     ELSE 4 
                 END")
                 ->orderBy('created_at', 'desc')

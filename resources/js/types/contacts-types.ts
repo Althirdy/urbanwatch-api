@@ -6,11 +6,8 @@ export type Contact = {
     branch_unit_name: string;
     contact_person?: string;
     responder_type: string;
-    location: string;
     primary_mobile: string;
     backup_mobile?: string;
-    latitude?: number;
-    longitude?: number;
     active: boolean;
     created_at: string;
     updated_at: string;
@@ -32,6 +29,8 @@ export interface PageProps {
 
 export type ContactsPageProps = PageProps & {
     contacts: PaginatedContacts;
+    responseUnits: BranchUnitName[];
+    responderTypes: ResponderType[];
     filters: {
         search?: string;
         responder_type?: string;
@@ -50,13 +49,8 @@ export type BranchUnitName = {
     name: string;
 };
 
-export type Location = {
-    id: number;
-    name: string;
-};
-
 // Selection state for dropdowns
 export type SelectionState = {
-    value: ResponderType | BranchUnitName | Location | null;
+    value: ResponderType | BranchUnitName | null;
     open: boolean;
 };

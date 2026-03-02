@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/components/use-toast';
 import { Contact } from '@/types/contacts-types';
 import { router, useForm } from '@inertiajs/react';
-import { Archive, Phone, User, MapPin, Dot } from 'lucide-react';
+import { Archive, Dot, Phone, User } from 'lucide-react';
 import React, { useState } from 'react';
 import { getResponderTypeCardColorClass, getStatusCardColorClass } from '@/lib/badgeStyles';
 
@@ -84,10 +84,6 @@ export default function DeleteContacts({
                                     <h1 className="text-lg font-semibold truncate">
                                         {contact.branch_unit_name}
                                     </h1>
-                                    <div className="text-xs flex gap-1 text-muted-foreground">
-                                        <MapPin className="inline h-4 w-auto shrink-0" />
-                                        <p className="truncate">{contact.location}</p>
-                                    </div>
                                 </div>
                             </div>
                             <div className="flex flex-col items-end gap-2">
@@ -189,4 +185,3 @@ export default function DeleteContacts({
         </AlertDialog>
     );
 }
-

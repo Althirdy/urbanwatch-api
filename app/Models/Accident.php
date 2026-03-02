@@ -50,17 +50,15 @@ class Accident extends Model
      */
     public function getLocationFromDevice()
     {
-        if (! $this->cctvDevice || ! $this->cctvDevice->location) {
+        if (! $this->cctvDevice) {
             return null;
         }
 
-        $location = $this->cctvDevice->location;
-
         return [
-            'latitude' => $location->latitude,
-            'longitude' => $location->longitude,
-            'location_name' => $location->location_name,
-            'barangay' => $location->barangay,
+            'latitude' => $this->cctvDevice->latitude,
+            'longitude' => $this->cctvDevice->longitude,
+            'location_name' => $this->cctvDevice->location_name,
+            'barangay' => null,
         ];
     }
 }
