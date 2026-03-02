@@ -26,4 +26,3 @@ class UnregisterPushTokenRequest extends FormRequest
         ];
     }
 }
-

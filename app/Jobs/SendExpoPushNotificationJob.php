@@ -36,4 +36,3 @@ class SendExpoPushNotificationJob implements ShouldQueue
         );
     }
 }
-

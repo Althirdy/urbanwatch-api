@@ -64,4 +64,3 @@ class PushTokenController extends BaseApiController
         ], 'Push token unregistered successfully');
     }
 }
-

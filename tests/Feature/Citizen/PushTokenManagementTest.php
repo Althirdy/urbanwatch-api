@@ -122,4 +122,3 @@ class PushTokenManagementTest extends TestCase
             ->assertJsonPath('success', false);
     }
 }
-

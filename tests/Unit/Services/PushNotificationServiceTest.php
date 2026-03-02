@@ -101,4 +101,3 @@ class PushNotificationServiceTest extends TestCase
         $this->assertFalse($token->is_active);
     }
 }
-

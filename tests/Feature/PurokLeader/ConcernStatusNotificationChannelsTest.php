@@ -99,4 +99,3 @@ class ConcernStatusNotificationChannelsTest extends TestCase
         Queue::assertPushed(SendConcernStatusNotificationJob::class);
     }
 }
-

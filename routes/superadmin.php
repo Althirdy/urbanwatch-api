@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Superadmin\SystemSettingController;
 use App\Http\Controllers\Superadmin\AiLogController;
+use App\Http\Controllers\Superadmin\SystemSettingController;
 use App\Http\Controllers\Superadmin\UserController;
 use Illuminate\Support\Facades\Route;
 
