@@ -241,14 +241,9 @@ class GeminiService
     }
 
     /**
-     * Analyze image content to verify emergency validity and extract incident details.
-     *
-     * @param  string  $fileContent  Raw binary content of the image file
-     * @param  string  $mimeType  Mime type of the file (e.g., 'image/jpeg')
-     * @param  array  $context  Additional context like device location, device name
-     * @return array|null Returns array with 'is_valid', 'accident_type', 'severity', 'title', 'description', 'confidence', 'detected_objects', 'reasoning' or null on failure
+     * Analyze YOLO image and evaluate each detected class independently.
      */
-    public function analyzeImage(string $fileContent, string $mimeType, array $context = [])
+    public function analyzeYoloImage(string $fileContent, string $mimeType, array $context = [], array $detectedClasses = [])
     {
         try {
             if (! $this->apiKey) {
@@ -258,8 +253,6 @@ class GeminiService
             }
 
             $base64Data = base64_encode($fileContent);
-
-            // Build context string if provided
             $contextInfo = '';
             if (! empty($context)) {
                 $contextInfo = "\n\nContext Information:\n";
@@ -271,34 +264,36 @@ class GeminiService
                 }
             }
 
-            $prompt = $this->getImageAnalysisSystemPrompt($contextInfo);
+            $prompt = $this->getImageAnalysisSystemPrompt(
+                $contextInfo,
+                $detectedClasses,
+                (bool) config('yolo.demo_mode_enabled', false)
+            );
 
             $response = Http::timeout(60)->withHeaders([
                 'Content-Type' => 'application/json',
             ])->post("{$this->audioModel}?key={$this->apiKey}", [
-                'contents' => [
-                    [
-                        'parts' => [
-                            [
-                                'inline_data' => [
-                                    'mime_type' => $mimeType,
-                                    'data' => $base64Data,
-                                ],
-                            ],
-                            [
-                                'text' => $prompt,
+                'contents' => [[
+                    'parts' => [
+                        [
+                            'inline_data' => [
+                                'mime_type' => $mimeType,
+                                'data' => $base64Data,
                             ],
                         ],
+                        [
+                            'text' => $prompt,
+                        ],
                     ],
-                ],
+                ]],
                 'generationConfig' => [
                     'response_mime_type' => 'application/json',
-                    'temperature' => 0.2, // Lower temperature for more consistent/reliable responses
+                    'temperature' => 0.2,
                 ],
             ]);
 
             if ($response->failed()) {
-                Log::error('Gemini API Error (Image Analysis)', [
+                Log::error('Gemini API Error (YOLO Image Analysis)', [
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
@@ -307,23 +302,16 @@ class GeminiService
             }
 
             $responseData = $response->json();
-
-            // Extract the text from the response
             if (! isset($responseData['candidates'][0]['content']['parts'][0]['text'])) {
-                Log::error('Gemini API: Unexpected response format (Image Analysis)', ['response' => $responseData]);
+                Log::error('Gemini API: Unexpected response format (YOLO Image Analysis)', ['response' => $responseData]);
 
                 return null;
             }
 
-            $jsonString = $responseData['candidates'][0]['content']['parts'][0]['text'];
-
-            // Clean up any markdown code blocks if present
-            $jsonString = preg_replace('/^```json\s*|\s*```$/', '', trim($jsonString));
-
+            $jsonString = preg_replace('/^```json\s*|\s*```$/', '', trim($responseData['candidates'][0]['content']['parts'][0]['text']));
             $result = json_decode($jsonString, true);
-
             if (json_last_error() !== JSON_ERROR_NONE) {
-                Log::error('Gemini API: Failed to parse JSON response (Image Analysis)', [
+                Log::error('Gemini API: Failed to parse JSON response (YOLO Image Analysis)', [
                     'error' => json_last_error_msg(),
                     'raw' => $jsonString,
                 ]);
@@ -331,23 +319,57 @@ class GeminiService
                 return null;
             }
 
-            // Log the analysis result
-            Log::info('Gemini Image Analysis Complete', [
-                'is_valid' => $result['is_valid'] ?? false,
-                'accident_type' => $result['accident_type'] ?? null,
-                'confidence' => $result['confidence'] ?? null,
-            ]);
-
-            return $this->normalizeConcernAiResult($result);
-
+            return $this->normalizeYoloImageResult($result, $detectedClasses);
         } catch (\Exception $e) {
-            Log::error('GeminiService Exception (Image Analysis)', [
+            Log::error('GeminiService Exception (YOLO Image Analysis)', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
             return null;
         }
+    }
+
+    /**
+     * Backward-compatible image analysis adapter for existing call sites.
+     */
+    public function analyzeImage(string $fileContent, string $mimeType, array $context = [])
+    {
+        $result = $this->analyzeYoloImage($fileContent, $mimeType, $context, []);
+        if (! $result) {
+            return null;
+        }
+
+        $bestVerdict = collect($result['class_verdicts'] ?? [])
+            ->firstWhere('is_legit', true);
+
+        if (! $bestVerdict) {
+            return [
+                'is_valid' => false,
+                'accident_type' => null,
+                'severity' => null,
+                'title' => null,
+                'description' => null,
+                'confidence' => null,
+                'detected_objects' => [],
+                'reasoning' => $result['reasoning'] ?? 'No legitimate emergency detected.',
+                'class_verdicts' => $result['class_verdicts'] ?? [],
+                'raw' => $result['raw'] ?? $result,
+            ];
+        }
+
+        return [
+            'is_valid' => true,
+            'accident_type' => $bestVerdict['accident_type'],
+            'severity' => $bestVerdict['severity'],
+            'title' => $bestVerdict['title'],
+            'description' => $bestVerdict['description'],
+            'confidence' => $bestVerdict['confidence'],
+            'detected_objects' => $bestVerdict['detected_objects'],
+            'reasoning' => $bestVerdict['reasoning'],
+            'class_verdicts' => $result['class_verdicts'] ?? [],
+            'raw' => $result['raw'] ?? $result,
+        ];
     }
 
     /**
@@ -695,64 +717,118 @@ PROMPT;
      * Uses Natural Taglish (conversational, avoiding deep Tagalog) for Barangay admin readability.
      * Supports thesis diorama simulation mode with explicit class mapping: Collision, Flood, Fir.
      */
-    private function getImageAnalysisSystemPrompt(string $contextInfo = ''): string
+    private function getImageAnalysisSystemPrompt(string $contextInfo = '', array $detectedClasses = [], bool $demoMode = false): string
     {
+        $detectedClassesText = empty($detectedClasses)
+            ? 'No explicit YOLO classes provided. Infer likely emergency classes.'
+            : 'YOLO detected classes: '.implode(', ', $detectedClasses);
+        $mode = $demoMode
+            ? "MODE: DEMO/SIMULATION\n- Treat toy vehicles and diorama scenes as real emergency simulation."
+            : "MODE: REAL-WORLD\n- Do not treat toy/diorama props as real emergencies.";
+
         return <<<PROMPT
 You are the UrbanWatch Emergency Detection AI. You analyze CCTV footage and flag emergencies.
 
-MODE: DEMO/SIMULATION (Thesis Diorama Mode Enabled)
-- Treat toy vehicles, scale models, and diorama scenes AS REAL emergencies.
-- Ignore that they are toys or paper. Focus on the SCENARIO depicted.
+{$mode}
 
-YOLO CLASS MAPPING (from dataset):
-- 'Collision' or car crash/vehicle accident → accident_type: 'Accident'
-- 'Flood' or water on roads/areas → accident_type: 'Flood'
-- 'Fir' or flames/smoke → accident_type: 'Fire'
+CLASS MAPPING:
+- CarCollision/Collision -> Accident
+- Flood -> Flood
+- Fire/Fir -> Fire
 
-VALID EMERGENCIES (is_valid: true):
-- Fire: Flames, large smoke, burning structures/vehicles (real or diorama).
-- Flood: Water covering roads/areas significantly (real or diorama).
-- Accident: Vehicle collisions, debris on road (real or toy cars).
+{$detectedClassesText}
 
-FALSE ALARMS (is_valid: false):
-- Trivial fire: Lighters, candles, stove burners (unless out of control).
-- Trivial water: Wet floors, small spills, indoor puddles.
-- Normal traffic, empty roads, blurry/unclear images.
-
-OUTPUT (JSON):
-
-If VALID (is_valid: true):
+Return JSON:
 {
-  "is_valid": true,
-  "accident_type": "Fire" | "Flood" | "Accident",
-  "severity": "Low" | "Medium" | "High",
-  "title": "SYSTEM ALERT: [Type in Natural Taglish, 5-8 words]",
-  "description": "SYSTEM ALERT: [Type] IDENTIFIED. [Natural Taglish description for Barangay admin, e.g., 'May na-detect na collision sa intersection area. Based sa camera analysis, medyo malakas ang impact. Paki-deploy po ng responders asap.']",
-  "confidence": 60-100,
-  "detected_objects": ["car", "toy_car", "smoke", ...],
-  "reasoning": "English internal reasoning for logs."
-}
-
-If DIORAMA/SIMULATION (still valid, add prefix):
-- title: "DEMO: SYSTEM ALERT: [Type]"
-- description: "DEMO: SYSTEM ALERT: [Type] IDENTIFIED (Simulation). ..."
-
-If FALSE ALARM (is_valid: false):
-{
-  "is_valid": false,
-  "accident_type": null,
-  "severity": null,
-  "title": null,
-  "description": null,
-  "confidence": null,
-  "detected_objects": null,
-  "reasoning": "Explanation why it's a false alarm."
+  "overall_valid": boolean,
+  "reasoning": "Overall explanation",
+  "class_verdicts": [
+    {
+      "source_class": "CarCollision|Flood|Fire",
+      "normalized_class": "Accident|Flood|Fire",
+      "is_legit": boolean,
+      "accident_type": "Accident|Flood|Fire|null",
+      "severity": "Low|Medium|High|null",
+      "title": "short title|null",
+      "description": "short description|null",
+      "confidence": 0-100|null,
+      "detected_objects": ["..."],
+      "reasoning": "class level reasoning"
+    }
+  ]
 }
 
 {$contextInfo}
 
 Return ONLY valid JSON. Do not include markdown formatting.
 PROMPT;
+    }
+
+    private function normalizeYoloImageResult(array $result, array $detectedClasses = []): array
+    {
+        if (isset($result['is_valid'])) {
+            $legacyAccidentType = $result['accident_type'] ?? null;
+            $result['class_verdicts'] = [[
+                'source_class' => $legacyAccidentType,
+                'normalized_class' => $legacyAccidentType,
+                'is_legit' => (bool) ($result['is_valid'] ?? false),
+                'accident_type' => $legacyAccidentType,
+                'severity' => $result['severity'] ?? null,
+                'title' => $result['title'] ?? null,
+                'description' => $result['description'] ?? null,
+                'confidence' => $result['confidence'] ?? null,
+                'detected_objects' => $result['detected_objects'] ?? [],
+                'reasoning' => $result['reasoning'] ?? null,
+            ]];
+            $result['overall_valid'] = (bool) ($result['is_valid'] ?? false);
+        }
+
+        $verdicts = collect($result['class_verdicts'] ?? [])->map(function ($item) {
+            $normalizedClass = $item['normalized_class'] ?? $item['accident_type'] ?? null;
+            $accidentType = $item['accident_type'] ?? $normalizedClass;
+            if ($accidentType === 'CarCollision') {
+                $accidentType = 'Accident';
+            }
+
+            return [
+                'source_class' => $item['source_class'] ?? $normalizedClass,
+                'normalized_class' => $normalizedClass,
+                'is_legit' => (bool) ($item['is_legit'] ?? false),
+                'accident_type' => $accidentType,
+                'severity' => $item['severity'] ?? null,
+                'title' => $item['title'] ?? null,
+                'description' => $item['description'] ?? null,
+                'confidence' => isset($item['confidence']) ? (float) $item['confidence'] : null,
+                'detected_objects' => $item['detected_objects'] ?? [],
+                'reasoning' => $item['reasoning'] ?? null,
+            ];
+        })->values()->toArray();
+
+        if (empty($verdicts) && ! empty($detectedClasses)) {
+            $verdicts = collect($detectedClasses)->map(function ($detectedClass) {
+                $accidentType = $detectedClass === 'CarCollision' ? 'Accident' : $detectedClass;
+
+                return [
+                    'source_class' => $detectedClass,
+                    'normalized_class' => $accidentType,
+                    'is_legit' => false,
+                    'accident_type' => $accidentType,
+                    'severity' => null,
+                    'title' => null,
+                    'description' => null,
+                    'confidence' => null,
+                    'detected_objects' => [],
+                    'reasoning' => 'Gemini did not return class verdict.',
+                ];
+            })->toArray();
+        }
+
+        return [
+            'overall_valid' => (bool) ($result['overall_valid'] ?? collect($verdicts)->contains(fn ($v) => $v['is_legit'])),
+            'reasoning' => $result['reasoning'] ?? null,
+            'class_verdicts' => $verdicts,
+            'raw' => $result,
+        ];
     }
 
     /**

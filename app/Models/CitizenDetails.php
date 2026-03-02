@@ -23,6 +23,7 @@ class CitizenDetails extends Model
         'province',
         'postal_code',
         'is_verified',
+        'status',
     ];
 
     protected $casts = [

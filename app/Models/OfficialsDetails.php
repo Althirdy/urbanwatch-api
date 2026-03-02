@@ -10,6 +10,7 @@ class OfficialsDetails extends Model
 
     protected $fillable = [
         'user_id',
+        'id_number',
         'purok_id',
         'first_name',
         'middle_name',
@@ -20,6 +21,7 @@ class OfficialsDetails extends Model
         'assigned_brgy',
         'latitude',
         'longitude',
+        'status',
     ];
 
     /**

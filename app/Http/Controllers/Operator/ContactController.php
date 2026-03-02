@@ -23,7 +23,7 @@ class ContactController extends Controller
         }
 
         $page = $request->get('page', 1);
-        $cacheKey = "contacts_list_page_{$page}";
+        $cacheKey = "contacts_list_v2_page_{$page}";
 
         $cachedData = \Illuminate\Support\Facades\Cache::tags(['contacts'])->remember($cacheKey, now()->addHours(1), function () use ($request) {
             return $this->getFilteredContacts($request);
@@ -69,8 +69,8 @@ class ContactController extends Controller
             ->values()
             ->toArray();
 
-        // Fetch distinct branch/unit names
-        $branchUnitNames = Contact::select('branch_unit_name')
+        // Fetch distinct response units
+        $responseUnits = Contact::select('branch_unit_name')
             ->distinct()
             ->whereNotNull('branch_unit_name')
             ->orderBy('branch_unit_name')
@@ -92,7 +92,7 @@ class ContactController extends Controller
         return [
             'contacts' => $contacts,
             'responderTypes' => $responderTypes,
-            'branchUnitNames' => $branchUnitNames,
+            'responseUnits' => $responseUnits,
             'statuses' => $statuses,
         ];
     }

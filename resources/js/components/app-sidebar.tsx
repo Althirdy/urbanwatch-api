@@ -19,6 +19,7 @@ import {
 import { type NavItem, SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
+    BrainCircuit,
     File,
     FlagTriangleRight,
     Folder,
@@ -67,6 +68,11 @@ const superadminNavItems: NavItem[] = [
         title: 'Users',
         href: users().url,
         icon: User,
+    },
+    {
+        title: 'AI Logs',
+        href: '/ai-logs',
+        icon: BrainCircuit,
     },
     {
         title: 'System Config',

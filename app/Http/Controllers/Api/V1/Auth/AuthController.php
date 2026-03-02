@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Http\Requests\Api\V1\Auth\LoginRequest;
 use App\Http\Requests\Api\V1\Auth\PurokLeaderLoginRequest;
 use App\Http\Requests\Api\V1\Auth\RegisterRequest;
+use App\Http\Requests\Api\V1\Auth\VerifyPurokLeaderIdRequest;
 use App\Http\Resources\Api\V1\AuthUserResource;
 use App\Services\AbstractApiService;
 use App\Services\AuthService;
@@ -179,10 +180,10 @@ class AuthController extends BaseApiController
         $validated = $request->validated();
 
         try {
-            $authData = $this->authService->loginPurokLeader($validated['pin']);
+            $authData = $this->authService->loginPurokLeader($validated['id_number'], $validated['pin']);
 
             if (! $authData) {
-                throw new UrbanWatchException('Invalid PIN');
+                throw new UrbanWatchException('Invalid ID Number or PIN');
             }
 
             $user = $authData['user'];
@@ -199,7 +200,30 @@ class AuthController extends BaseApiController
         } catch (UrbanWatchException $e) {
             throw $e;
         } catch (\Exception $e) {
-            return $this->sendUnauthorized(message: 'Invalid PIN');
+            return $this->sendUnauthorized(message: 'Invalid ID Number or PIN');
+        }
+    }
+
+    // Verify Purok Leader ID Number (Step 1 of 2-step login)
+    public function verifyPurokLeaderId(VerifyPurokLeaderIdRequest $request): \Illuminate\Http\JsonResponse
+    {
+        $validated = $request->validated();
+
+        try {
+            $result = $this->authService->verifyPurokLeaderId($validated['id_number']);
+
+            if (! $result) {
+                throw new UrbanWatchException('ID Number not found. Please check and try again.');
+            }
+
+            return $this->sendResponse([
+                'name' => $result['name'],
+                'id_number' => $result['id_number'],
+            ], 'ID Number verified successfully');
+        } catch (UrbanWatchException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return $this->sendError('Verification failed. Please try again.', 500);
         }
     }
 

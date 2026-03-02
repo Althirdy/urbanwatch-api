@@ -24,6 +24,7 @@ class PurokLeaderLoginRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'id_number' => 'required|string',
             'pin' => 'required|string',
         ];
     }
@@ -32,6 +33,7 @@ class PurokLeaderLoginRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'id_number.required' => 'ID Number is required.',
             'pin.required' => 'PIN is required.',
         ];
     }

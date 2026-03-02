@@ -6,6 +6,6 @@ use Illuminate\Support\Facades\Route;
 // Contact Routes
 Route::middleware(['auth:sanctum', 'ability.access'])->group(function () {
 
-    // // CRUD operations for contacts
-    // Route::apiResource('contacts', ContactController::class);
+    // CRUD operations for contacts
+    Route::apiResource('contacts', ContactController::class);
 });

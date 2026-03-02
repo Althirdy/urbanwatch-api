@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Crypt;
@@ -202,5 +203,10 @@ class User extends Authenticatable
         return $this->hasOne(UserSuspension::class)
             ->where('status', 'active')
             ->orderBy('created_at', 'desc');
+    }
+
+    public function pushTokens(): HasMany
+    {
+        return $this->hasMany(UserPushToken::class);
     }
 }

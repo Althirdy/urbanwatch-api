@@ -98,7 +98,7 @@ class PurokLeaderValidationTest extends TestCase
     public function test_operator_can_update_purok_leader_with_same_phone_number(): void
     {
         $operator = $this->createOperator();
-        $leader = $this->createPurokLeader('09111111111');
+        $leader = $this->createPurokLeader('09111111111', 'leader@example.com', 'PL-0001');
 
         $response = $this->actingAs($operator)->put("/user/{$leader->id}", [
             'first_name' => 'Updated',
@@ -114,6 +114,7 @@ class PurokLeaderValidationTest extends TestCase
             'latitude' => '',
             'longitude' => '',
             'purok_id' => '',
+            'id_number' => 'PL-0001',
         ]);
 
         $response->assertSessionDoesntHaveErrors();
@@ -122,8 +123,8 @@ class PurokLeaderValidationTest extends TestCase
     public function test_operator_cannot_update_purok_leader_to_duplicate_phone_number(): void
     {
         $operator = $this->createOperator();
-        $leader = $this->createPurokLeader('09111111111');
-        $this->createPurokLeader('09222222222', 'other.leader@example.com');
+        $leader = $this->createPurokLeader('09111111111', 'leader@example.com', 'PL-0002');
+        $this->createPurokLeader('09222222222', 'other.leader@example.com', 'PL-0003');
 
         $response = $this->actingAs($operator)->put("/user/{$leader->id}", [
             'first_name' => 'Updated',
@@ -139,6 +140,7 @@ class PurokLeaderValidationTest extends TestCase
             'latitude' => '',
             'longitude' => '',
             'purok_id' => '',
+            'id_number' => 'PL-0002',
         ]);
 
         $response->assertSessionHasErrors('phone_number');
@@ -152,7 +154,7 @@ class PurokLeaderValidationTest extends TestCase
         ]);
     }
 
-    private function createPurokLeader(string $phone, string $email = 'leader@example.com'): User
+    private function createPurokLeader(string $phone, string $email = 'leader@example.com', string $idNumber = 'PL-TEST-DEFAULT'): User
     {
         $leader = User::factory()->create([
             'role_id' => $this->purokLeaderRole->id,
@@ -163,6 +165,7 @@ class PurokLeaderValidationTest extends TestCase
 
         OfficialsDetails::create([
             'user_id' => $leader->id,
+            'id_number' => $idNumber,
             'first_name' => 'Purok',
             'middle_name' => '',
             'last_name' => 'Leader',
@@ -187,10 +190,9 @@ class PurokLeaderValidationTest extends TestCase
             'email' => 'new.leader@example.com',
             'phone_number' => '09123456789',
             'role_id' => $this->purokLeaderRole->id,
+            'id_number' => 'PL-NEW-0001',
             'assigned_brgy' => 'Barangay 176-E',
             'office_address' => 'HQ',
-            'password' => '1234',
-            'password_confirmation' => '1234',
             'latitude' => '',
             'longitude' => '',
             'purok_id' => '',

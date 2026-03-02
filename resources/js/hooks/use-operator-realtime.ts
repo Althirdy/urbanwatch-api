@@ -14,7 +14,8 @@ interface AccidentData {
     id: number;
     title: string;
     description: string;
-    accident_type: string;
+    accident_type?: string;
+    accidentType?: string;
 }
 
 export function useOperatorRealtime(isOperator: boolean) {
@@ -49,7 +50,7 @@ export function useOperatorRealtime(isOperator: boolean) {
 
             toast({
                 title: '🚨 New Accident Detected!',
-                description: `${data.title} - ${data.accident_type.toUpperCase()}`,
+                description: `${data.title} - ${(data.accidentType || data.accident_type || 'ACCIDENT').toUpperCase()}`,
                 variant: 'destructive',
             });
 

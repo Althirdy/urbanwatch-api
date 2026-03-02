@@ -7,7 +7,8 @@ interface AccidentData {
     id: number;
     title: string;
     description: string;
-    accident_type: string;
+    accident_type?: string;
+    accidentType?: string;
     latitude: string;
     longitude: string;
     status: string;

@@ -72,6 +72,10 @@ class UserRequest extends FormRequest
             'assigned_brgy' => 'nullable|string|max:255',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
+            // ID Number for Purok Leaders (no length restriction, just unique)
+            'id_number' => $isPurokLeader
+                ? ['required', 'string', $isUpdate ? 'unique:officials_details,id_number,'.$userId.',user_id' : 'unique:officials_details,id_number']
+                : 'nullable',
         ];
     }
 
@@ -122,6 +126,8 @@ class UserRequest extends FormRequest
             'latitude.between' => 'Latitude must be between -90 and 90.',
             'longitude.numeric' => 'Longitude must be a valid number.',
             'longitude.between' => 'Longitude must be between -180 and 180.',
+            'id_number.required' => 'ID Number is required for Purok Leader.',
+            'id_number.unique' => 'This ID Number is already in use by another Purok Leader.',
         ];
     }
 

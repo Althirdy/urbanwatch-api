@@ -270,6 +270,7 @@ class UserController extends Controller
                 // Operator or Purok Leader - create OfficialsDetails
                 OfficialsDetails::create([
                     'user_id' => $user->id,
+                    'id_number' => $validated['id_number'] ?? null,
                     'purok_id' => $validated['purok_id'] ?? null, // Save Purok ID
                     'first_name' => $validated['first_name'],
                     'middle_name' => $validated['middle_name'],
@@ -280,6 +281,7 @@ class UserController extends Controller
                     'assigned_brgy' => $validated['assigned_brgy'] ?? $validated['barangay'] ?? '',
                     'latitude' => $validated['latitude'] ?? null,
                     'longitude' => $validated['longitude'] ?? null,
+                    'status' => 'active',
                 ]);
 
                 // For Purok Leaders, create initial PIN log entry
@@ -307,6 +309,7 @@ class UserController extends Controller
                     'province' => $validated['province'],
                     'postal_code' => $validated['postal_code'],
                     'is_verified' => false, // Default to unverified
+                    'status' => 'active',
                 ]);
             }
 
@@ -387,6 +390,7 @@ class UserController extends Controller
                 $officialDetails = $user->officialDetails()->updateOrCreate(
                     ['user_id' => $user->id],
                     [
+                        'id_number' => $validated['id_number'] ?? null,
                         'purok_id' => $validated['purok_id'] ?? null, // Update Purok ID
                         'first_name' => $validated['first_name'],
                         'middle_name' => $validated['middle_name'],

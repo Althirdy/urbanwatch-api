@@ -58,6 +58,8 @@ class YoloAccidentController extends BaseApiController
                 'snapshot' => 'required|file|image|max:10240', // Max 10MB
                 'device_id' => 'required|integer|exists:cctv_devices,id',
                 'detected_at' => 'nullable|date',
+                'detected_classes' => 'nullable|array',
+                'detected_classes.*' => 'string|in:CarCollision,Flood,Fire,Accident',
             ]);
 
             if ($validator->fails()) {
@@ -68,6 +70,7 @@ class YoloAccidentController extends BaseApiController
             $file = $request->file('snapshot');
             $deviceId = $request->input('device_id');
             $detectedAt = $request->input('detected_at');
+            $detectedClasses = $request->input('detected_classes', []);
 
             // Store file temporarily for async processing
             $tempPath = $file->store('temp_yolo', 'local');
@@ -75,6 +78,7 @@ class YoloAccidentController extends BaseApiController
             Log::info('YOLO Snapshot received - dispatching async job', [
                 'deviceId' => $deviceId,
                 'detectedAt' => $detectedAt,
+                'detectedClasses' => $detectedClasses,
                 'tempPath' => $tempPath,
                 'fileSize' => $file->getSize(),
             ]);
@@ -86,7 +90,8 @@ class YoloAccidentController extends BaseApiController
                 $detectedAt,
                 $file->getClientOriginalName(),
                 $file->getMimeType() ?? 'image/jpeg',
-                $file->getSize()
+                $file->getSize(),
+                $detectedClasses
             );
 
             // Return immediately with 202 Accepted
