@@ -224,6 +224,80 @@ class ConcernManagementTest extends TestCase
         Queue::assertPushed(ProcessVoiceConcernJob::class);
     }
 
+    public function test_can_submit_voice_concern_with_m4a_extension_and_generic_mime()
+    {
+        Sanctum::actingAs($this->citizen, ['*']);
+
+        $file = UploadedFile::fake()->create('voice.m4a', 100, 'application/octet-stream');
+
+        $payload = [
+            'type' => 'voice',
+            'category' => 'safety',
+            'files' => [$file],
+            'latitude' => 14.7785335,
+            'longitude' => 121.1210474,
+        ];
+
+        $response = $this->post('/api/v1/concerns', $payload, ['Accept' => 'application/json']);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('message', 'Concern submitted successfully!');
+
+        $concern = Concern::query()
+            ->where('citizen_id', $this->citizen->id)
+            ->where('type', 'voice')
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($concern);
+
+        $this->assertDatabaseHas('incident_media', [
+            'source_type' => Concern::class,
+            'source_id' => $concern->id,
+            'media_type' => 'audio',
+        ]);
+    }
+
+    public function test_can_submit_voice_concern_with_3gp_audio_mime()
+    {
+        Sanctum::actingAs($this->citizen, ['*']);
+
+        $file = UploadedFile::fake()->create('voice.3gp', 100, 'audio/3gpp');
+
+        $payload = [
+            'type' => 'voice',
+            'category' => 'safety',
+            'files' => [$file],
+            'latitude' => 14.7785335,
+            'longitude' => 121.1210474,
+        ];
+
+        $response = $this->post('/api/v1/concerns', $payload, ['Accept' => 'application/json']);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('message', 'Concern submitted successfully!');
+    }
+
+    public function test_voice_concern_rejects_unsupported_file_type()
+    {
+        Sanctum::actingAs($this->citizen, ['*']);
+
+        $file = UploadedFile::fake()->create('voice.txt', 100, 'text/plain');
+
+        $payload = [
+            'type' => 'voice',
+            'category' => 'safety',
+            'files' => [$file],
+            'latitude' => 14.7785335,
+            'longitude' => 121.1210474,
+        ];
+
+        $response = $this->postJson('/api/v1/concerns', $payload);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['files.0']);
+    }
+
     public function test_voice_concern_requires_exactly_one_audio_file()
     {
         Sanctum::actingAs($this->citizen, ['*']);
