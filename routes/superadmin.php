@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Superadmin\SystemSettingController;
+use App\Http\Controllers\Superadmin\AiLogController;
 use App\Http\Controllers\Superadmin\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,7 @@ Route::middleware(['auth', 'verified', 'role:operator,superadmin'])->group(funct
 });
 
 Route::middleware(['auth', 'verified', 'role:superadmin'])->group(function () {
+    Route::get('ai-logs', [AiLogController::class, 'index'])->name('ai-logs.index');
     Route::get('system-settings', [SystemSettingController::class, 'index'])->name('system-settings.index');
     Route::patch('system-settings', [SystemSettingController::class, 'update'])->name('system-settings.update');
 });

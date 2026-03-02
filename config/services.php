@@ -52,6 +52,9 @@ return [
         'device_id' => env('TEXTBEE_DEVICE_ID'),
         'sms_notification_enabled' => env('TEXTBEE_SMS_NOTIFICATION_ENABLED', true),
     ],
+    'expo' => [
+        'access_token' => env('EXPO_ACCESS_TOKEN'),
+    ],
 
     // YOLO Python Script API Key
     'yolo_api_key' => env('YOLO_API_KEY'),

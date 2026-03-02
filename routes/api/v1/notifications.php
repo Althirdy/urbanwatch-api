@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\PushTokenController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -17,7 +18,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
 
     // PUT /api/v1/notifications/{id}/read - Mark as read
-    Route::put('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::put('notifications/{id}/read', [NotificationController::class, 'markAsRead'])
+        ->whereNumber('id');
 
     // PUT /api/v1/notifications/mark-all-read - Mark all as read
     Route::put('notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
@@ -27,5 +29,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('notifications/clear', [NotificationController::class, 'clearAll']);
 
     // DELETE /api/v1/notifications/{id} - Delete a notification
-    Route::delete('notifications/{id}', [NotificationController::class, 'destroy']);
+    Route::delete('notifications/{id}', [NotificationController::class, 'destroy'])
+        ->whereNumber('id');
+});
+
+Route::middleware(['auth:sanctum', 'ability.access'])->group(function () {
+    // POST /api/v1/notifications/push-token - Register/upsert a device token
+    Route::post('notifications/push-token', [PushTokenController::class, 'register']);
+
+    // DELETE /api/v1/notifications/push-token - Deactivate a device token
+    Route::delete('notifications/push-token', [PushTokenController::class, 'unregister']);
 });

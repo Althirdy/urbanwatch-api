@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Operator;
 
 use App\Http\Controllers\Controller;
 use App\Models\Accident;
-use App\Models\FalseAlarm;
 use App\Models\PublicPost;
 use App\Models\Report;
 use App\Models\User;
@@ -20,74 +19,33 @@ class ReportController extends Controller
 
     public function index(Request $request): Response
     {
-        $viewType = $request->input('view', 'incidents'); // 'incidents' or 'false_alarms'
+        // Get accidents with media and cctv device
+        $query = Accident::with(['media', 'cctvDevice']);
 
-        if ($viewType === 'false_alarms') {
-            $query = FalseAlarm::with(['cctvDevice']);
-
-            // Search functionality for False Alarms
-            if ($request->has('search') && $request->search) {
-                $searchTerm = $request->search;
-                $query->where(function ($q) use ($searchTerm) {
-                    $q->where('gemini_reasoning', 'like', "%{$searchTerm}%")
-                        ->orWhere('attempted_accident_type', 'like', "%{$searchTerm}%");
-                });
-            }
-
-            $reports = $query->orderBy('created_at', 'desc')
-                ->paginate(10)
-                ->withQueryString();
-
-            $reports->getCollection()->transform(function ($alarm) {
-                $displayLocation = $alarm->cctvDevice?->location_name;
-
-                return [
-                    'id' => $alarm->id,
-                    'report_type' => ucfirst($alarm->attempted_accident_type ?? 'Unknown'),
-                    'transcript' => 'AI: False Alarm Detected',
-                    'description' => $alarm->gemini_reasoning,
-                    'latitude' => 0,
-                    'longtitude' => 0,
-                    'location_name' => $displayLocation,
-                    'is_acknowledge' => true, // False alarms are auto-acknowledged/ignored
-                    'status' => 'False Alarm',
-                    'created_at' => $alarm->created_at,
-                    'updated_at' => $alarm->updated_at,
-                    'user' => null,
-                    'acknowledgedBy' => null,
-                    'media' => [], // No media for false alarms
-                ];
+        // Search functionality
+        if ($request->has('search') && $request->search) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', "%{$searchTerm}%")
+                    ->orWhere('description', 'like', "%{$searchTerm}%")
+                    ->orWhere('accident_type', 'like', "%{$searchTerm}%");
             });
-        } else {
-            // Get accidents with media and cctv device
-            $query = Accident::with(['media', 'cctvDevice']);
+        }
 
-            // Search functionality
-            if ($request->has('search') && $request->search) {
-                $searchTerm = $request->search;
-                $query->where(function ($q) use ($searchTerm) {
-                    $q->where('title', 'like', "%{$searchTerm}%")
-                        ->orWhere('description', 'like', "%{$searchTerm}%")
-                        ->orWhere('accident_type', 'like', "%{$searchTerm}%");
-                });
-            }
+        // Filter by accident type
+        if ($request->has('report_type') && $request->report_type) {
+            $query->where('accident_type', $request->report_type);
+        }
 
-            // Filter by accident type
-            if ($request->has('report_type') && $request->report_type) {
-                $query->where('accident_type', $request->report_type);
-            }
+        // Filter by status
+        if ($request->has('acknowledged') && $request->acknowledged !== '') {
+            $statusFilter = $request->acknowledged === 'true' ? 'resolved' : 'pending';
+            $query->where('status', $statusFilter);
+        }
 
-            // Filter by status
-            if ($request->has('acknowledged') && $request->acknowledged !== '') {
-                $statusFilter = $request->acknowledged === 'true'
-                    ? ['Resolved', 'resolved']
-                    : ['Pending', 'pending'];
-                $query->whereIn('status', $statusFilter);
-            }
-
-            // Order by status (pending first, then in progress, then resolved last) and then by created_at
-            $accidents = $query
-                ->orderByRaw("CASE 
+        // Order by status (pending first, then in progress, then resolved last) and then by created_at
+        $accidents = $query
+            ->orderByRaw("CASE 
                     WHEN status = 'pending' THEN 1 
                     WHEN status = 'in progress' THEN 2 
                     WHEN status = 'resolved' THEN 3 
@@ -96,50 +54,48 @@ class ReportController extends Controller
                     WHEN status = 'Resolved' THEN 3
                     ELSE 4 
                 END")
-                ->orderBy('created_at', 'desc')
-                ->paginate(10)
-                ->withQueryString();
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->withQueryString();
 
-            // Transform accidents data to match reports structure
-            $accidents->getCollection()->transform(function ($accident) {
-                // Get location from CCTV device
-                $displayLocation = $accident->cctvDevice?->location_name;
+        // Transform accidents data to match reports structure
+        $accidents->getCollection()->transform(function ($accident) {
+            // Get location from CCTV device
+            $displayLocation = $accident->cctvDevice?->location_name;
 
-                // Normalize status: convert "In Progress" to "Ongoing" for consistency
-                $status = $accident->status;
-                if (strtolower($status) === 'in progress') {
-                    $status = 'Ongoing';
-                } else {
-                    $status = ucfirst(strtolower($status)); // Normalize case: pending -> Pending, resolved -> Resolved
-                }
+            // Normalize status: convert "In Progress" to "Ongoing" for consistency
+            $status = $accident->status;
+            if (strtolower($status) === 'in progress') {
+                $status = 'Ongoing';
+            } else {
+                $status = ucfirst(strtolower($status)); // Normalize case: pending -> Pending, resolved -> Resolved
+            }
 
-                return [
-                    'id' => $accident->id,
-                    'report_type' => ucfirst($accident->accident_type),
-                    'transcript' => $accident->title,
-                    'description' => $accident->description,
-                    'latitude' => $accident->latitude,
-                    'longtitude' => $accident->longitude,
-                    'location_name' => $displayLocation,
-                    'is_acknowledge' => strtolower($accident->status) !== 'pending',
-                    'status' => $status,
-                    'created_at' => $accident->created_at,
-                    'updated_at' => $accident->updated_at,
-                    'user' => null, // Accidents don't have users (YOLO detected)
-                    'acknowledgedBy' => null,
-                    'media' => $accident->media->map(function ($media) {
-                        return $media->original_path;
-                    })->toArray(),
-                ];
-            });
+            return [
+                'id' => $accident->id,
+                'report_type' => ucfirst($accident->accident_type),
+                'transcript' => $accident->title,
+                'description' => $accident->description,
+                'latitude' => $accident->latitude,
+                'longtitude' => $accident->longitude,
+                'location_name' => $displayLocation,
+                'is_acknowledge' => strtolower($accident->status) !== 'pending',
+                'status' => $status,
+                'created_at' => $accident->created_at,
+                'updated_at' => $accident->updated_at,
+                'user' => null, // Accidents don't have users (YOLO detected)
+                'acknowledgedBy' => null,
+                'media' => $accident->media->map(function ($media) {
+                    return $media->original_path;
+                })->toArray(),
+            ];
+        });
 
-            $reports = $accidents;
-        }
+        $reports = $accidents;
 
         return Inertia::render('reports', [
             'reports' => $reports,
-            'currentView' => $viewType,
-            'filters' => $request->only(['search', 'report_type', 'acknowledged', 'view']),
+            'filters' => $request->only(['search', 'report_type', 'acknowledged']),
             'reportTypes' => ['Accident', 'Fire', 'Flood'], // Accident types
             'statusOptions' => ['pending', 'in progress', 'resolved'],
         ]);

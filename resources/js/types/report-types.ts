@@ -27,12 +27,10 @@ export type ReportsProps = {
         prev_page_url: string | null;
         next_page_url: string | null;
     };
-    currentView?: 'incidents' | 'false_alarms';
     filters: {
         search?: string;
         report_type?: string;
         acknowledged?: string;
-        view?: string;
     };
     reportTypes: string[];
 };
