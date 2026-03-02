@@ -20,6 +20,7 @@ class OfficialsDetails extends Model
         'assigned_brgy',
         'latitude',
         'longitude',
+        'status',
     ];
 
     /**

@@ -61,6 +61,7 @@ const UserActionTab = ({
         { value: 'active', label: 'Active' },
         { value: 'inactive', label: 'Inactive' },
         { value: 'suspended', label: 'Suspended' },
+        { value: 'archived', label: 'Archived' },
     ];
 
     // Filter displayed users based on selected filters

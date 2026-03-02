@@ -19,19 +19,19 @@ class UserController extends Controller
 {
     private function normalizePhilippineMobileNumber(?string $rawPhone): ?string
     {
-        if (! is_string($rawPhone) || trim($rawPhone) === '') {
+        if (!is_string($rawPhone) || trim($rawPhone) === '') {
             return null;
         }
 
         $digits = preg_replace('/\D+/', '', $rawPhone);
-        if (! $digits) {
+        if (!$digits) {
             return null;
         }
 
         if (str_starts_with($digits, '63') && strlen($digits) === 12) {
-            $digits = '0'.substr($digits, 2);
+            $digits = '0' . substr($digits, 2);
         } elseif (str_starts_with($digits, '9') && strlen($digits) === 10) {
-            $digits = '0'.$digits;
+            $digits = '0' . $digits;
         }
 
         return $digits;
@@ -57,7 +57,7 @@ class UserController extends Controller
 
     private function resolveRoleIdsByNames(array $names): array
     {
-        return Roles::whereIn('name', $names)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        return Roles::whereIn('name', $names)->pluck('id')->map(fn($id) => (int) $id)->all();
     }
 
     private function allowedIndexRoleIds(): array
@@ -101,21 +101,21 @@ class UserController extends Controller
 
     private function ensureCanCreateRole(int $roleId): void
     {
-        if (! in_array($roleId, $this->allowedCreateRoleIds(), true)) {
+        if (!in_array($roleId, $this->allowedCreateRoleIds(), true)) {
             abort(403, 'Unauthorized action.');
         }
     }
 
     private function ensureCanEditUser(User $user): void
     {
-        if (! in_array((int) $user->role_id, $this->allowedEditableTargetRoleIds(), true)) {
+        if (!in_array((int) $user->role_id, $this->allowedEditableTargetRoleIds(), true)) {
             abort(403, 'Unauthorized action.');
         }
     }
 
     private function ensureCanViewUser(User $user): void
     {
-        if (! in_array((int) $user->role_id, $this->allowedIndexRoleIds(), true)) {
+        if (!in_array((int) $user->role_id, $this->allowedIndexRoleIds(), true)) {
             abort(403, 'Unauthorized action.');
         }
     }
@@ -125,7 +125,7 @@ class UserController extends Controller
         $user->loadMissing('role:id,name');
         $targetRole = strtolower((string) ($user->role?->name ?? ''));
 
-        if (! $this->isOperatorActor() || $targetRole !== 'citizen') {
+        if (!$this->isOperatorActor() || $targetRole !== 'citizen') {
             abort(403, 'Unauthorized action.');
         }
     }
@@ -135,7 +135,7 @@ class UserController extends Controller
         $user->loadMissing('role:id,name');
         $targetRole = strtolower((string) ($user->role?->name ?? ''));
 
-        if (! $this->isSuperadminActor() || $targetRole !== 'operator') {
+        if (!$this->isSuperadminActor() || $targetRole !== 'operator') {
             abort(403, 'Unauthorized action.');
         }
     }
@@ -228,8 +228,8 @@ class UserController extends Controller
 
         // Combine names for the user table
         $validated['name'] = trim(
-            $validated['first_name'].' '.
-            ($validated['middle_name'] ? $validated['middle_name'].'. ' : '').
+            $validated['first_name'] . ' ' .
+            ($validated['middle_name'] ? $validated['middle_name'] . '. ' : '') .
             $validated['last_name']
         );
 
@@ -280,6 +280,7 @@ class UserController extends Controller
                     'assigned_brgy' => $validated['assigned_brgy'] ?? $validated['barangay'] ?? '',
                     'latitude' => $validated['latitude'] ?? null,
                     'longitude' => $validated['longitude'] ?? null,
+                    'status' => 'active',
                 ]);
 
                 // For Purok Leaders, create initial PIN log entry
@@ -307,6 +308,7 @@ class UserController extends Controller
                     'province' => $validated['province'],
                     'postal_code' => $validated['postal_code'],
                     'is_verified' => false, // Default to unverified
+                    'status' => 'active',
                 ]);
             }
 
@@ -325,11 +327,11 @@ class UserController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Failed to create user: '.$e->getMessage());
-            \Log::error('Stack trace: '.$e->getTraceAsString());
+            \Log::error('Failed to create user: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
 
             return back()
-                ->withErrors(['error' => 'Failed to create user: '.$e->getMessage()])
+                ->withErrors(['error' => 'Failed to create user: ' . $e->getMessage()])
                 ->withInput();
         }
     }
@@ -365,8 +367,8 @@ class UserController extends Controller
 
         // Combine names for the user table
         $validated['name'] = trim(
-            $validated['first_name'].' '.
-            ($validated['middle_name'] ? $validated['middle_name'].' ' : '').
+            $validated['first_name'] . ' ' .
+            ($validated['middle_name'] ? $validated['middle_name'] . ' ' : '') .
             $validated['last_name']
         );
 
@@ -513,8 +515,8 @@ class UserController extends Controller
                     if ($suspension->suspendedBy?->officialDetails) {
                         $details = $suspension->suspendedBy->officialDetails;
                         $adminName = trim(
-                            $details->first_name.' '.
-                            ($details->middle_name ? $details->middle_name.' ' : '').
+                            $details->first_name . ' ' .
+                            ($details->middle_name ? $details->middle_name . ' ' : '') .
                             $details->last_name
                         );
                     }
@@ -576,7 +578,7 @@ class UserController extends Controller
             $allowedTypes = array_column($availablePunishments, 'type');
             \Log::info('Allowed types', ['allowed' => $allowedTypes, 'requested' => $validated['punishment_type']]);
 
-            if (! in_array($validated['punishment_type'], $allowedTypes)) {
+            if (!in_array($validated['punishment_type'], $allowedTypes)) {
                 \Log::warning('Punishment type not allowed');
 
                 return back()->withErrors(['error' => 'This punishment type is not available for this user.']);
@@ -636,7 +638,7 @@ class UserController extends Controller
                 'line' => $e->getLine(),
             ]);
 
-            return back()->withErrors(['error' => 'Failed to apply suspension: '.$e->getMessage()]);
+            return back()->withErrors(['error' => 'Failed to apply suspension: ' . $e->getMessage()]);
         }
     }
 
@@ -649,7 +651,7 @@ class UserController extends Controller
         try {
             $activeSuspension = UserSuspension::getActiveSuspension($user->id);
 
-            if (! $activeSuspension) {
+            if (!$activeSuspension) {
                 return back()->with('error', 'No active suspension found for this user.');
             }
 
@@ -776,13 +778,13 @@ class UserController extends Controller
     {
         // Ensure the target is a Purok Leader
         $purokLeaderRoleIds = $this->resolveRoleIdsByNames(['Purok Leader']);
-        if (! in_array((int) $user->role_id, $purokLeaderRoleIds, true)) {
+        if (!in_array((int) $user->role_id, $purokLeaderRoleIds, true)) {
             return back()->withErrors(['error' => 'Only Purok Leader PINs can be reset using this method.']);
         }
 
         // Verify the operator's password
         $operator = auth()->user();
-        if (! Hash::check($request->operator_password, $operator->password)) {
+        if (!Hash::check($request->operator_password, $operator->password)) {
             return back()->withErrors(['operator_password' => 'Incorrect password. Please try again.']);
         }
 
@@ -825,7 +827,7 @@ class UserController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Failed to reset Purok Leader PIN: '.$e->getMessage());
+            \Log::error('Failed to reset Purok Leader PIN: ' . $e->getMessage());
 
             return back()->with('error', 'Failed to reset PIN. Please try again.');
         }
