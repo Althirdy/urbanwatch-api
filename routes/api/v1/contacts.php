@@ -7,5 +7,5 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth:sanctum', 'ability.access'])->group(function () {
 
     // CRUD operations for contacts
-    Route::apiResource('contacts', ContactController::class);
+    Route::apiResource('contacts', ContactController::class)->names('api.v1.contacts');
 });
