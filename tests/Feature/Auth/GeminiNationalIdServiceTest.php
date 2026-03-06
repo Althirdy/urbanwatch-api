@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\SystemSetting;
 use App\Services\GeminiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -40,10 +39,8 @@ class GeminiNationalIdServiceTest extends TestCase
         $this->assertArrayHasKey('postalCode', $result['data']);
     }
 
-    public function test_analyze_national_id_applies_phase9_restriction_with_address_fallback(): void
+    public function test_analyze_national_id_does_not_apply_registration_gate_in_gemini_response(): void
     {
-        SystemSetting::set('restrict_registration_to_brgy_176', 'true');
-
         Http::fake([
             'generativelanguage.googleapis.com/*' => Http::response([
                 'candidates' => [[
@@ -68,7 +65,7 @@ class GeminiNationalIdServiceTest extends TestCase
 
         $result = (new GeminiService)->analyzeNationalId('fake-image-content', 'image/jpeg');
 
-        $this->assertTrue($result['isOutsideAllowedArea']);
-        $this->assertNotNull($result['locationRestrictionReason']);
+        $this->assertFalse($result['isOutsideAllowedArea']);
+        $this->assertNull($result['locationRestrictionReason']);
     }
 }

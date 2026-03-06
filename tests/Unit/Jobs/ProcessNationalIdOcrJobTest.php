@@ -6,6 +6,7 @@ use App\Jobs\ProcessNationalIdOcrJob;
 use App\Models\IdVerification;
 use App\Services\GeminiService;
 use App\Services\ImageProcessingService;
+use App\Services\RegistrationEligibilityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Mockery\MockInterface;
@@ -47,7 +48,6 @@ class ProcessNationalIdOcrJobTest extends TestCase
                 ->andReturn([
                     'backSideDetected' => false,
                     'isAuthentic' => true,
-                    'isOutsideAllowedArea' => false,
                     'confidence' => 98,
                     'data' => [
                         'pcnNumber' => '1234-5678-9012-3456',
@@ -56,8 +56,23 @@ class ProcessNationalIdOcrJobTest extends TestCase
                 ]);
         });
 
+        $this->mock(RegistrationEligibilityService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('evaluate')
+                ->once()
+                ->andReturn([
+                    'eligible' => true,
+                    'failureCode' => null,
+                    'failureReason' => null,
+                    'flags' => [],
+                ]);
+        });
+
         $job = new ProcessNationalIdOcrJob($verification->id);
-        $job->handle(app(GeminiService::class), app(ImageProcessingService::class));
+        $job->handle(
+            app(GeminiService::class),
+            app(ImageProcessingService::class),
+            app(RegistrationEligibilityService::class)
+        );
 
         $verification->refresh();
         $this->assertSame('completed', $verification->status);
@@ -94,8 +109,16 @@ class ProcessNationalIdOcrJobTest extends TestCase
                 ->andThrow(new \RuntimeException('Gemini failure'));
         });
 
+        $this->mock(RegistrationEligibilityService::class, function (MockInterface $mock) {
+            $mock->shouldNotReceive('evaluate');
+        });
+
         $job = new ProcessNationalIdOcrJob($verification->id);
-        $job->handle(app(GeminiService::class), app(ImageProcessingService::class));
+        $job->handle(
+            app(GeminiService::class),
+            app(ImageProcessingService::class),
+            app(RegistrationEligibilityService::class)
+        );
 
         $verification->refresh();
         $this->assertSame('failed', $verification->status);

@@ -11,11 +11,18 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 
 class OtpController extends Controller
 {
+    private const OTP_TTL_SECONDS = 300;
+
+    private const OTP_COOLDOWN_SECONDS = 60;
+
+    private const OTP_EXPIRY_MINUTES = 5;
+
     protected MailService $mailService;
 
     protected AbstractApiService $abstractApiService;
@@ -56,16 +63,16 @@ class OtpController extends Controller
                 'success' => false,
                 'message' => 'Please wait before requesting again.',
                 'lock_type' => 'cooldown',
-                'seconds' => 60,
+                'seconds' => self::OTP_COOLDOWN_SECONDS,
             ], 429);
         }
 
         // Generate 6-digit OTP
         $code = random_int(100000, 999999);
 
-        // Store OTP in cache for 1 minute
-        Cache::put('otp_'.$phone, $code, 60);
-        Cache::put('otp_lock_'.$phone, true, 60);
+        // Store OTP in cache for 5 minutes, but keep resend cooldown at 60 seconds.
+        Cache::put('otp_'.$phone, $code, self::OTP_TTL_SECONDS);
+        Cache::put('otp_lock_'.$phone, true, self::OTP_COOLDOWN_SECONDS);
 
         // Dispatch job to send SMS
         SendOtpJob::dispatch($phone, $code);
@@ -75,7 +82,7 @@ class OtpController extends Controller
             'message' => 'OTP sent successfully to your phone!',
             'data' => [
                 'phone' => $phone,
-                'expires_in' => 1, // minutes
+                'expires_in' => self::OTP_EXPIRY_MINUTES,
             ],
         ]);
     }
@@ -116,23 +123,66 @@ class OtpController extends Controller
                 'success' => false,
                 'message' => 'Please wait before requesting again.',
                 'lock_type' => 'cooldown',
-                'seconds' => 60,
+                'seconds' => self::OTP_COOLDOWN_SECONDS,
             ], 429);
         }
 
         $emailReputationResult = $this->abstractApiService->validateEmail($request->email);
 
-        if ($emailReputationResult['valid'] === false ||
-             $emailReputationResult['deliverable'] === false ||
-             $emailReputationResult['disposable'] === true) {
+        if (($emailReputationResult['bypass'] ?? false) === true) {
+            Log::warning('Registration OTP proceeded with Abstract API bypass', [
+                'email_hash' => hash('sha256', strtolower(trim((string) $request->email))),
+                'reason' => $emailReputationResult['error'] ?? null,
+            ]);
+        }
+
+        $emailFailure = $this->resolveEmailValidationFailure($emailReputationResult);
+        if ($emailFailure !== null) {
             return response()->json([
                 'success' => false,
-                'message' => 'The provided email address is not valid for registration.',
+                'code' => $emailFailure['code'],
+                'message' => $emailFailure['message'],
                 'data' => $emailReputationResult,
             ], 422);
         }
 
         return $this->requestOtp($request);
+    }
+
+    /**
+     * Enforce strict-core registration email checks:
+     * - format valid
+     * - deliverable
+     * - not disposable
+     */
+    private function resolveEmailValidationFailure(array $emailReputationResult): ?array
+    {
+        $isFormatValid = (bool) ($emailReputationResult['is_format_valid'] ?? true);
+        $isDeliverable = (bool) ($emailReputationResult['deliverable'] ?? false);
+        $isDisposable = (bool) ($emailReputationResult['disposable'] ?? false);
+
+        if (! $isFormatValid) {
+            return [
+                'code' => 'EMAIL_INVALID_FORMAT',
+                'message' => 'Please enter a valid email format.',
+            ];
+        }
+
+        if (! $isDeliverable) {
+            return [
+                'code' => 'EMAIL_UNDELIVERABLE',
+                'message' => 'Email is undeliverable. Please use a real and reachable email address.',
+            ];
+        }
+
+        if ($isDisposable) {
+            return [
+                'code' => 'EMAIL_DISPOSABLE',
+                'message' => 'Disposable email addresses are not allowed. Please use your primary email.',
+            ];
+        }
+
+        return null;
     }
 
     /**
@@ -246,16 +296,16 @@ class OtpController extends Controller
                 'success' => false,
                 'message' => 'Please wait before requesting another OTP.',
                 'lock_type' => 'cooldown',
-                'seconds' => 60,
+                'seconds' => self::OTP_COOLDOWN_SECONDS,
             ], 429);
         }
 
         // Generate new 6-digit OTP
         $code = random_int(100000, 999999);
 
-        // Store OTP in cache for 1 minute
-        Cache::put('otp_'.$phone, $code, 60);
-        Cache::put('otp_lock_'.$phone, true, 60);
+        // Store OTP in cache for 5 minutes, but keep resend cooldown at 60 seconds.
+        Cache::put('otp_'.$phone, $code, self::OTP_TTL_SECONDS);
+        Cache::put('otp_lock_'.$phone, true, self::OTP_COOLDOWN_SECONDS);
 
         // Dispatch job to send SMS
         SendOtpJob::dispatch($phone, $code);
@@ -265,7 +315,7 @@ class OtpController extends Controller
             'message' => 'OTP resent successfully to your phone!',
             'data' => [
                 'phone' => $phone,
-                'expires_in' => 1, // minutes
+                'expires_in' => self::OTP_EXPIRY_MINUTES,
             ],
         ]);
     }

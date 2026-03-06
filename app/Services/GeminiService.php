@@ -542,34 +542,9 @@ PROMPT;
 
             $result = $this->normalizeNationalIdResult($result);
 
-            // Check location restriction if system setting is enabled
-            $restrictToBarangay = \App\Models\SystemSetting::get('restrict_registration_to_brgy_176', 'false') === 'true';
+            // Registration residency rules are evaluated in OCR workflow service.
             $result['isOutsideAllowedArea'] = false;
             $result['locationRestrictionReason'] = null;
-
-            if ($restrictToBarangay && $result['isAuthentic']) {
-                $address = $result['data']['address'] ?? null;
-                $isPhase9Resident = $result['isPhase9Resident'] ?? false;
-
-                $isWithinAllowedArea = $isPhase9Resident;
-
-                if (! $isWithinAllowedArea && $address) {
-                    if (preg_match('/\bPH\.?\s*9\b|\bPHASE\s*9\b/i', strtoupper($address))) {
-                        $isWithinAllowedArea = true;
-                    }
-                }
-
-                if (! $isWithinAllowedArea) {
-                    $result['isOutsideAllowedArea'] = true;
-                    $result['locationRestrictionReason'] = 'Registration is only available to Phase 9 (PH 9) residents. Your address is not in Phase 9.';
-
-                    Log::info('National ID validation: Outside allowed area (not PH 9)', [
-                        'address' => $address,
-                        'isPhase9Resident' => $isPhase9Resident,
-                        'restriction_enabled' => $restrictToBarangay,
-                    ]);
-                }
-            }
 
             return $result;
 

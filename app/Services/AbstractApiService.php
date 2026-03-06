@@ -22,7 +22,7 @@ class AbstractApiService
     public function validateEmail(string $email): array
     {
         if (! $this->isEnabled()) {
-            return $this->getFallBackResponse(true, 'Abstract API service is disabled.');
+            return $this->getFallbackResponse('Abstract API service is disabled.');
         }
 
         try {
@@ -39,14 +39,14 @@ class AbstractApiService
                     'body' => $response->body(),
                 ]);
 
-                return $this->getFallBackResponse(false, 'Failed to connect to Abstract API service.');
+                return $this->getFallbackResponse('Failed to connect to Abstract API service.');
             }
 
             return $this->parseResponse($response->json(), $email);
         } catch (\Exception $e) {
             Log::error('AbstractAPI request exception: '.$e->getMessage());
 
-            return $this->getFallbackResponse(error: $e->getMessage());
+            return $this->getFallbackResponse($e->getMessage());
         }
 
     }
@@ -54,9 +54,10 @@ class AbstractApiService
     protected function parseResponse(array $response, string $email): array
     {
         $status = $response['email_deliverability']['status'] ?? 'unknown';
+        $statusDetail = $response['email_deliverability']['status_detail'] ?? null;
         $isDeliverable = ($status === 'deliverable');
         $isDisposable = $response['email_quality']['is_disposable'] ?? false;
-        $isFormatValid = $response['email_deliverability']['is_format_valid'] ?? true;
+        $isFormatValid = (bool) ($response['email_deliverability']['is_format_valid'] ?? false);
         $qualityScore = (float) ($response['email_quality']['score'] ?? 0.5);
         $isValid = $isDeliverable && ! $isDisposable && $isFormatValid;
         $suggestion = null;
@@ -65,6 +66,9 @@ class AbstractApiService
             'valid' => $isValid,
             'deliverable' => $isDeliverable,
             'disposable' => $isDisposable,
+            'is_format_valid' => $isFormatValid,
+            'status' => $status,
+            'status_detail' => $statusDetail,
             'quality_score' => $qualityScore,
             'suggestion' => $suggestion,
             'bypass' => false,
@@ -77,15 +81,18 @@ class AbstractApiService
         return $this->enabled && ! empty($this->apiKey);
     }
 
-    protected function getFallBackResponse(bool $bypass = true, ?string $error = null): array
+    protected function getFallbackResponse(?string $error = null): array
     {
         return [
             'valid' => true,
             'deliverable' => true,
             'disposable' => false,
+            'is_format_valid' => true,
+            'status' => 'bypassed',
+            'status_detail' => 'abstract_api_unavailable',
             'quality_score' => 1.0,
             'suggestion' => null,
-            'bypass' => $bypass,
+            'bypass' => true,
             'error' => $error,
         ];
     }

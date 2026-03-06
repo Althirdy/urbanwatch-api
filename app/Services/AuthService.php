@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\UrbanWatchException;
 use App\Models\CitizenDetails;
 use App\Models\IdVerification;
+use App\Models\Roles;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Crypt;
@@ -83,6 +84,11 @@ class AuthService
 
     public function register(array $data)
     {
+        $citizenRole = Roles::query()->where('name', 'Citizen')->first();
+        if (! $citizenRole) {
+            throw new UrbanWatchException('Registration setup is incomplete: Citizen role is missing. Please initialize roles first.', 500);
+        }
+
         $verification = IdVerification::where('verification_id', $data['verificationId'])->first();
         if (! $verification) {
             throw new UrbanWatchException('ID verification not found. Please upload your ID again.', 403);
@@ -141,7 +147,7 @@ class AuthService
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
                 'email_verified_at' => now(),
-                'role_id' => 3,
+                'role_id' => $citizenRole->id,
             ]);
 
             CitizenDetails::create([
@@ -157,7 +163,7 @@ class AuthService
                 'barangay' => $data['barangay'],
                 'city' => $data['city'],
                 'province' => $data['province'],
-                'postal_code' => $data['postalCode'],
+                'postal_code' => $data['postalCode'] ?? $data['postal_code'] ?? '',
                 'is_verified' => true,
                 'status' => 'active',
             ]);
