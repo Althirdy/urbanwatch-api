@@ -55,13 +55,6 @@ export default function Contacts({
                     </Tabs>
                 </div>
 
-                <div>
-                    <h1 className="text-xl font-bold tracking-tight text-foreground">Contacts</h1>
-                    <p className="text-sm text-muted-foreground">
-                        Manage response units and responder contact information.
-                    </p>
-                </div>
-
                 {/* Filters */}
                 <ContactActionTab
                     contacts={contacts}

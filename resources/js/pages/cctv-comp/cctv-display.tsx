@@ -78,13 +78,13 @@ function CCTVDisplay({
     return (
         <div className="space-y-6">
             {/* CCTV Cards Grid */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {devices?.data.map((device) => (
                     <Card
                         key={device.id}
-                        className="group relative overflow-hidden transition-all duration-200 hover:shadow-md"
+                        className="group relative py-4 overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700 h-full"
                     >
-                        <CardHeader className="pb-3">
+                        <CardHeader className="pb-4">
                             <div className="flex items-center gap-2">
 
                                 <div className="min-w-0 flex-1">
@@ -111,7 +111,7 @@ function CCTVDisplay({
 
                         <CardContent className="space-y-4">
                             {/* Action Buttons - Premium Footer */}
-                            <div className="flex items-center justify-end gap-1.5 p-3 mt-auto border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/20">
+                            <div className="flex items-center justify-end gap-1.5 pt-1.5 mt-auto dark:border-zinc-800">
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Button
