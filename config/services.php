@@ -42,6 +42,8 @@ return [
 
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
+        'api_base' => env('GEMINI_API_BASE', 'https://generativelanguage.googleapis.com/v1beta'),
+        'audio_model' => env('GEMINI_AUDIO_MODEL', 'gemini-2.5-flash-lite'),
     ],
     'semaphore' => [
         'api_key' => env('SEMAPHORE_API_KEY'),

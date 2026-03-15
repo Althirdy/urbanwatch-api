@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Exceptions\UrbanWatchException;
 use App\Models\CitizenDetails;
 use App\Models\IdVerification;
+use App\Models\Roles;
 use App\Models\User;
+use App\Support\PcnNormalizer;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +15,10 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthService
 {
+    public function __construct(
+        protected RegistrationPhoneGuardService $registrationPhoneGuardService
+    ) {}
+
     public function login(string $email, string $password)
     {
         $user = User::with(['role', 'officialDetails', 'citizenDetails'])
@@ -83,6 +89,11 @@ class AuthService
 
     public function register(array $data)
     {
+        $citizenRole = Roles::query()->where('name', 'Citizen')->first();
+        if (! $citizenRole) {
+            throw new UrbanWatchException('Registration setup is incomplete: Citizen role is missing. Please initialize roles first.', 500);
+        }
+
         $verification = IdVerification::where('verification_id', $data['verificationId'])->first();
         if (! $verification) {
             throw new UrbanWatchException('ID verification not found. Please upload your ID again.', 403);
@@ -98,7 +109,7 @@ class AuthService
 
         $verificationResult = $verification->result_json ?? [];
         $verifiedPcn = $verificationResult['data']['pcnNumber'] ?? null;
-        if (! $verifiedPcn || $verifiedPcn !== $data['pcnNumber']) {
+        if (! PcnNormalizer::equals($verifiedPcn, (string) ($data['pcnNumber'] ?? ''))) {
             throw new UrbanWatchException('PCN does not match verified ID data.', 403);
         }
 
@@ -129,6 +140,14 @@ class AuthService
             throw new UrbanWatchException('Verification failed: '.$e->getMessage(), 403);
         }
 
+        if ($this->registrationPhoneGuardService->isPhoneRegistered($data['phoneNumber'] ?? null)) {
+            throw new UrbanWatchException(
+                'This phone number is already registered. Please use a different phone number.',
+                422,
+                ['code' => 'PHONE_ALREADY_REGISTERED']
+            );
+        }
+
         DB::beginTransaction();
         try {
             $fullName = trim($data['firstName'].' '.
@@ -141,12 +160,15 @@ class AuthService
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
                 'email_verified_at' => now(),
-                'role_id' => 3,
+                'role_id' => $citizenRole->id,
             ]);
+
+            $normalizedPcnNumber = PcnNormalizer::toDashed((string) ($data['pcnNumber'] ?? ''))
+                ?? trim((string) ($data['pcnNumber'] ?? ''));
 
             CitizenDetails::create([
                 'user_id' => $user->id,
-                'pcn_number' => $data['pcnNumber'],
+                'pcn_number' => $normalizedPcnNumber,
                 'first_name' => $data['firstName'],
                 'middle_name' => $data['middleName'] ?? null,
                 'last_name' => $data['lastName'],
@@ -157,7 +179,7 @@ class AuthService
                 'barangay' => $data['barangay'],
                 'city' => $data['city'],
                 'province' => $data['province'],
-                'postal_code' => $data['postalCode'],
+                'postal_code' => $data['postalCode'] ?? $data['postal_code'] ?? '',
                 'is_verified' => true,
                 'status' => 'active',
             ]);
@@ -203,6 +225,29 @@ class AuthService
 
     public function checkPcnNumberExists(string $pcnNumber): bool
     {
-        return CitizenDetails::where('pcn_number', $pcnNumber)->exists();
+        $rawPcn = trim($pcnNumber);
+        $normalizedPcn = PcnNormalizer::normalize($rawPcn);
+
+        if ($rawPcn === '' || $normalizedPcn === '') {
+            return false;
+        }
+
+        $dashedPcn = PcnNormalizer::toDashed($rawPcn);
+
+        return CitizenDetails::query()
+            ->where(function ($query) use ($rawPcn, $normalizedPcn, $dashedPcn) {
+                $query->where('pcn_number', $rawPcn);
+
+                if ($dashedPcn !== null) {
+                    $query->orWhere('pcn_number', $dashedPcn);
+                }
+
+                $query->orWhere('pcn_number', $normalizedPcn);
+                $query->orWhereRaw(
+                    "REPLACE(REPLACE(REPLACE(REPLACE(pcn_number, '-', ''), ' ', ''), '.', ''), '/', '') = ?",
+                    [$normalizedPcn]
+                );
+            })
+            ->exists();
     }
 }

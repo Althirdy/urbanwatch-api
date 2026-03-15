@@ -7,7 +7,9 @@ use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Fortify\Features;
@@ -30,7 +32,26 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        $user = $request->validateCredentials();
+        try {
+            $user = $request->validateCredentials();
+        } catch (ValidationException $exception) {
+            $submittedEmail = strtolower(trim((string) $request->input('email')));
+            $configuredSuperadminEmail = strtolower(trim((string) env('SUPERADMIN_EMAIL', 'superadmin@urbanwatch.local')));
+
+            if ($submittedEmail === $configuredSuperadminEmail) {
+                Log::warning('Superadmin login failed', [
+                    'email' => $submittedEmail,
+                    'ip' => $request->ip(),
+                ]);
+
+                throw ValidationException::withMessages([
+                    'email' => 'Superadmin login failed. Verify credentials and ensure the superadmin account is provisioned in this environment.',
+                ]);
+            }
+
+            throw $exception;
+        }
+
         $user->loadMissing('role:id,name');
         $roleName = strtolower((string) ($user->role?->name ?? ''));
 

@@ -127,13 +127,17 @@ class AuthController extends BaseApiController
         $request->validate([
             'image' => 'required|file|mimes:jpeg,png,jpg,gif|max:5120',
             'deviceFingerprint' => 'nullable|string|max:191',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ]);
 
         try {
             $verification = $this->idVerificationService->start(
                 $request->file('image'),
                 $request->ip(),
-                $request->input('deviceFingerprint')
+                $request->input('deviceFingerprint'),
+                $request->filled('latitude') ? (float) $request->input('latitude') : null,
+                $request->filled('longitude') ? (float) $request->input('longitude') : null
             );
 
             \App\Jobs\ProcessNationalIdOcrJob::dispatch($verification->id);
@@ -168,6 +172,7 @@ class AuthController extends BaseApiController
             'expiresAt' => $verification->expires_at?->toIso8601String(),
             'completedAt' => $verification->processed_at?->toIso8601String(),
             'failureReason' => $verification->failure_reason,
+            'failureCode' => $verification->failure_code,
             'confidenceScore' => $verification->confidence,
             'extractedData' => $verification->status === 'completed' ? ($result['data'] ?? null) : null,
             'flags' => $verification->flags,
@@ -247,18 +252,10 @@ class AuthController extends BaseApiController
     {
         try {
             $user = $request->user()->load(['role', 'officialDetails', 'citizenDetails']);
-
-            // if (($user->role_id == 1 || $user->role_id == 2) && !$user->officialDetails) {
-            //     return $this->sendError('Official details not found for this user');
-            // }
-
-            // if ($user->role_id == 3 && !$user->citizenDetails) {
-            //     return $this->sendError('Citizen details not found for this user');
-            // }
-
-            // if (!in_array($user->role_id, [1, 2, 3])) {
-            //     return $this->sendError('Invalid user role');
-            // }
+            $roleName = strtolower((string) ($user->role?->name ?? ''));
+            if ($roleName === 'citizen' && ! $user->citizenDetails) {
+                return $this->sendError('Citizen profile is not yet available. Please complete registration or contact support.', null, 409);
+            }
 
             return $this->sendResponse([
                 'user' => new AuthUserResource($user),

@@ -576,6 +576,56 @@ class ConcernService
     }
 
     /**
+     * Assign a concern without deduplication.
+     * Used for voice AI fallback so the concern still proceeds through normal operations.
+     */
+    public function assignWithoutDeduplication(int $concernId, ?string $remarks = null): void
+    {
+        $lock = Cache::lock("assign_without_deduplication:{$concernId}", 10);
+
+        try {
+            $lock->block(5, function () use ($concernId, $remarks) {
+                $concern = Concern::find($concernId);
+
+                if (! $concern) {
+                    Log::error("Concern #{$concernId} not found for assignWithoutDeduplication.");
+
+                    return;
+                }
+
+                if ($concern->distribution) {
+                    Log::info("Concern #{$concern->id} already distributed in assignWithoutDeduplication.");
+
+                    return;
+                }
+
+                $routeData = $this->routingService->findPurokLeader($concern->latitude, $concern->longitude);
+                if ($routeData && $routeData['leader']) {
+                    $purokLeaderId = $routeData['leader']->user_id;
+                    $this->assignToLeader(
+                        $concern,
+                        $purokLeaderId,
+                        $remarks ?? 'Concern assigned after voice AI fallback.'
+                    );
+
+                    return;
+                }
+
+                ConcernHistory::create([
+                    'concern_id' => $concern->id,
+                    'status' => 'pending',
+                    'remarks' => $remarks ?? 'Voice concern fallback: no mapped active Purok Leader. Routed to Operator pool.',
+                ]);
+
+                event(new ConcernUnassigned($concern));
+            });
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+            Log::warning("assignWithoutDeduplication lock timed out for Concern #{$concernId}.");
+            throw $e;
+        }
+    }
+
+    /**
      * Mark a concern as valid after AI analysis.
      *
      * Implements Weighted Coherence/Detail scoring with rejection thresholds:
@@ -597,8 +647,20 @@ class ConcernService
         // Weighted Score Calculation: Coherence (40%) + Detail (40%) + Confidence (20%)
         $weightedScore = ($coherenceScore * 0.4) + ($detailScore * 0.4) + ($confidence * 0.2);
 
-        // Rejection Logic based on thresholds
-        if (! $isFallback) {
+        Log::info('Concern validation decision started', [
+            'concern_id' => $concernId,
+            'type' => $concern->type,
+            'is_fallback' => $isFallback,
+            'ai_is_valid' => $analysis['is_valid'] ?? null,
+            'confidence' => $confidence,
+            'coherence_score' => $coherenceScore,
+            'detail_score' => $detailScore,
+            'weighted_score' => $weightedScore,
+        ]);
+
+        // Rejection logic remains strict for non-voice concerns only.
+        // Voice concerns are validated primarily via Gemini's is_valid signal to avoid false negatives from score noise.
+        if (! $isFallback && $concern->type !== 'voice') {
             if ($coherenceScore < 0.60) {
                 Log::info("Concern #{$concernId} rejected: Low coherence score ({$coherenceScore})");
 
@@ -628,6 +690,12 @@ class ConcernService
                     $analysis
                 );
             }
+        } elseif (! $isFallback && $concern->type === 'voice') {
+            Log::info("Concern #{$concernId} voice concern: score-gate rejection skipped", [
+                'coherence_score' => $coherenceScore,
+                'detail_score' => $detailScore,
+                'weighted_score' => $weightedScore,
+            ]);
         }
 
         // Hierarchy: AI Result (if high confidence) > Existing Value
@@ -695,6 +763,36 @@ class ConcernService
             return;
         }
 
+        // Defensive guard for voice concerns:
+        // if Gemini explicitly marked it valid, never apply invalid path.
+        if (
+            $concern->type === 'voice'
+            && is_array($rawAnalysis)
+            && array_key_exists('is_valid', $rawAnalysis)
+            && $rawAnalysis['is_valid'] === true
+        ) {
+            Log::warning('Voice concern invalidation blocked; Gemini returned is_valid=true', [
+                'concern_id' => $concernId,
+                'incoming_reason' => $reason,
+                'coherence_score' => $rawAnalysis['coherence_score'] ?? null,
+                'detail_score' => $rawAnalysis['detail_score'] ?? null,
+            ]);
+
+            $this->markAsValid($concernId, $rawAnalysis);
+
+            return;
+        }
+
+        if ($concern->status === 'rejected') {
+            Log::info('Concern rejection duplicate suppressed', [
+                'concern_id' => $concernId,
+                'existing_reason' => $concern->rejection_reason,
+                'incoming_reason' => $reason,
+            ]);
+
+            return;
+        }
+
         $concern->update([
             'is_valid' => false,
             'status' => 'rejected',
@@ -759,13 +857,20 @@ class ConcernService
     {
         $strikes = $user->false_alarm_strikes;
         $adminId = 1; // System Admin ID
+        $activeSuspension = UserSuspension::getActiveSuspension($user->id);
 
         if ($strikes == 3) {
-            UserSuspension::applySuspension($user->id, 'warning_1', $adminId, 'Automated: 3 strikes for false alarms/spam.');
-        } elseif ($strikes == 4) {
-            UserSuspension::applySuspension($user->id, 'warning_2', $adminId, 'Automated: 4 strikes for false alarms/spam.');
-        } elseif ($strikes >= 5) {
-            UserSuspension::applySuspension($user->id, 'suspension', $adminId, 'Automated: 5+ strikes for false alarms/spam. Permanent ban.');
+            if ($activeSuspension?->punishment_type !== 'warning_1') {
+                UserSuspension::applySuspension($user->id, 'warning_1', $adminId, 'Automated: 3 strikes for false alarms/spam.');
+            }
+        } elseif ($strikes == 5) {
+            if ($activeSuspension?->punishment_type !== 'warning_2') {
+                UserSuspension::applySuspension($user->id, 'warning_2', $adminId, 'Automated: 5 strikes for false alarms/spam.');
+            }
+        } elseif ($strikes >= 8) {
+            if ($activeSuspension?->punishment_type !== 'suspension') {
+                UserSuspension::applySuspension($user->id, 'suspension', $adminId, 'Automated: 8+ strikes for false alarms/spam. Permanent ban.');
+            }
         }
     }
 

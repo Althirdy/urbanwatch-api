@@ -38,7 +38,7 @@ class TextBeeService
 
     public function sendOtp($phoneNumber, $otpCode)
     {
-        $message = "Your UrbanWatch verification code is: {$otpCode}. Valid for 1 minute. Do not share this code.";
+        $message = "Your UrbanWatch verification code is: {$otpCode}. Valid for 5 minutes. Do not share this code.";
 
         $recipients = is_array($phoneNumber) ? $phoneNumber : [$phoneNumber];
 
