@@ -313,6 +313,60 @@ class AsyncOcrRegistrationTest extends TestCase
         $this->assertSame('09123456789', $citizenDetails->phone_number);
     }
 
+    public function test_it_registers_successfully_when_verified_pcn_format_differs_from_payload(): void
+    {
+        $verification = IdVerification::create([
+            'verification_id' => (string) \Illuminate\Support\Str::uuid(),
+            'status' => 'completed',
+            'image_disk' => 'local',
+            'image_path' => null,
+            'result_json' => [
+                'data' => [
+                    'pcnNumber' => '1234-5678-9012-3456',
+                ],
+            ],
+            'confidence' => 95,
+            'expires_at' => now()->addMinutes(10),
+            'processed_at' => now(),
+        ]);
+
+        $token = Crypt::encryptString(json_encode([
+            'phone' => '09123456782',
+            'expires_at' => Carbon::now()->addMinutes(10)->toIso8601String(),
+        ]));
+
+        $response = $this->postJson('/api/v1/auth/register/complete', [
+            'email' => 'valid-format-variant@example.com',
+            'password' => 'StrongPass1!',
+            'password_confirmation' => 'StrongPass1!',
+            'firstName' => 'Maria',
+            'middleName' => 'Santos',
+            'lastName' => 'Dela Cruz',
+            'suffix' => null,
+            'dateOfBirth' => '2000-01-01',
+            'phoneNumber' => '09123456782',
+            'address' => '123 Street',
+            'barangay' => 'Barangay 176',
+            'city' => 'Caloocan',
+            'province' => 'Metro Manila',
+            'postalCode' => '1400',
+            'pcnNumber' => '1234567890123456',
+            'verificationToken' => $token,
+            'verificationId' => $verification->verification_id,
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'success' => true,
+                'message' => 'Registration successful',
+            ]);
+
+        $this->assertDatabaseHas('citizen_details', [
+            'phone_number' => '09123456782',
+            'pcn_number' => '1234-5678-9012-3456',
+        ]);
+    }
+
     public function test_it_registers_successfully_even_when_postal_code_is_missing(): void
     {
         $verification = IdVerification::create([
@@ -472,6 +526,156 @@ class AsyncOcrRegistrationTest extends TestCase
             ]);
     }
 
+    public function test_it_blocks_registration_when_phone_number_is_already_registered(): void
+    {
+        $existingUser = User::create([
+            'name' => 'Existing Citizen',
+            'email' => 'existing-phone@example.com',
+            'password' => 'StrongPass1!',
+            'role_id' => 3,
+            'email_verified_at' => now(),
+        ]);
+
+        CitizenDetails::create([
+            'user_id' => $existingUser->id,
+            'pcn_number' => '3333-4444-5555-6666',
+            'first_name' => 'Existing',
+            'middle_name' => null,
+            'last_name' => 'Citizen',
+            'suffix' => null,
+            'date_of_birth' => '1999-01-01',
+            'phone_number' => '09129999999',
+            'address' => 'PH9, Bagong Silang',
+            'barangay' => 'Barangay 176-E',
+            'city' => 'Caloocan',
+            'province' => 'Metro Manila',
+            'postal_code' => '1400',
+            'is_verified' => true,
+            'status' => 'active',
+        ]);
+
+        $verification = IdVerification::create([
+            'verification_id' => (string) \Illuminate\Support\Str::uuid(),
+            'status' => 'completed',
+            'image_disk' => 'local',
+            'image_path' => null,
+            'result_json' => [
+                'data' => [
+                    'pcnNumber' => '5555-6666-7777-8888',
+                ],
+            ],
+            'confidence' => 95,
+            'expires_at' => now()->addMinutes(10),
+            'processed_at' => now(),
+        ]);
+
+        $token = Crypt::encryptString(json_encode([
+            'phone' => '09129999999',
+            'expires_at' => Carbon::now()->addMinutes(10)->toIso8601String(),
+        ]));
+
+        $response = $this->postJson('/api/v1/auth/register/complete', [
+            'email' => 'duplicate-phone@example.com',
+            'password' => 'StrongPass1!',
+            'password_confirmation' => 'StrongPass1!',
+            'firstName' => 'Juan',
+            'middleName' => 'Santos',
+            'lastName' => 'Dela Cruz',
+            'suffix' => null,
+            'dateOfBirth' => '2000-01-01',
+            'phoneNumber' => '09129999999',
+            'address' => '123 Street',
+            'barangay' => 'Barangay 176',
+            'city' => 'Caloocan',
+            'province' => 'Metro Manila',
+            'postalCode' => '1400',
+            'pcnNumber' => '5555-6666-7777-8888',
+            'verificationToken' => $token,
+            'verificationId' => $verification->verification_id,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+                'code' => 'PHONE_ALREADY_REGISTERED',
+                'message' => 'This phone number is already registered. Please use a different phone number.',
+            ]);
+    }
+
+    public function test_it_blocks_registration_when_pcn_is_already_registered_even_with_format_variation(): void
+    {
+        $existingUser = User::create([
+            'name' => 'Existing Citizen',
+            'email' => 'existing-pcn@example.com',
+            'password' => 'StrongPass1!',
+            'role_id' => 3,
+            'email_verified_at' => now(),
+        ]);
+
+        CitizenDetails::create([
+            'user_id' => $existingUser->id,
+            'pcn_number' => '1234-5678-9012-3456',
+            'first_name' => 'Existing',
+            'middle_name' => null,
+            'last_name' => 'Citizen',
+            'suffix' => null,
+            'date_of_birth' => '1999-01-01',
+            'phone_number' => '09125550000',
+            'address' => 'PH9, Bagong Silang',
+            'barangay' => 'Barangay 176-E',
+            'city' => 'Caloocan',
+            'province' => 'Metro Manila',
+            'postal_code' => '1400',
+            'is_verified' => true,
+            'status' => 'active',
+        ]);
+
+        $verification = IdVerification::create([
+            'verification_id' => (string) \Illuminate\Support\Str::uuid(),
+            'status' => 'completed',
+            'image_disk' => 'local',
+            'image_path' => null,
+            'result_json' => [
+                'data' => [
+                    'pcnNumber' => '1234567890123456',
+                ],
+            ],
+            'confidence' => 95,
+            'expires_at' => now()->addMinutes(10),
+            'processed_at' => now(),
+        ]);
+
+        $token = Crypt::encryptString(json_encode([
+            'phone' => '09125550001',
+            'expires_at' => Carbon::now()->addMinutes(10)->toIso8601String(),
+        ]));
+
+        $response = $this->postJson('/api/v1/auth/register/complete', [
+            'email' => 'duplicate-pcn-variant@example.com',
+            'password' => 'StrongPass1!',
+            'password_confirmation' => 'StrongPass1!',
+            'firstName' => 'Juan',
+            'middleName' => 'Santos',
+            'lastName' => 'Dela Cruz',
+            'suffix' => null,
+            'dateOfBirth' => '2000-01-01',
+            'phoneNumber' => '09125550001',
+            'address' => '123 Street',
+            'barangay' => 'Barangay 176',
+            'city' => 'Caloocan',
+            'province' => 'Metro Manila',
+            'postalCode' => '1400',
+            'pcnNumber' => '1234567890123456',
+            'verificationToken' => $token,
+            'verificationId' => $verification->verification_id,
+        ]);
+
+        $response->assertStatus(400)
+            ->assertJson([
+                'success' => false,
+            ]);
+    }
+
     public function test_process_job_fails_when_pcn_is_already_registered(): void
     {
         $existingUser = User::create([
@@ -491,6 +695,62 @@ class AsyncOcrRegistrationTest extends TestCase
             'suffix' => null,
             'date_of_birth' => '1999-01-01',
             'phone_number' => '09120000001',
+            'address' => 'PH9, Bagong Silang',
+            'barangay' => 'Barangay 176-E',
+            'city' => 'Caloocan',
+            'province' => 'Metro Manila',
+            'postal_code' => '1400',
+            'is_verified' => true,
+            'status' => 'active',
+        ]);
+
+        $verification = $this->createPendingVerificationWithImage();
+
+        $gemini = Mockery::mock(GeminiService::class);
+        $gemini->shouldReceive('analyzeNationalId')->once()->andReturn([
+            'backSideDetected' => false,
+            'isAuthentic' => true,
+            'confidence' => 95,
+            'data' => [
+                'pcnNumber' => '1234-5678-9012-3456',
+                'address' => 'PH9 Block 1',
+            ],
+            'isPhase9Resident' => true,
+        ]);
+
+        $imageProcessor = Mockery::mock(ImageProcessingService::class);
+        $imageProcessor->shouldReceive('optimizeForAi')->once()->andReturn('optimized-image-content');
+
+        (new ProcessNationalIdOcrJob($verification->id))->handle(
+            $gemini,
+            $imageProcessor,
+            app(RegistrationEligibilityService::class)
+        );
+
+        $verification->refresh();
+        $this->assertSame('failed', $verification->status);
+        $this->assertSame('PCN_ALREADY_REGISTERED', $verification->failure_code);
+    }
+
+    public function test_process_job_fails_when_registered_pcn_format_differs_from_ocr_result(): void
+    {
+        $existingUser = User::create([
+            'name' => 'Existing Citizen',
+            'email' => 'existing-pcn-variant@example.com',
+            'password' => 'StrongPass1!',
+            'role_id' => 3,
+            'email_verified_at' => now(),
+        ]);
+
+        CitizenDetails::create([
+            'user_id' => $existingUser->id,
+            'pcn_number' => '1234567890123456',
+            'first_name' => 'Existing',
+            'middle_name' => null,
+            'last_name' => 'Citizen',
+            'suffix' => null,
+            'date_of_birth' => '1999-01-01',
+            'phone_number' => '09120000002',
             'address' => 'PH9, Bagong Silang',
             'barangay' => 'Barangay 176-E',
             'city' => 'Caloocan',
