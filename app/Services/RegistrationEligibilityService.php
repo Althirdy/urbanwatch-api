@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CitizenDetails;
+use App\Support\PcnNormalizer;
 use Illuminate\Support\Facades\Log;
 
 class RegistrationEligibilityService
@@ -24,10 +25,9 @@ class RegistrationEligibilityService
      */
     public function evaluate(array $analysis, ?float $latitude, ?float $longitude): array
     {
-        $pcn = (string) ($analysis['data']['pcnNumber'] ?? '');
-        $pcn = trim($pcn);
+        $pcn = trim((string) ($analysis['data']['pcnNumber'] ?? ''));
 
-        if ($pcn !== '' && CitizenDetails::where('pcn_number', $pcn)->exists()) {
+        if ($pcn !== '' && $this->isPcnAlreadyRegistered($pcn)) {
             return $this->fail(
                 'PCN_ALREADY_REGISTERED',
                 'This National ID is already registered in UrbanWatch.',
@@ -92,8 +92,27 @@ class RegistrationEligibilityService
 
     private function isPhase9Resident(array $analysis): bool
     {
-        if ((bool) ($analysis['isPhase9Resident'] ?? false)) {
-            return true;
+        if (array_key_exists('isPhase9Resident', $analysis)) {
+            $phase9Flag = $analysis['isPhase9Resident'];
+
+            if (is_bool($phase9Flag)) {
+                return $phase9Flag;
+            }
+
+            if (is_int($phase9Flag) || is_float($phase9Flag)) {
+                return (int) $phase9Flag === 1;
+            }
+
+            if (is_string($phase9Flag)) {
+                $normalizedFlag = strtolower(trim($phase9Flag));
+                if (in_array($normalizedFlag, ['true', '1', 'yes'], true)) {
+                    return true;
+                }
+
+                if (in_array($normalizedFlag, ['false', '0', 'no'], true)) {
+                    return false;
+                }
+            }
         }
 
         $address = strtoupper((string) ($analysis['data']['address'] ?? ''));
@@ -124,6 +143,11 @@ class RegistrationEligibilityService
             $xj = (float) ($vertices[$j][0] ?? 0.0);
             $yj = (float) ($vertices[$j][1] ?? 0.0);
 
+            // Treat points on polygon edges/vertices as inside.
+            if ($this->isPointOnSegment($x, $y, $xi, $yi, $xj, $yj)) {
+                return true;
+            }
+
             $intersect = (($yi > $y) !== ($yj > $y))
                 && ($x < ($xj - $xi) * ($y - $yi) / (($yj - $yi) ?: 1.0) + $xi);
 
@@ -133,6 +157,31 @@ class RegistrationEligibilityService
         }
 
         return $inside;
+    }
+
+    private function isPointOnSegment(
+        float $px,
+        float $py,
+        float $ax,
+        float $ay,
+        float $bx,
+        float $by
+    ): bool {
+        $epsilon = 1.0E-10;
+
+        $cross = ($py - $ay) * ($bx - $ax) - ($px - $ax) * ($by - $ay);
+        if (abs($cross) > $epsilon) {
+            return false;
+        }
+
+        $dot = ($px - $ax) * ($bx - $ax) + ($py - $ay) * ($by - $ay);
+        if ($dot < -$epsilon) {
+            return false;
+        }
+
+        $segmentLengthSquared = ($bx - $ax) ** 2 + ($by - $ay) ** 2;
+
+        return $dot - $segmentLengthSquared <= $epsilon;
     }
 
     /**
@@ -161,5 +210,33 @@ class RegistrationEligibilityService
             'failureReason' => $failureReason,
             'flags' => $flags,
         ];
+    }
+
+    private function isPcnAlreadyRegistered(string $pcn): bool
+    {
+        $rawPcn = trim($pcn);
+        $normalizedPcn = PcnNormalizer::normalize($rawPcn);
+
+        if ($rawPcn === '' || $normalizedPcn === '') {
+            return false;
+        }
+
+        $dashedPcn = PcnNormalizer::toDashed($rawPcn);
+
+        return CitizenDetails::query()
+            ->where(function ($query) use ($rawPcn, $normalizedPcn, $dashedPcn) {
+                $query->where('pcn_number', $rawPcn);
+
+                if ($dashedPcn !== null) {
+                    $query->orWhere('pcn_number', $dashedPcn);
+                }
+
+                $query->orWhere('pcn_number', $normalizedPcn);
+                $query->orWhereRaw(
+                    "REPLACE(REPLACE(REPLACE(REPLACE(pcn_number, '-', ''), ' ', ''), '.', ''), '/', '') = ?",
+                    [$normalizedPcn]
+                );
+            })
+            ->exists();
     }
 }

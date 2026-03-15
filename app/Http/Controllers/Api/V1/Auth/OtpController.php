@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SendOtpJob;
+use App\Models\IdVerification;
 use App\Models\Otp;
 use App\Services\AbstractApiService;
+use App\Services\IdVerificationService;
 use App\Services\MailService;
+use App\Services\RegistrationPhoneGuardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -27,10 +30,21 @@ class OtpController extends Controller
 
     protected AbstractApiService $abstractApiService;
 
-    public function __construct(MailService $mailService, AbstractApiService $abstractApiService)
+    protected RegistrationPhoneGuardService $registrationPhoneGuardService;
+
+    protected IdVerificationService $idVerificationService;
+
+    public function __construct(
+        MailService $mailService,
+        AbstractApiService $abstractApiService,
+        RegistrationPhoneGuardService $registrationPhoneGuardService,
+        IdVerificationService $idVerificationService
+    )
     {
         $this->mailService = $mailService;
         $this->abstractApiService = $abstractApiService;
+        $this->registrationPhoneGuardService = $registrationPhoneGuardService;
+        $this->idVerificationService = $idVerificationService;
     }
 
     /**
@@ -93,6 +107,7 @@ class OtpController extends Controller
         $validator = Validator::make($request->all(), [
             'phone' => 'required|numeric|digits:11',
             'email' => 'required|email|unique:users,email',
+            'verificationId' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -100,6 +115,19 @@ class OtpController extends Controller
                 'success' => false,
                 'message' => 'Validation failed',
                 'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $ocrEligibilityFailure = $this->resolveRegistrationOcrEligibility((string) $request->verificationId);
+        if ($ocrEligibilityFailure !== null) {
+            return $ocrEligibilityFailure;
+        }
+
+        if ($this->registrationPhoneGuardService->isPhoneRegistered($request->phone)) {
+            return response()->json([
+                'success' => false,
+                'code' => 'PHONE_ALREADY_REGISTERED',
+                'message' => 'This phone number is already registered. Please use a different phone number.',
             ], 422);
         }
 
@@ -147,6 +175,42 @@ class OtpController extends Controller
         }
 
         return $this->requestOtp($request);
+    }
+
+    private function resolveRegistrationOcrEligibility(string $verificationId): ?JsonResponse
+    {
+        $verification = IdVerification::query()->where('verification_id', $verificationId)->first();
+        if (! $verification) {
+            return response()->json([
+                'success' => false,
+                'code' => 'ID_VERIFICATION_NOT_FOUND',
+                'message' => 'ID verification not found. Please upload your ID again.',
+            ], 422);
+        }
+
+        $verification = $this->idVerificationService->markExpiredIfNeeded($verification);
+
+        if (in_array($verification->status, ['pending', 'processing'], true)) {
+            return response()->json([
+                'success' => false,
+                'code' => 'ID_VERIFICATION_NOT_COMPLETED',
+                'message' => 'ID verification is still processing. Please wait before requesting OTP.',
+                'ocrStatus' => $verification->status,
+            ], 409);
+        }
+
+        if (in_array($verification->status, ['failed', 'expired'], true)) {
+            return response()->json([
+                'success' => false,
+                'code' => 'ID_VERIFICATION_FAILED',
+                'message' => $verification->failure_reason ?: 'ID verification failed. Please upload your ID again.',
+                'ocrStatus' => $verification->status,
+                'failureCode' => $verification->failure_code,
+                'failureReason' => $verification->failure_reason,
+            ], 422);
+        }
+
+        return null;
     }
 
     /**

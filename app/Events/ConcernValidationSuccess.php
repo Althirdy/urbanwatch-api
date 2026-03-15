@@ -51,7 +51,11 @@ class ConcernValidationSuccess implements ShouldBroadcast
         return [
             'concern' => [
                 'id' => $this->concern->id,
+                'type' => $this->concern->type,
                 'status' => $this->concern->status,
+                'title' => $this->concern->title,
+                'description' => $this->concern->description,
+                'transcript_text' => $this->concern->transcript_text,
                 'category' => $this->concern->category,
                 'severity' => $this->concern->severity,
                 'tracking_code' => $this->concern->tracking_code,

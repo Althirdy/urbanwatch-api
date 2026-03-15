@@ -662,6 +662,9 @@ class UserController extends Controller
                 // Mark suspension as revoked
                 $activeSuspension->update(['status' => 'revoked']);
 
+                // Reset strike count on manual revoke.
+                $user->update(['false_alarm_strikes' => 0]);
+
                 // Restore user status
                 if ($user->role_id == 1 || $user->role_id == 2) {
                     $user->officialDetails()->update(['status' => 'active']);
@@ -672,7 +675,7 @@ class UserController extends Controller
                 DB::commit();
 
                 return redirect()->route('users')
-                    ->with('success', 'Suspension revoked successfully. User has been restored.');
+                    ->with('success', 'Suspension revoked successfully. User has been restored and strikes reset to 0.');
             } catch (\Exception $e) {
                 DB::rollBack();
 

@@ -51,7 +51,7 @@ class ConcernResource extends JsonResource
             'assignedTo' => $this->whenLoaded('distribution', function () {
                 $purokLeader = $this->distribution->purokLeader ?? null;
 
-                if (! $purokLeader) {
+                if (!$purokLeader) {
                     return null;
                 }
 
@@ -65,7 +65,7 @@ class ConcernResource extends JsonResource
                 ];
             }),
 
-            'timeline' => $this->whenLoaded('histories', fn () => $this->histories->map(fn ($history) => [
+            'timeline' => $this->whenLoaded('histories', fn() => $this->histories->map(fn($history) => [
                 'id' => $history->id,
                 'status' => $history->status,
                 'remarks' => $history->remarks,
@@ -81,10 +81,13 @@ class ConcernResource extends JsonResource
             ])),
 
             // 6. Threaded Updates (Duplicates)
-            'updates' => $this->whenLoaded('duplicates', fn () => $this->duplicates->map(fn ($duplicate) => [
+            'updates' => $this->whenLoaded('duplicates', fn() => $this->duplicates->map(fn($duplicate) => [
                 'id' => $duplicate->id,
+                'trackingCode' => $duplicate->tracking_code,
+                'type' => $duplicate->type,
                 'title' => $duplicate->title,
                 'description' => $duplicate->description,
+                'transcriptText' => $duplicate->transcript_text,
                 'createdAt' => $duplicate->created_at->diffForHumans(),
                 // Optimization: Only show media if it was explicitly loaded (i.e., in Detail View)
                 'media' => $duplicate->relationLoaded('media')
@@ -96,7 +99,7 @@ class ConcernResource extends JsonResource
             'duplicatesCount' => $this->duplicates_count ?? $this->duplicates()->count() ?? 0,
             'followupsCount' => $this->followups_count ?? 0,
             'lastFollowupAt' => $this->last_followup_at?->toIso8601String(),
-            'isDuplicate' => ! is_null($this->parent_concern_id),
+            'isDuplicate' => !is_null($this->parent_concern_id),
         ];
     }
 }

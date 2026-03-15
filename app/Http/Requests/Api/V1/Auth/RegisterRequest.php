@@ -44,7 +44,7 @@ class RegisterRequest extends FormRequest
             'city' => 'required|string|max:255',
             'province' => 'required|string|max:255',
             'postalCode' => 'nullable|string|max:10',
-            'pcnNumber' => 'required|string|max:50|unique:citizen_details,pcn_number',
+            'pcnNumber' => 'required|string|max:50',
             'verificationToken' => 'required|string',
             'verificationId' => 'required|string',
         ];
