@@ -14,7 +14,7 @@ class IdVerificationService
 
     protected int $ttlMinutes = 15;
 
-    public function start(UploadedFile $image, ?string $requestIp, ?string $deviceFingerprint): IdVerification
+    public function start(UploadedFile $image, ?string $requestIp, ?string $deviceFingerprint, ?float $requestLatitude = null, ?float $requestLongitude = null): IdVerification
     {
         $verificationId = (string) Str::uuid();
         $extension = $image->getClientOriginalExtension() ?: 'jpg';
@@ -29,6 +29,8 @@ class IdVerificationService
             'image_path' => $imagePath,
             'request_ip' => $requestIp,
             'device_fingerprint' => $deviceFingerprint,
+            'request_latitude' => $requestLatitude,
+            'request_longitude' => $requestLongitude,
             'expires_at' => now()->addMinutes($this->ttlMinutes),
         ]);
     }
@@ -43,6 +45,7 @@ class IdVerificationService
             $verification->update([
                 'status' => 'expired',
                 'failure_reason' => 'Verification request expired. Please upload your ID again.',
+                'failure_code' => 'VERIFICATION_EXPIRED',
             ]);
             $this->deleteTemporaryImage($verification);
             $verification->refresh();

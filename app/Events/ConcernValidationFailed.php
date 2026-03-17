@@ -57,6 +57,7 @@ class ConcernValidationFailed implements ShouldBroadcast
         return [
             'concern' => [
                 'id' => $this->concern->id,
+                'type' => $this->concern->type,
                 'status' => $this->concern->status,
                 'rejection_reason' => $this->reason,
                 'tracking_code' => $this->concern->tracking_code,

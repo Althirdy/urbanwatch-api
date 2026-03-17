@@ -83,8 +83,11 @@ class ConcernResource extends JsonResource
             // 6. Threaded Updates (Duplicates)
             'updates' => $this->whenLoaded('duplicates', fn () => $this->duplicates->map(fn ($duplicate) => [
                 'id' => $duplicate->id,
+                'trackingCode' => $duplicate->tracking_code,
+                'type' => $duplicate->type,
                 'title' => $duplicate->title,
                 'description' => $duplicate->description,
+                'transcriptText' => $duplicate->transcript_text,
                 'createdAt' => $duplicate->created_at->diffForHumans(),
                 // Optimization: Only show media if it was explicitly loaded (i.e., in Detail View)
                 'media' => $duplicate->relationLoaded('media')

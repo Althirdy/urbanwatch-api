@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\CitizenDetails;
 use App\Models\OfficialsDetails;
+use App\Models\Purok;
+use App\Models\Roles;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -15,11 +17,26 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
+        $operatorRoleId = Roles::query()->where('name', 'Operator')->value('id');
+        $purokLeaderRoleId = Roles::query()->where('name', 'Purok Leader')->value('id');
+        $citizenRoleId = Roles::query()->where('name', 'Citizen')->value('id');
+
+        if (! $operatorRoleId || ! $purokLeaderRoleId || ! $citizenRoleId) {
+            return;
+        }
+
+        $operatorPurokId = Purok::query()->where('name', 'Phase 9 Package 7A')->value('id');
+        $leaderPurokId = Purok::query()->where('name', 'Phase 7A Lakan')->value('id');
+
+        if (! $operatorPurokId || ! $leaderPurokId) {
+            return;
+        }
+
         // Create Operator User
         User::firstOrCreate(
             ['email' => 'jericotagorda@gmail.com'],
             [
-                'role_id' => 1,
+                'role_id' => $operatorRoleId,
                 'name' => 'Jerico Tagorda',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
@@ -29,6 +46,7 @@ class UserSeeder extends Seeder
         OfficialsDetails::firstOrCreate(
             ['user_id' => User::where('email', 'jericotagorda@gmail.com')->first()->id],
             [
+                'purok_id' => $operatorPurokId,
                 'contact_number' => '+63 912-345-6789',
                 'first_name' => 'Jerico',
                 'middle_name' => '',
@@ -46,7 +64,7 @@ class UserSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'nestorparungao@gmail.com'],
             [
-                'role_id' => 2,
+                'role_id' => $purokLeaderRoleId,
                 'name' => 'Nestor Parungao',
                 'password' => Hash::make('1001'),
                 'email_verified_at' => now(),
@@ -55,6 +73,7 @@ class UserSeeder extends Seeder
         OfficialsDetails::firstOrCreate(
             ['user_id' => User::where('email', 'nestorparungao@gmail.com')->first()->id],
             [
+                'purok_id' => $leaderPurokId,
                 'contact_number' => '+63 945-899-6127',
                 'first_name' => 'Nestor',
                 'middle_name' => '',
@@ -72,7 +91,7 @@ class UserSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'sangertbr@gmail.com'],
             [
-                'role_id' => 3,
+                'role_id' => $citizenRoleId,
                 'name' => 'Sanger Briones',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),

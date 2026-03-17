@@ -158,7 +158,7 @@ function CCTVDisplay({
         setStatusFilter('all');
         setPackageFilter('all');
         setYoloFilter('all');
-        
+
         router.get('/devices', {
             search: '',
             status: 'all',
@@ -274,7 +274,7 @@ function CCTVDisplay({
                 {devices?.data?.map((device) => (
                     <Card
                         key={device.id}
-                        className="group py-0 relative overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700"
+                        className="group py-4 relative overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700"
                     >
                         <CardContent className="p-6">
                             {/* Header Row */}

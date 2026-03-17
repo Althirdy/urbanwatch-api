@@ -37,7 +37,7 @@ chmod +x deploy-staging.sh setup.sh 2>/dev/null || true
 
 # 3. Apply infrastructure changes (like new Redis service)
 echo "🏗️ Applying infrastructure changes..."
-docker compose -f docker-compose.uat.yml up -d
+docker compose -f docker-compose.uat.yml up -d --build uat-app uat-queue uat-scheduler
 
 # 4. Run build and optimization commands
 echo "� Fixing vendor directory permissions inside container..."
@@ -60,11 +60,14 @@ docker compose -f docker-compose.uat.yml exec -T uat-app php artisan db:seed --c
 echo "⚡ Optimizing application..."
 docker compose -f docker-compose.uat.yml exec -T uat-app php artisan optimize
 
+echo "🔁 Restarting queue workers to load latest code..."
+docker compose -f docker-compose.uat.yml exec -T uat-app php artisan queue:restart
+
 echo "🔒 Setting final permissions..."
 docker compose -f docker-compose.uat.yml exec -T --user root uat-app chown -R "${APP_UID:-1000}:${APP_GID:-1000}" storage bootstrap/cache public/build
 docker compose -f docker-compose.uat.yml exec -T --user root uat-app chmod -R 775 storage bootstrap/cache public/build
 
-echo "♻️  Restarting services to apply changes..."
-docker compose -f docker-compose.uat.yml restart uat-app
+echo "♻️  Restarting app layer services to apply changes..."
+docker compose -f docker-compose.uat.yml restart uat-app uat-queue uat-scheduler
 
 echo "✅ Deployment completed successfully!"

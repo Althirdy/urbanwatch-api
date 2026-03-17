@@ -4,124 +4,150 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Psr\Http\Message\StreamInterface;
 
 class GeminiService
 {
     protected $apiKey;
 
-    protected $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
+    protected string $apiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta';
 
-    protected $audioModel = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
+    protected string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
+
+    protected string $audioModel = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
+
+    protected string $audioModelName = 'gemini-2.5-flash-lite';
 
     public function __construct()
     {
         $this->apiKey = config('services.gemini.api_key');
+        $this->apiBaseUrl = rtrim((string) config('services.gemini.api_base', 'https://generativelanguage.googleapis.com/v1beta'), '/');
+        $this->audioModelName = (string) config('services.gemini.audio_model', 'gemini-2.5-flash-lite');
+
+        $generateUrl = "{$this->apiBaseUrl}/models/{$this->audioModelName}:generateContent";
+        $this->baseUrl = $generateUrl;
+        $this->audioModel = $generateUrl;
     }
 
     /**
      * Transcribe and analyze audio content with category and severity detection.
      *
-     * @param  string  $fileContent  Raw binary content of the file
-     * @param  string  $mimeType  Mime type of the file (e.g., 'audio/mp3')
-     * @return array|null Returns array with 'transcription_text', 'title', 'description', 'category', 'severity', 'confidence', 'is_valid', 'rejection_reason' or null on failure
+     * Stream-first signature:
+     * analyzeAudio(resource|StreamInterface $audioInput, int $audioSize, string $mimeType, array $context = [])
+     *
+     * Legacy signature (backwards compatible):
+     * analyzeAudio(string $fileContent, string $mimeType, array $context = [])
+     *
+     * @return array|null Returns array with 'transcription_text', 'title', 'description', 'category', 'severity',
+     *                    'confidence', 'is_valid', 'rejection_reason' or null on failure.
      */
-    public function analyzeAudio(string $fileContent, string $mimeType)
+    public function analyzeAudio($audioInput, $audioSizeOrMimeType, $mimeTypeOrContext = null, array $context = [])
     {
-        try {
-            if (! $this->apiKey) {
-                Log::error('Gemini API Key is missing.');
+        if (! $this->apiKey) {
+            Log::error('Gemini API Key is missing.');
 
-                return null;
-            }
+            return null;
+        }
 
-            $base64Data = base64_encode($fileContent);
+        $audioSize = 0;
+        $mimeType = '';
+        $resolvedContext = $context;
 
-            $prompt = 'Transcribe the following audio recording of a citizen concern (likely in Filipino or Taglish). '.
-                      'Provide the transcription text verbatim. '.
-                      'Generate a concise 3-5 word title in Tagalog (Filipino). '.
-                      'Generate a brief 1-sentence summary description in Tagalog (Filipino). '.
-                      "\n\n".
-                      'Also analyze the concern for VALIDITY and CLASSIFICATION:'."\n".
-                      '- is_valid: true if it describes a real community issue.'."\n".
-                      '- rejection_reason: Brief Tagalog explanation if invalid, else null.'."\n".
-                      '- CATEGORIES: safety, security, infrastructure, environment, noise, other'."\n".
-                      '- SPECIFIC TYPE: One-word lowercase tag identifying the exact issue (e.g., fire, collision, theft, flood, assault, noise, garbage).'."\n".
-                      '- SEVERITY LEVELS: low, medium, high'."\n".
-                      "\n".
-                      'EXAMPLES:'."\n".
-                      '- "May sunog" → category: safety, specific_type: fire, severity: high, is_valid: true'."\n".
-                      '- "Maraming basura" → category: environment, specific_type: garbage, severity: medium, is_valid: true'."\n".
-                      "\n".
-                      "Return strictly valid JSON with keys: 'transcription_text', 'title', 'description', 'category', 'specific_type', 'severity', 'confidence', 'is_valid', 'rejection_reason'. ".
-                      'Do not include markdown formatting.';
+        if (is_string($audioInput)) {
+            // Legacy path: analyzeAudio($fileContent, $mimeType, $context)
+            $audioSize = strlen($audioInput);
+            $mimeType = (string) $audioSizeOrMimeType;
+            $resolvedContext = is_array($mimeTypeOrContext) ? $mimeTypeOrContext : $context;
+        } else {
+            // Stream-first path: analyzeAudio($stream, $audioSize, $mimeType, $context)
+            $audioSize = (int) $audioSizeOrMimeType;
+            $mimeType = (string) $mimeTypeOrContext;
+            $resolvedContext = $context;
+        }
 
-            $response = Http::timeout(30)->withHeaders([
-                'Content-Type' => 'application/json',
-            ])->post("{$this->audioModel}?key={$this->apiKey}", [
-                'contents' => [
-                    [
-                        'parts' => [
-                            [
-                                'inline_data' => [
-                                    'mime_type' => $mimeType,
-                                    'data' => $base64Data,
-                                ],
-                            ],
-                            [
-                                'text' => $prompt,
-                            ],
-                        ],
-                    ],
-                ],
-                'generationConfig' => [
-                    'response_mime_type' => 'application/json',
-                ],
-            ]);
+        $mimeType = $this->normalizeVoiceAudioMimeType($mimeType);
+        $fileContent = $this->extractAudioContentFromInput($audioInput);
 
-            if ($response->failed()) {
-                Log::error('Gemini API Error', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-
-                return null;
-            }
-
-            $responseData = $response->json();
-
-            // Extract the text from the response
-            if (! isset($responseData['candidates'][0]['content']['parts'][0]['text'])) {
-                Log::error('Gemini API: Unexpected response format', ['response' => $responseData]);
-
-                return null;
-            }
-
-            $jsonString = $responseData['candidates'][0]['content']['parts'][0]['text'];
-
-            // Clean up any markdown code blocks if present (just in case)
-            $jsonString = preg_replace('/^```json\s*|\s*```$/', '', $jsonString);
-
-            $result = json_decode($jsonString, true);
-
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                Log::error('Gemini API: Failed to parse JSON response', [
-                    'error' => json_last_error_msg(),
-                    'raw' => $jsonString,
-                ]);
-
-                return null;
-            }
-
-            return $this->normalizeConcernAiResult($result);
-
-        } catch (\Exception $e) {
-            Log::error('GeminiService Exception', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+        if ($audioSize <= 0 || trim($mimeType) === '' || $fileContent === '') {
+            Log::error('Gemini audio analysis input is invalid', [
+                'has_stream_input' => is_resource($audioInput) || $audioInput instanceof StreamInterface,
+                'has_file_content' => $fileContent !== '',
+                'audio_size' => $audioSize,
+                'mime_type' => $mimeType,
+                'concern_id' => $resolvedContext['concern_id'] ?? null,
             ]);
 
             return null;
         }
+
+        $maxAttempts = 3;
+        $retryDelaysMs = [0, 1000, 2000];
+
+        $logContext = array_filter([
+            'concern_id' => $resolvedContext['concern_id'] ?? null,
+            'mime_type' => $mimeType,
+            'input_bytes' => $audioSize,
+            'model' => $this->audioModelName,
+            'voice_ai_path' => 'inline_data',
+        ], static fn ($value) => ! is_null($value));
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            Log::info('Gemini audio analysis attempt started', array_merge($logContext, [
+                'attempt' => $attempt,
+                'max_attempts' => $maxAttempts,
+            ]));
+
+            try {
+                $inlineResult = $this->analyzeAudioInlineData($fileContent, $mimeType, $logContext, $attempt);
+                if (! $inlineResult['success']) {
+                    if ($inlineResult['retryable'] && $attempt < $maxAttempts) {
+                        usleep($retryDelaysMs[$attempt] * 1000);
+
+                        continue;
+                    }
+
+                    Log::error('Gemini audio analysis failed at inline step', array_merge($logContext, [
+                        'attempt' => $attempt,
+                        'status' => $inlineResult['status'],
+                        'error' => $inlineResult['error'],
+                    ]));
+
+                    return null;
+                }
+
+                $result = $inlineResult['result'] ?? null;
+                if (! is_array($result)) {
+                    return null;
+                }
+
+                Log::info('Gemini audio analysis completed', array_merge($logContext, [
+                    'attempt' => $attempt,
+                    'is_valid' => (bool) ($result['is_valid'] ?? false),
+                ]));
+
+                return $this->normalizeConcernAiResult($result);
+            } catch (\Throwable $e) {
+                $retryable = $attempt < $maxAttempts;
+                Log::warning('Gemini audio analysis exception', array_merge($logContext, [
+                    'attempt' => $attempt,
+                    'retryable' => $retryable,
+                    'error' => $e->getMessage(),
+                    'exception' => get_class($e),
+                ]));
+
+                if (! $retryable) {
+                    Log::error('GeminiService audio analysis exhausted after exceptions', array_merge($logContext, [
+                        'error' => $e->getMessage(),
+                    ]));
+
+                    return null;
+                }
+
+                usleep($retryDelaysMs[$attempt] * 1000);
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -542,34 +568,9 @@ PROMPT;
 
             $result = $this->normalizeNationalIdResult($result);
 
-            // Check location restriction if system setting is enabled
-            $restrictToBarangay = \App\Models\SystemSetting::get('restrict_registration_to_brgy_176', 'false') === 'true';
+            // Registration residency rules are evaluated in OCR workflow service.
             $result['isOutsideAllowedArea'] = false;
             $result['locationRestrictionReason'] = null;
-
-            if ($restrictToBarangay && $result['isAuthentic']) {
-                $address = $result['data']['address'] ?? null;
-                $isPhase9Resident = $result['isPhase9Resident'] ?? false;
-
-                $isWithinAllowedArea = $isPhase9Resident;
-
-                if (! $isWithinAllowedArea && $address) {
-                    if (preg_match('/\bPH\.?\s*9\b|\bPHASE\s*9\b/i', strtoupper($address))) {
-                        $isWithinAllowedArea = true;
-                    }
-                }
-
-                if (! $isWithinAllowedArea) {
-                    $result['isOutsideAllowedArea'] = true;
-                    $result['locationRestrictionReason'] = 'Registration is only available to Phase 9 (PH 9) residents. Your address is not in Phase 9.';
-
-                    Log::info('National ID validation: Outside allowed area (not PH 9)', [
-                        'address' => $address,
-                        'isPhase9Resident' => $isPhase9Resident,
-                        'restriction_enabled' => $restrictToBarangay,
-                    ]);
-                }
-            }
 
             return $result;
 
@@ -709,6 +710,164 @@ PROMPT;
         $parts = array_filter($parts, fn ($part) => strlen($part) >= 3);
 
         return array_values(array_unique($parts));
+    }
+
+    private function analyzeAudioInlineData(string $fileContent, string $mimeType, array $logContext, int $attempt): array
+    {
+        $response = Http::timeout(30)->withHeaders([
+            'Content-Type' => 'application/json',
+        ])->post("{$this->audioModel}?key={$this->apiKey}", [
+            'contents' => [[
+                'parts' => [
+                    [
+                        'inline_data' => [
+                            'mime_type' => $mimeType,
+                            'data' => base64_encode($fileContent),
+                        ],
+                    ],
+                    [
+                        'text' => $this->buildAudioPrompt(),
+                    ],
+                ],
+            ]],
+            'generationConfig' => [
+                'response_mime_type' => 'application/json',
+            ],
+        ]);
+
+        if ($response->failed()) {
+            $status = $response->status();
+            $retryable = $this->isRetryableGeminiStatus($status);
+            Log::warning('Gemini audio inline_data HTTP failure', array_merge($logContext, [
+                'attempt' => $attempt,
+                'status' => $status,
+                'retryable' => $retryable,
+                'response_preview' => substr($response->body(), 0, 500),
+            ]));
+
+            return [
+                'success' => false,
+                'retryable' => $retryable,
+                'status' => $status,
+                'error' => 'inline_request_failed',
+            ];
+        }
+
+        $responseData = $response->json();
+        if (! isset($responseData['candidates'][0]['content']['parts'][0]['text'])) {
+            Log::error('Gemini audio inline_data unexpected response format', array_merge($logContext, [
+                'attempt' => $attempt,
+                'response' => $responseData,
+            ]));
+
+            return [
+                'success' => false,
+                'retryable' => false,
+                'status' => $response->status(),
+                'error' => 'inline_unexpected_response',
+            ];
+        }
+
+        $jsonString = preg_replace('/^```json\s*|\s*```$/', '', (string) $responseData['candidates'][0]['content']['parts'][0]['text']);
+        $result = json_decode($jsonString, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            Log::error('Gemini audio inline_data JSON parse failure', array_merge($logContext, [
+                'attempt' => $attempt,
+                'error' => json_last_error_msg(),
+                'raw_preview' => substr($jsonString, 0, 500),
+            ]));
+
+            return [
+                'success' => false,
+                'retryable' => false,
+                'status' => $response->status(),
+                'error' => 'inline_json_parse_failed',
+            ];
+        }
+
+        return [
+            'success' => true,
+            'retryable' => false,
+            'status' => $response->status(),
+            'result' => $this->normalizeConcernAiResult($result),
+        ];
+    }
+
+    private function extractAudioContentFromInput($audioInput): string
+    {
+        if (is_string($audioInput)) {
+            return $audioInput;
+        }
+
+        if ($audioInput instanceof StreamInterface) {
+            try {
+                if ($audioInput->isSeekable()) {
+                    $audioInput->rewind();
+                }
+
+                return $audioInput->getContents();
+            } catch (\Throwable) {
+                return '';
+            }
+        }
+
+        if (is_resource($audioInput)) {
+            $meta = stream_get_meta_data($audioInput);
+            if (($meta['seekable'] ?? false) === true) {
+                @rewind($audioInput);
+            }
+
+            $contents = stream_get_contents($audioInput);
+            if ($contents === false) {
+                return '';
+            }
+
+            return $contents;
+        }
+
+        return '';
+    }
+
+    private function normalizeVoiceAudioMimeType(string $mimeType): string
+    {
+        $normalized = strtolower(trim($mimeType));
+
+        return match ($normalized) {
+            'video/mp4' => 'audio/mp4',
+            'audio/m4a' => 'audio/mp4',
+            default => $normalized,
+        };
+    }
+
+    private function buildAudioPrompt(): string
+    {
+        return 'Transcribe the following audio recording of a citizen concern (likely in Filipino or Taglish). '.
+            'Provide the transcription text verbatim. '.
+            'Generate a concise 3-5 word title in Tagalog (Filipino). '.
+            'Generate a brief 1-sentence summary description in Tagalog (Filipino). '.
+            "\n\n".
+            'Also analyze the concern for VALIDITY and CLASSIFICATION:'."\n".
+            '- is_valid: true if it describes a real community issue or emergency.'."\n".
+            '- rejection_reason: Brief Tagalog explanation if invalid, else null.'."\n".
+            '- CATEGORIES: safety, security, infrastructure, environment, noise, other'."\n".
+            '- SPECIFIC TYPE: One-word lowercase tag identifying the exact issue (e.g., fire, collision, theft, flood, assault, noise, garbage).'."\n".
+            '- SEVERITY LEVELS: low, medium, high'."\n".
+            '- IMPORTANT: Reports mentioning emergencies like "sunog", "banggaan/aksidente", "baha", "nakawan", especially with landmarks/locations (e.g., gasolinahan, rotonda, school, kanto), are VALID even if short.'."\n".
+            '- INVALID ONLY if clearly gibberish, joke/test spam, or unrelated chat.'."\n".
+            "\n".
+            'EXAMPLES:'."\n".
+            '- "May sunog" → category: safety, specific_type: fire, severity: high, is_valid: true'."\n".
+            '- "May banggaan malapit sa Roden gasoline station" → category: safety, specific_type: collision, severity: high, is_valid: true'."\n".
+            '- "Maraming basura" → category: environment, specific_type: garbage, severity: medium, is_valid: true'."\n".
+            '- "Testing 123 asdf" → is_valid: false'."\n".
+            "\n".
+            "Return strictly valid JSON with keys: 'transcription_text', 'title', 'description', 'category', 'specific_type', 'severity', 'confidence', 'is_valid', 'rejection_reason'. ".
+            'Do not include markdown formatting.';
+    }
+
+    private function isRetryableGeminiStatus(int $status): bool
+    {
+        return in_array($status, [429, 500, 502, 503, 504], true);
     }
 
     /**

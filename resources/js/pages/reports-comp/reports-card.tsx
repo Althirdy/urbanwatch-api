@@ -48,7 +48,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                 preserveState: false, // Force reload to show updated status
                 onSuccess: (page) => {
                     console.log('Acknowledge request completed', page.props);
-                    
+
                     // Check for validation errors
                     const errors = page.props.errors as Record<string, string> | undefined;
                     if (errors && Object.keys(errors).length > 0) {
@@ -57,7 +57,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                         alert(`❌ ${errorMsg}`);
                         return;
                     }
-                    
+
                     // Show success message
                     const flash = page.props.flash as { success?: string } | undefined;
                     if (flash?.success) {
@@ -67,7 +67,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                 },
                 onError: (errors) => {
                     console.error('Failed to acknowledge:', errors);
-                    const errorMsg = typeof errors === 'object' 
+                    const errorMsg = typeof errors === 'object'
                         ? (errors.message || Object.values(errors)[0] || 'Unknown error')
                         : 'Request failed';
                     alert(`❌ ${errorMsg}`);
@@ -119,7 +119,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
     };
 
     return (
-        <div className="grid auto-rows-min grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid auto-rows-min grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {reports.length === 0 && (
                 <Card className="col-span-full rounded-[var(--radius)] border border-sidebar-border/70 dark:border-sidebar-border">
                     <CardContent className="flex items-center justify-center py-12">
@@ -141,7 +141,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                 return (
                     <Card
                         key={report.id}
-                        className="relative flex flex-col overflow-hidden rounded-[var(--radius)] border border-sidebar-border/70 shadow-sm transition-shadow hover:shadow-md dark:border-sidebar-border"
+                        className="group relative flex flex-col overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700 h-full"
                     >
                         {/* Accident Image - Reduced height */}
                         {firstImage ? (
@@ -242,7 +242,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                             </div>
                         </CardContent>
 
-                        <CardFooter className="flex flex-col gap-3 p-3 mt-auto border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/20">
+                        <CardFooter className="flex flex-col gap-3 p-3 mt-auto dark:border-zinc-800">
                             {report.status !== 'False Alarm' && (
                                 <div className="w-full">
                                     {!report.is_acknowledge ? (
@@ -283,7 +283,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        className="h-8 flex-1 text-xs border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                        className="cursor-pointer h-8 flex-1 text-xs border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                     >
                                         <Open className="mr-1.5 h-3.5 w-3.5 text-zinc-600 dark:text-zinc-400" />
                                         Details
@@ -300,8 +300,8 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                                 <TooltipTrigger asChild>
                                                     <Button
                                                         variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                                        size="sm"
+                                                        className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                                     >
                                                         <SquarePen className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
                                                     </Button>
@@ -317,8 +317,8 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                                 <TooltipTrigger asChild>
                                                     <Button
                                                         variant="outline"
-                                                        size="icon"
-                                                        className="h-8 w-8 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 group"
+                                                        size="sm"
+                                                        className="cursor-pointer h-8 w-8 p-0 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 group"
                                                     >
                                                         <Archive className="h-4 w-4 text-zinc-400 group-hover:text-red-500 transition-colors" />
                                                     </Button>

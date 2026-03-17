@@ -75,9 +75,9 @@ const UserCard = ({
                     key={user.id}
                     className="group relative py-4 overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700 h-full"
                 >
-                    <CardContent className="p-4 flex flex-col h-full">
+                    <CardContent className="p-6 flex flex-col h-full">
                         {/* Header Row */}
-                        <div className='flex flex-row gap-2 items-center px-2 mb-4'>
+                        <div className='flex flex-row gap-2 items-center  mb-4'>
 
                             <div className='flex flex-col gap-1'>
                                 <h3 className="truncate text-sm font-semibold leading-tight">

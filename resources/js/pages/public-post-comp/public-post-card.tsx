@@ -132,9 +132,9 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {paginatedPosts.length === 0 && (
-                    <Card className="col-span-full rounded-[var(--radius)] border border-sidebar-border/70 dark:border-sidebar-border">
+                    <Card className="col-span-full border bg-card dark:border-zinc-800">
                         <CardContent className="flex items-center justify-center py-12">
                             <p className="text-muted-foreground">
                                 No posts found matching your selection.
@@ -147,7 +147,7 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
                     return (
                         <Card
                             key={post.id}
-                            className="relative flex h-full flex-col overflow-hidden rounded-[var(--radius)] border border-sidebar-border/70 dark:border-sidebar-border"
+                            className="group relative flex h-full flex-col overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700"
                         >
                             <CardHeader className=" pt-1 px-6">
                                 <div className="flex items-start justify-between">
@@ -220,7 +220,7 @@ const PublicPostCard = ({ posts }: { posts: PublicPost_T[] }) => {
                                 </div>
                             </CardContent>
                             <CardFooter className="mt-auto">
-                                <div className="flex w-full justify-end gap-1.5 border-t dark:border-zinc-800">
+                                <div className="flex items-center w-full justify-end gap-1.5 pt-1.5 dark:border-zinc-800">
                                     <Tooltip>
                                         <ViewPublicPostDetails post={post}>
                                             <TooltipTrigger asChild>

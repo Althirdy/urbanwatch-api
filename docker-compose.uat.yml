@@ -35,6 +35,39 @@ services:
       - /var/www/html/vendor
     command: php artisan queue:work --verbose --tries=3 --timeout=90
     environment:
+      - APP_ENV=uat
+      - DB_CONNECTION=mysql
+      - DB_HOST=uat-db
+      - DB_PORT=3306
+      - DB_DATABASE=urbanwatch_uat
+      - DB_USERNAME=urban_user
+      - DB_PASSWORD=urban_password
+      - QUEUE_CONNECTION=redis
+      - CACHE_STORE=redis
+      - REDIS_HOST=uat-redis
+      - NPM_CONFIG_CACHE=/var/www/html/.npm-cache
+    depends_on:
+      - uat-db
+      - uat-redis
+
+  uat-scheduler:
+    build: .
+    container_name: urbanwatch-uat-scheduler
+    restart: always
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
+    volumes:
+      - ./:/var/www/html
+      - /var/www/html/vendor
+    command: php artisan schedule:work
+    environment:
+      - APP_ENV=uat
+      - DB_CONNECTION=mysql
+      - DB_HOST=uat-db
+      - DB_PORT=3306
+      - DB_DATABASE=urbanwatch_uat
+      - DB_USERNAME=urban_user
+      - DB_PASSWORD=urban_password
+      - QUEUE_CONNECTION=redis
       - CACHE_STORE=redis
       - REDIS_HOST=uat-redis
       - NPM_CONFIG_CACHE=/var/www/html/.npm-cache

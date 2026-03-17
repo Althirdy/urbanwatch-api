@@ -245,7 +245,7 @@ class ConcernController extends BaseApiController
                         $previousStatus,
                         $status,
                         $remarks
-                    );
+                    )->afterCommit();
                 }
             }
 
@@ -280,7 +280,7 @@ class ConcernController extends BaseApiController
                     $previousStatus,
                     $status,
                     $remarks
-                );
+                )->afterCommit();
             }
 
             return $this->sendResponse([
@@ -301,7 +301,7 @@ class ConcernController extends BaseApiController
 
     private function shouldSendStatusEmail(string $status): bool
     {
-        return in_array($status, ['resolved', 'rejected'], true);
+        return in_array($status, ['ongoing', 'escalated', 'awaiting_confirmation', 'resolved', 'rejected'], true);
     }
 
     private function shouldSendPushForStatus(string $status): bool
@@ -325,6 +325,8 @@ class ConcernController extends BaseApiController
             array_merge($payload, [
                 'notification_id' => $notification->id,
                 'notification_type' => $notification->type,
+                'type' => 'concern_status_update',
+                'concernId' => (int) ($payload['concern_id'] ?? 0),
             ])
         )->afterCommit();
     }

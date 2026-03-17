@@ -11,6 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class ProcessVoiceConcernJob implements ShouldQueue
 {
@@ -33,6 +34,7 @@ class ProcessVoiceConcernJob implements ShouldQueue
     public function handle(GeminiService $geminiService, \App\Services\ConcernService $concernService)
     {
         $concernId = $this->concernId ?? null;
+        $audioStream = null;
 
         if (! $concernId) {
             Log::error('ProcessVoiceConcernJob: Job started with missing concernId');
@@ -95,11 +97,60 @@ class ProcessVoiceConcernJob implements ShouldQueue
                 return;
             }
 
-            $fileContent = Storage::disk($disk)->get($storagePath);
             $mimeType = $audioMedia->mime_type ?? 'audio/mp3'; // Default fallback
+            $audioSize = (int) ($audioMedia->file_size ?? 0);
+
+            if ($audioSize <= 0) {
+                try {
+                    $audioSize = (int) Storage::disk($disk)->size($storagePath);
+                } catch (Throwable $e) {
+                    Log::warning('ProcessVoiceConcernJob: Failed to resolve audio size from storage', [
+                        'concern_id' => $concern->id,
+                        'path' => $storagePath,
+                        'disk' => $disk,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            if ($audioSize <= 0) {
+                Log::error('ProcessVoiceConcernJob: Invalid audio size for voice concern', [
+                    'concern_id' => $concern->id,
+                    'path' => $storagePath,
+                    'disk' => $disk,
+                    'file_size_meta' => $audioMedia->file_size,
+                ]);
+
+                $concernService->markNeedsReview($concern->id, 'Audio file size is invalid. Manual review required.', [
+                    'storage_path' => $storagePath,
+                    'disk' => $disk,
+                    'fallback_source' => 'voice_concern_invalid_audio_size',
+                ]);
+
+                return;
+            }
+
+            $audioStream = Storage::disk($disk)->readStream($storagePath);
+            if (! is_resource($audioStream)) {
+                Log::error('ProcessVoiceConcernJob: Unable to open audio stream from storage', [
+                    'concern_id' => $concern->id,
+                    'path' => $storagePath,
+                    'disk' => $disk,
+                ]);
+
+                $concernService->markNeedsReview($concern->id, 'Audio stream unavailable in storage. Manual review required.', [
+                    'storage_path' => $storagePath,
+                    'disk' => $disk,
+                    'fallback_source' => 'voice_concern_stream_open_failed',
+                ]);
+
+                return;
+            }
 
             // Call Gemini Service - now includes category, severity, and validity analysis
-            $analysis = $geminiService->analyzeAudio($fileContent, $mimeType);
+            $analysis = $geminiService->analyzeAudio($audioStream, $audioSize, $mimeType, [
+                'concern_id' => $concern->id,
+            ]);
 
             if ($analysis) {
                 // Prepare update data with transcription
@@ -115,6 +166,16 @@ class ProcessVoiceConcernJob implements ShouldQueue
                     $concernService->markAsValid($concern->id, $analysis);
                 } else {
                     $reason = $analysis['rejection_reason'] ?? 'Ang iyong voice report ay tinukoy bilang spam o hindi wasto.';
+                    Log::warning('ProcessVoiceConcernJob: Voice concern marked invalid by AI', [
+                        'concern_id' => $concern->id,
+                        'reason' => $reason,
+                        'confidence' => $analysis['confidence'] ?? null,
+                        'category' => $analysis['category'] ?? null,
+                        'severity' => $analysis['severity'] ?? null,
+                        'transcript_preview' => isset($analysis['transcription_text'])
+                            ? mb_substr((string) $analysis['transcription_text'], 0, 180)
+                            : null,
+                    ]);
                     $concernService->markAsInvalid($concern->id, $reason, $analysis);
                 }
             } else {
@@ -122,35 +183,38 @@ class ProcessVoiceConcernJob implements ShouldQueue
                     'concern_id' => $concern->id,
                 ]);
 
-                // Fallback: Update with default text so UI doesn't show "Processing..." forever
-                $concern->update([
-                    'transcript_text' => 'Transcription unavailable. Please listen to the attached audio.',
-                ]);
-
-                $concernService->markNeedsReview($concern->id, 'Voice AI analysis unavailable. Routed for manual review.', [
-                    'is_fallback' => true,
-                    'reasoning' => 'Gemini analysis failed or returned null.',
-                ]);
+                $this->applyAiFailureFallback(
+                    $concernService,
+                    $concern,
+                    'Gemini analysis failed or returned null.',
+                    [
+                        'fallback_source' => 'voice_ai_analysis_null',
+                    ]
+                );
             }
 
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
             Log::error('ProcessVoiceConcernJob: Error processing voice concern', [
                 'concern_id' => $concernId,
                 'error' => $e->getMessage(),
             ]);
 
-            // Fallback: Update with error text
             $concern = Concern::find($concernId);
             if ($concern) {
-                $concern->update([
-                    'transcript_text' => 'Transcription unavailable due to system error.',
-                ]);
+                $this->applyAiFailureFallback(
+                    $concernService,
+                    $concern,
+                    'Exception during voice processing.',
+                    [
+                        'fallback_source' => 'voice_processing_exception',
+                        'exception' => get_class($e),
+                    ]
+                );
             }
-
-            $concernService->markNeedsReview($concernId, 'Voice AI processing exception. Routed for manual review.', [
-                'is_fallback' => true,
-                'reasoning' => 'Exception during voice processing.',
-            ]);
+        } finally {
+            if (is_resource($audioStream)) {
+                fclose($audioStream);
+            }
         }
     }
 
@@ -168,11 +232,53 @@ class ProcessVoiceConcernJob implements ShouldQueue
 
         if ($concernId) {
             $concernService = app(\App\Services\ConcernService::class);
-            $concernService->markNeedsReview($concernId, 'Voice AI failed after retries. Routed for manual review.', [
-                'is_fallback' => true,
-                'confidence' => 0,
-                'reasoning' => 'Voice analysis failed after multiple attempts.',
-            ]);
+            $concern = Concern::find($concernId);
+            if ($concern) {
+                $this->applyAiFailureFallback(
+                    $concernService,
+                    $concern,
+                    'Voice analysis failed after multiple attempts.',
+                    [
+                        'fallback_source' => 'voice_job_failed_after_retries',
+                        'exception' => get_class($exception),
+                    ]
+                );
+            }
         }
+    }
+
+    private function applyAiFailureFallback(\App\Services\ConcernService $concernService, Concern $concern, string $reason, array $meta = []): void
+    {
+        if (in_array($concern->status, ['rejected', 'resolved', 'awaiting_confirmation'], true)) {
+            Log::info('ProcessVoiceConcernJob: Skipping fallback update for terminal concern state', [
+                'concern_id' => $concern->id,
+                'status' => $concern->status,
+            ]);
+
+            return;
+        }
+
+        $fallbackRaw = [
+            'is_fallback' => true,
+            'fallback_source' => $meta['fallback_source'] ?? 'voice_ai_fallback',
+            'gemini_status' => $meta['gemini_status'] ?? null,
+            'gemini_error' => $reason,
+            'attempts' => $meta['attempts'] ?? null,
+            'timestamp' => now()->toIso8601String(),
+            'meta' => $meta,
+        ];
+
+        $concern->update([
+            'title' => 'Ulat ng Mamamayan (Voice)',
+            'description' => 'Naisumiteng voice concern. Sinusuri ng aming team.',
+            'transcript_text' => $concern->transcript_text ?: 'Transcription unavailable. Please listen to the attached audio.',
+            'is_valid' => true,
+            'status' => 'pending',
+            'rejection_reason' => null,
+            'ai_processed_at' => now(),
+            'ai_analysis_raw' => $fallbackRaw,
+        ]);
+
+        $concernService->assignWithoutDeduplication($concern->id, 'Voice concern queued after AI fallback.');
     }
 }

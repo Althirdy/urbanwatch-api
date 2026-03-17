@@ -55,5 +55,38 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perHour(30)->by($key),
             ];
         });
+
+        RateLimiter::for('ocr.start', function (Request $request) {
+            $fingerprint = trim((string) $request->input('deviceFingerprint', ''));
+            $identity = $fingerprint !== '' ? 'fp:'.$fingerprint : 'ip:'.$request->ip();
+
+            $cooldownKey = 'ocr:start:cooldown:'.$identity;
+            $minuteKey = 'ocr:start:minute:'.$identity;
+
+            return [
+                Limit::perSecond(1, 10)->by($cooldownKey)->response(function (Request $request, array $headers) {
+                    $retryAfter = (int) ($headers['Retry-After'] ?? 10);
+
+                    return response()->json([
+                        'success' => false,
+                        'code' => 'OCR_RATE_LIMITED',
+                        'lock_type' => 'cooldown',
+                        'seconds' => $retryAfter,
+                        'message' => "Please wait {$retryAfter} second(s) before scanning another ID.",
+                    ], 429, $headers);
+                }),
+                Limit::perMinute(12)->by($minuteKey)->response(function (Request $request, array $headers) {
+                    $retryAfter = (int) ($headers['Retry-After'] ?? 60);
+
+                    return response()->json([
+                        'success' => false,
+                        'code' => 'OCR_RATE_LIMITED',
+                        'lock_type' => 'rate_limit',
+                        'seconds' => $retryAfter,
+                        'message' => "Too many ID scan attempts. Please try again in {$retryAfter} second(s).",
+                    ], 429, $headers);
+                }),
+            ];
+        });
     }
 }
