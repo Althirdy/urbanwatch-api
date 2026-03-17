@@ -205,7 +205,7 @@ function SuspensionUser({ user, children }: SuspensionUsersProps) {
                 </DialogHeader>
 
                 {/* User Info Card */}
-                <div className="flex items-center gap-3 rounded-lg border bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
+                <div className="flex items-center gap-3 rounded-lg border  p-3 ">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-800">
                         <User className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
                     </div>
@@ -379,8 +379,8 @@ function SuspensionUser({ user, children }: SuspensionUsersProps) {
                         {/* Available Punishments */}
                         {data?.available_punishments && data.available_punishments.length > 0 ? (
                             <div className="space-y-3">
-                                <div className="rounded-lg border dark:border-zinc-800">
-                                    <div className="flex items-center gap-2 border-b bg-zinc-50 px-4 py-2.5 dark:border-zinc-800 dark:bg-zinc-900/50">
+                                <div className="rounded-lg border ">
+                                    <div className="flex items-center gap-2 border-b px-4 py-2.5  ">
                                         <AlertTriangle className="h-4 w-4 text-amber-500" />
                                         <h4 className="text-sm font-semibold">
                                             {data?.is_suspended ? 'Upgrade Punishment' : 'Select Punishment Type'}

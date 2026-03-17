@@ -54,11 +54,23 @@ function CreateUsers({
     roles: roles_T[];
     puroks?: any[]; // Using any for now to avoid extensive type definitions, or define interface
 }) {
+    const pageProps = usePage().props as any;
+    const actorRoleName = (pageProps?.auth?.user?.role?.name || '').toLowerCase();
+    const defaultPurokLeaderRoleId =
+        roles.find((role) => role.name.toLowerCase() === 'purok leader')?.id?.toString() || '';
+    const defaultOperatorRoleId =
+        roles.find((role) => role.name.toLowerCase() === 'operator')?.id?.toString() || '';
+
+    const isSuperadminActor = actorRoleName === 'superadmin';
+    const defaultRoleId = isSuperadminActor ? defaultOperatorRoleId : defaultPurokLeaderRoleId;
+    const targetAccountLabel = isSuperadminActor ? 'Operator' : 'Purok Leader';
+    const defaultAssignedBrgy = isSuperadminActor ? 'BRGY 176 E' : '';
+
     const [open, setOpen] = useState(false);
     const [showPinModal, setShowPinModal] = useState(false);
     const [generatedPin, setGeneratedPin] = useState<string>('');
     const [purokLeaderName, setPurokLeaderName] = useState<string>('');
-    const { flash } = usePage().props as any;
+    const { flash } = pageProps;
     const { data, setData, post, processing, errors, reset } =
         useForm<CreateUserForm>({
             first_name: '',
@@ -66,8 +78,8 @@ function CreateUsers({
             last_name: '',
             email: '',
             phone_number: '',
-            assigned_brgy: '',
-            role_id: '',
+            assigned_brgy: defaultAssignedBrgy,
+            role_id: defaultRoleId,
             password: '',
             password_confirmation: '',
             suffix: '',
@@ -321,10 +333,26 @@ function CreateUsers({
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog
+            open={open}
+            onOpenChange={(nextOpen) => {
+                setOpen(nextOpen);
+
+                if (nextOpen) {
+                    reset();
+                    setClientErrors({});
+                    setData((prev) => ({
+                        ...prev,
+                        role_id: defaultRoleId,
+                        assigned_brgy: defaultAssignedBrgy,
+                        purok_id: '',
+                    }));
+                }
+            }}
+        >
             <DialogTrigger asChild>
                 <Button className="cursor-pointer px-4 py-2">
-                    <Plus /> Add User
+                    <Plus /> Add {targetAccountLabel}
                 </Button>
             </DialogTrigger>
             <DialogContent
@@ -336,9 +364,9 @@ function CreateUsers({
                     className="flex h-full flex-col overflow-hidden"
                 >
                     <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
-                        <DialogTitle>Add New User</DialogTitle>
+                        <DialogTitle>Add New {targetAccountLabel}</DialogTitle>
                         <DialogDescription>
-                            Create a new user account with their personal
+                            Create a {targetAccountLabel} account with their personal
                             information and role assignment.
                         </DialogDescription>
                     </DialogHeader>
@@ -552,51 +580,12 @@ function CreateUsers({
                                 <div className="grid flex-1 gap-2">
                                     <Label htmlFor="role">Role</Label>
                                     <div>
-                                        <Select
-                                            value={data.role_id}
-                                            onValueChange={(value) => {
-                                                setData('role_id', value);
-                                                setClientErrors((prev) => ({
-                                                    ...prev,
-                                                    role_id: undefined,
-                                                }));
-                                                // Auto-set location for Operator, reset for others
-                                                if (isSelectedOperator(value)) {
-                                                    // Operator: Auto-assign to BRGY 176 E
-                                                    setData(prev => ({ ...prev, assigned_brgy: 'BRGY 176 E', purok_id: '' }));
-                                                } else {
-                                                    // Reset location for other roles
-                                                    setData(prev => ({ ...prev, assigned_brgy: '', purok_id: '' }));
-                                                }
-                                            }}
-                                        >
-                                            <SelectTrigger
-                                                className={
-                                                    errors.role_id ||
-                                                        clientErrors.role_id
-                                                        ? 'border-red-500 focus:ring-red-500'
-                                                        : ''
-                                                }
-                                            >
-                                                <SelectValue placeholder="" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {roles
-                                                    .filter(
-                                                        (role) =>
-                                                            role.name !==
-                                                            'Citizen',
-                                                    )
-                                                    .map((role) => (
-                                                        <SelectItem
-                                                            key={role.id}
-                                                            value={role.id.toString()}
-                                                        >
-                                                            {role.name}
-                                                        </SelectItem>
-                                                    ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <Input
+                                            id="role"
+                                            value={targetAccountLabel}
+                                            readOnly
+                                            className="bg-muted cursor-not-allowed"
+                                        />
                                         <div className="h-5">
                                             {(errors.role_id ||
                                                 clientErrors.role_id) && (

@@ -4,8 +4,7 @@
         {
             "type": "Feature",
             "properties": {
-                "name": "PKG 3 - MAHARLIKA 1",
-                "color": "#FFD700"
+                "name": "PKG 3 - MAHARLIKA 1"
             },
             "geometry": {
                 "coordinates": [

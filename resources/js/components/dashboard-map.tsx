@@ -27,7 +27,7 @@ const createMarkerIcon = (severity: string | undefined | null) => {
     // Normalize severity: handle null, undefined, whitespace, and ensure lowercase
     const normalizedSeverity = (severity || 'high').toString().trim().toLowerCase();
     const color = SEVERITY_COLORS[normalizedSeverity] || 'red';
-    
+
     return L.icon({
         iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
         shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
@@ -147,11 +147,15 @@ export default function DashboardMap({ puroks, concerns, purokLeaders }: Dashboa
                                 key={purok.id}
                                 data={purok.geometry}
                                 style={getPurokStyle(purok)}
-                                onEachFeature={(feature, layer) => {
-                                    layer.bindTooltip(purok.name, {
+                                onEachFeature={(_, layer) => {
+                                    const tooltipText = purok.active_leader_name
+                                        ? `${purok.name}<br/>Purok Leader: ${purok.active_leader_name}`
+                                        : purok.name;
+
+                                    layer.bindTooltip(tooltipText, {
                                         permanent: true,
                                         direction: 'center',
-                                        className: 'text-xs font-bold bg-transparent border-0 shadow-none',
+                                        className: 'text-xs font-bold bg-transparent border-0 shadow-none whitespace-pre-line',
                                     });
                                 }}
                             />
@@ -184,11 +188,10 @@ export default function DashboardMap({ puroks, concerns, purokLeaders }: Dashboa
                                 <h4 className="font-semibold text-sm leading-tight text-gray-900 dark:text-gray-100">{concern.title}</h4>
                                 <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">{concern.description}</p>
                                 <div className="flex flex-wrap gap-1.5">
-                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
-                                        concern.severity === 'high' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800' :
+                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border ${concern.severity === 'high' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800' :
                                         concern.severity === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800' :
-                                        'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800'
-                                    }`}>
+                                            'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800'
+                                        }`}>
                                         {SEVERITY_LABELS[concern.severity] || concern.severity}
                                     </span>
                                     <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 text-[10px] font-medium border border-gray-200 dark:border-gray-700">
@@ -241,11 +244,10 @@ export default function DashboardMap({ puroks, concerns, purokLeaders }: Dashboa
                                 <span className="text-[10px] font-mono text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded border border-gray-200 dark:border-gray-700">
                                     {selectedConcern.tracking_code}
                                 </span>
-                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
-                                    selectedConcern.severity === 'high' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800' :
+                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border ${selectedConcern.severity === 'high' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800' :
                                     selectedConcern.severity === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800' :
-                                    'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800'
-                                }`}>
+                                        'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800'
+                                    }`}>
                                     {SEVERITY_LABELS[selectedConcern.severity] || selectedConcern.severity}
                                 </span>
                             </div>
@@ -306,8 +308,8 @@ export default function DashboardMap({ puroks, concerns, purokLeaders }: Dashboa
                                     </SelectTrigger>
                                     <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 z-[10000]">
                                         {purokLeaders.map((leader) => (
-                                            <SelectItem 
-                                                key={leader.id} 
+                                            <SelectItem
+                                                key={leader.id}
                                                 value={leader.id.toString()}
                                                 className="text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700 cursor-pointer"
                                             >

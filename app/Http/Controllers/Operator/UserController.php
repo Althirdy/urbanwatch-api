@@ -187,18 +187,28 @@ class UserController extends Controller
         // Fetch Puroks with geometry and status
         $puroksRaw = \App\Models\Purok::select('id', 'name', DB::raw('ST_AsGeoJSON(boundary) as geometry'))->get();
 
-        // Get IDs of puroks that already have an active leader
-        $occupiedPurokIds = OfficialsDetails::where('status', 'active')
+        // Get active leader assignment per purok for map labels/tooltips
+        $activeLeadersByPurok = OfficialsDetails::with('user:id,name')
+            ->where('status', 'active')
             ->whereNotNull('purok_id')
-            ->pluck('purok_id')
-            ->toArray();
+            ->whereHas('user', function ($query) {
+                $query->where('role_id', 2);
+            })
+            ->orderByDesc('id')
+            ->get()
+            ->unique('purok_id')
+            ->keyBy('purok_id');
 
-        $puroks = $puroksRaw->map(function ($p) use ($occupiedPurokIds) {
+        $puroks = $puroksRaw->map(function ($p) use ($activeLeadersByPurok) {
+            $activeLeader = $activeLeadersByPurok->get($p->id);
+
             return [
                 'id' => $p->id,
                 'name' => $p->name,
                 'geometry' => json_decode($p->geometry),
-                'status' => in_array($p->id, $occupiedPurokIds) ? 'occupied' : 'available',
+                'status' => $activeLeader ? 'occupied' : 'available',
+                'active_leader_name' => $activeLeader?->user?->name,
+                'active_leader_id' => $activeLeader?->user_id,
             ];
         });
 
