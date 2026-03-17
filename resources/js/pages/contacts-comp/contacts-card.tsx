@@ -37,7 +37,13 @@ const ContactCard = ({ contacts }: { contacts: Contact[] }) => {
                         <div className="flex items-center justify-between gap-2 mb-3">
                             <div className="flex flex-col  gap-2 min-w-0 flex-1">
                                 <div className="min-w-0 flex flex-col gap-2">
-                                    <span className="truncate text-sm font-semibold ">
+
+                                    {contact.branch_unit_abbreviation && (
+                                        <span className="truncate text-sm font-semibold">
+                                            {contact.branch_unit_abbreviation}
+                                        </span>
+                                    )}
+                                    <span className="truncate text-xs  text-muted-foreground">
                                         {contact.branch_unit_name}
                                     </span>
                                 </div>

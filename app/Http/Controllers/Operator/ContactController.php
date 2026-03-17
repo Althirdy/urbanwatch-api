@@ -23,7 +23,9 @@ class ContactController extends Controller
         }
 
         $page = $request->get('page', 1);
-        $cacheKey = "contacts_list_v2_page_{$page}";
+        $latestContactUpdate = Contact::max('updated_at');
+        $latestContactVersion = $latestContactUpdate ? strtotime((string) $latestContactUpdate) : 0;
+        $cacheKey = "contacts_list_v3_page_{$page}_ver_{$latestContactVersion}";
 
         $cachedData = \Illuminate\Support\Facades\Cache::tags(['contacts'])->remember($cacheKey, now()->addHours(1), function () use ($request) {
             return $this->getFilteredContacts($request);

@@ -120,18 +120,23 @@ export default function ViewContacts({ contact, children }: ViewContactsProps) {
                                 <h3 className="text-xl font-semibold">
                                     {getDisplayName()}
                                 </h3>
-
-                                {contact.contact_person && (
+                                {contact.branch_unit_abbreviation && (
                                     <span className="text-md font-normal text-muted-foreground">
+                                        {contact.branch_unit_abbreviation}
+                                    </span>
+                                )}
+                                {contact.contact_person && (
+                                    <span className="text-sm font-normal text-muted-foreground">
                                         {contact.branch_unit_name}
                                     </span>
                                 )}
+
                             </div>
                             <div className="flex flex-col items-end gap-2">
                                 <Badge
                                     className={`inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium text-foreground ${contact.active
-                                            ? 'bg-green-800 dark:bg-green-900'
-                                            : 'bg-gray-800'
+                                        ? 'bg-green-800 dark:bg-green-900'
+                                        : 'bg-gray-800'
                                         }`}
                                 >
                                     {contact.active ? 'Active' : 'Inactive'}
@@ -139,7 +144,7 @@ export default function ViewContacts({ contact, children }: ViewContactsProps) {
                                 <Badge
                                     className={`inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium ${responderTypeColors[
                                         contact.responder_type
-                                        ] || 'bg-blue-100 text-blue-800'
+                                    ] || 'bg-blue-100 text-blue-800'
                                         }`}
                                 >
                                     {contact.responder_type}

@@ -11,6 +11,7 @@ class Contact extends Model
 
     protected $fillable = [
         'branch_unit_name',
+        'branch_unit_abbreviation',
         'contact_person',
         'responder_type',
         'primary_mobile',
@@ -45,6 +46,7 @@ class Contact extends Model
     {
         return $query->where(function ($q) use ($term) {
             $q->where('branch_unit_name', 'like', "%{$term}%")
+                ->orWhere('branch_unit_abbreviation', 'like', "%{$term}%")
                 ->orWhere('contact_person', 'like', "%{$term}%")
                 ->orWhere('primary_mobile', 'like', "%{$term}%")
                 ->orWhere('backup_mobile', 'like', "%{$term}%");

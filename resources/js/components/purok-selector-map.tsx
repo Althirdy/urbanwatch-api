@@ -72,11 +72,10 @@ export default function PurokSelectorMap({
     }, [puroks]);
 
     const onEachFeature = (purok: PurokData) => (feature: any, layer: L.Layer) => {
-        // Add tooltip with name and status
-        const statusText = purok.status === 'occupied' ? 'Occupied' : 'Available';
+        // Add tooltip with name and optional assigned leader
         const tooltipText = purok.active_leader_name
-            ? `${purok.name}<br/>${statusText}<br/>Purok Leader: ${purok.active_leader_name}`
-            : `${purok.name}<br/>${statusText}`;
+            ? `${purok.name}<br/>Purok Leader: ${purok.active_leader_name}`
+            : purok.name;
 
         layer.bindTooltip(tooltipText, {
             permanent: false,
