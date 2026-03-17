@@ -45,6 +45,10 @@ docker compose -f docker-compose.uat.yml exec -T --user root uat-app chown -R "$
 
 echo "📦 Dependencies and frontend assets are built during Docker image build; skipping runtime install/build."
 
+echo "🧹 Refreshing Laravel package discovery cache..."
+docker compose -f docker-compose.uat.yml exec -T uat-app rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+docker compose -f docker-compose.uat.yml exec -T uat-app php artisan package:discover --ansi
+
 echo "🗄️ Running database migrations..."
 docker compose -f docker-compose.uat.yml exec -T uat-app php artisan migrate --force
 
