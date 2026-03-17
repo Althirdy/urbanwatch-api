@@ -1,5 +1,6 @@
 services:
   uat-app:
+    image: urbanwatch-uat-runtime:latest
     build: .
     container_name: urbanwatch-uat-app
     restart: always
@@ -26,7 +27,7 @@ services:
       - uat-redis
 
   uat-queue:
-    build: .
+    image: urbanwatch-uat-runtime:latest
     container_name: urbanwatch-uat-queue
     restart: always
     user: "${APP_UID:-1000}:${APP_GID:-1000}"
@@ -51,7 +52,7 @@ services:
       - uat-redis
 
   uat-scheduler:
-    build: .
+    image: urbanwatch-uat-runtime:latest
     container_name: urbanwatch-uat-scheduler
     restart: always
     user: "${APP_UID:-1000}:${APP_GID:-1000}"
