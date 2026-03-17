@@ -39,17 +39,11 @@ chmod +x deploy-staging.sh setup.sh 2>/dev/null || true
 echo "🏗️ Applying infrastructure changes..."
 docker compose -f docker-compose.uat.yml up -d --build uat-app uat-queue uat-scheduler
 
-# 4. Run build and optimization commands
+# 4. Run application commands after containers are up
 echo "� Fixing vendor directory permissions inside container..."
 docker compose -f docker-compose.uat.yml exec -T --user root uat-app chown -R "${APP_UID:-1000}:${APP_GID:-1000}" /var/www/html/vendor 2>/dev/null || true
 
-echo "�📦 Installing dependencies..."
-docker compose -f docker-compose.uat.yml exec -T uat-app composer install --no-dev --no-interaction --optimize-autoloader
-
-docker compose -f docker-compose.uat.yml exec -T uat-app npm ci --no-audit --no-fund
-
-echo "🏗️ Building frontend assets..."
-docker compose -f docker-compose.uat.yml exec -T uat-app npm run build
+echo "📦 Dependencies and frontend assets are built during Docker image build; skipping runtime install/build."
 
 echo "🗄️ Running database migrations..."
 docker compose -f docker-compose.uat.yml exec -T uat-app php artisan migrate --force
