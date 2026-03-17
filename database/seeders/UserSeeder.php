@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\CitizenDetails;
 use App\Models\OfficialsDetails;
+use App\Models\Purok;
 use App\Models\Roles;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -24,6 +25,13 @@ class UserSeeder extends Seeder
             return;
         }
 
+        $operatorPurokId = Purok::query()->where('name', 'Phase 9 Package 7A')->value('id');
+        $leaderPurokId = Purok::query()->where('name', 'Phase 7A Lakan')->value('id');
+
+        if (! $operatorPurokId || ! $leaderPurokId) {
+            return;
+        }
+
         // Create Operator User
         User::firstOrCreate(
             ['email' => 'jericotagorda@gmail.com'],
@@ -38,6 +46,7 @@ class UserSeeder extends Seeder
         OfficialsDetails::firstOrCreate(
             ['user_id' => User::where('email', 'jericotagorda@gmail.com')->first()->id],
             [
+                'purok_id' => $operatorPurokId,
                 'contact_number' => '+63 912-345-6789',
                 'first_name' => 'Jerico',
                 'middle_name' => '',
@@ -64,6 +73,7 @@ class UserSeeder extends Seeder
         OfficialsDetails::firstOrCreate(
             ['user_id' => User::where('email', 'nestorparungao@gmail.com')->first()->id],
             [
+                'purok_id' => $leaderPurokId,
                 'contact_number' => '+63 945-899-6127',
                 'first_name' => 'Nestor',
                 'middle_name' => '',

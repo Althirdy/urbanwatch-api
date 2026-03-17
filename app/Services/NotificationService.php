@@ -131,7 +131,7 @@ class NotificationService
         Concern $concern,
         string $previousStatus,
         string $newStatus,
-        User $actor,
+        ?User $actor,
         ?string $remarks = null
     ): ?Notification {
         try {
@@ -174,7 +174,7 @@ class NotificationService
                     'tracking_code' => $concern->tracking_code,
                     'previous_status' => $previousStatus,
                     'new_status' => $newStatus,
-                    'updated_by' => $actor->name ?? 'Official',
+                    'updated_by' => $actor?->name ?? 'UrbanWatch System',
                     'remarks' => $remarks,
                     'rejection_reason' => $newStatus === 'rejected' ? $remarks : null,
                 ],
@@ -183,6 +183,40 @@ class NotificationService
             Log::error('Failed to create concern_status_update notification', [
                 'error' => $e->getMessage(),
                 'concern_id' => $concern->id,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Notify a purok leader when an awaiting confirmation concern is auto-resolved by timeout.
+     */
+    public function notifyConcernAutoResolvedForPurokLeader(
+        Concern $concern,
+        User $purokLeader
+    ): ?Notification {
+        try {
+            return Notification::create([
+                'user_id' => $purokLeader->id,
+                'user_type' => Notification::USER_TYPE_PUROK_LEADER,
+                'type' => Notification::TYPE_CONCERN_STATUS_UPDATE,
+                'title' => 'Concern Auto-Resolved',
+                'message' => "Concern ({$concern->tracking_code}) was automatically resolved after the citizen did not respond within 2 hours.",
+                'data' => [
+                    'concern_id' => $concern->id,
+                    'tracking_code' => $concern->tracking_code,
+                    'previous_status' => 'awaiting_confirmation',
+                    'new_status' => 'resolved',
+                    'updated_by' => 'UrbanWatch System',
+                    'auto_resolved' => true,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to create concern_auto_resolved notification for purok leader', [
+                'error' => $e->getMessage(),
+                'concern_id' => $concern->id,
+                'purok_leader_id' => $purokLeader->id,
             ]);
 
             return null;

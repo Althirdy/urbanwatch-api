@@ -26,8 +26,7 @@ class ProcessNationalIdOcrJob implements ShouldQueue
         GeminiService $geminiService,
         ImageProcessingService $imageProcessingService,
         RegistrationEligibilityService $registrationEligibilityService
-    ): void
-    {
+    ): void {
         /** @var IdVerification|null $verification */
         $verification = IdVerification::find($this->idVerificationId);
         if (! $verification) {

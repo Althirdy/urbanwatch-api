@@ -361,10 +361,9 @@ class AsyncOcrRegistrationTest extends TestCase
                 'message' => 'Registration successful',
             ]);
 
-        $this->assertDatabaseHas('citizen_details', [
-            'phone_number' => '09123456782',
-            'pcn_number' => '1234-5678-9012-3456',
-        ]);
+        $citizenDetails = CitizenDetails::where('pcn_number', '1234-5678-9012-3456')->first();
+        $this->assertNotNull($citizenDetails);
+        $this->assertSame('09123456782', $citizenDetails->phone_number);
     }
 
     public function test_it_registers_successfully_even_when_postal_code_is_missing(): void

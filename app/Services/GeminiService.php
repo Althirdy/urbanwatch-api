@@ -102,6 +102,7 @@ class GeminiService
                 if (! $inlineResult['success']) {
                     if ($inlineResult['retryable'] && $attempt < $maxAttempts) {
                         usleep($retryDelaysMs[$attempt] * 1000);
+
                         continue;
                     }
 

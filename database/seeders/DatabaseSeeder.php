@@ -26,16 +26,16 @@ class DatabaseSeeder extends Seeder
             Roles::firstOrCreate(['name' => $role['name']], $role);
         }
 
+        // Core seed profile for staging/uat refresh.
         $this->call([
             SystemSettingsSeeder::class,
+            PurokSeeder::class,
             UserSeeder::class,
             SuperadminSeeder::class,
-            CctvDeviceSeeder::class,
-            ReportSeeder::class,
-            PublicPostSeeder::class,
             ContactSeeder::class,
-            // UwDeviceSeeder::class,
         ]);
 
+        // Optional: seed demo-heavy content explicitly when needed.
+        // php artisan db:seed --class=DemoDataSeeder
     }
 }

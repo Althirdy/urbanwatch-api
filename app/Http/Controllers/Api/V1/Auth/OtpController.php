@@ -39,8 +39,7 @@ class OtpController extends Controller
         AbstractApiService $abstractApiService,
         RegistrationPhoneGuardService $registrationPhoneGuardService,
         IdVerificationService $idVerificationService
-    )
-    {
+    ) {
         $this->mailService = $mailService;
         $this->abstractApiService = $abstractApiService;
         $this->registrationPhoneGuardService = $registrationPhoneGuardService;

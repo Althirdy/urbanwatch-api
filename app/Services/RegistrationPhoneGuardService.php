@@ -88,4 +88,3 @@ class RegistrationPhoneGuardService
         return false;
     }
 }
-

@@ -33,7 +33,7 @@ class ConcernStatusNotificationChannelsTest extends TestCase
         $this->citizen = User::factory()->create(['role_id' => 3]);
     }
 
-    public function test_ongoing_status_dispatches_push_but_not_email(): void
+    public function test_ongoing_status_dispatches_push_and_email(): void
     {
         Queue::fake();
         Event::fake();
@@ -62,7 +62,7 @@ class ConcernStatusNotificationChannelsTest extends TestCase
             ->assertJsonPath('data.new_status', 'ongoing');
 
         Queue::assertPushed(SendExpoPushNotificationJob::class);
-        Queue::assertNotPushed(SendConcernStatusNotificationJob::class);
+        Queue::assertPushed(SendConcernStatusNotificationJob::class);
     }
 
     public function test_resolved_status_after_awaiting_confirmation_dispatches_push_and_email(): void
