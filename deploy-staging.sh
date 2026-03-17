@@ -43,11 +43,15 @@ docker compose -f docker-compose.uat.yml up -d --build uat-app uat-queue uat-sch
 echo "� Fixing vendor directory permissions inside container..."
 docker compose -f docker-compose.uat.yml exec -T --user root uat-app chown -R "${APP_UID:-1000}:${APP_GID:-1000}" /var/www/html/vendor 2>/dev/null || true
 
-echo "📦 Dependencies and frontend assets are built during Docker image build; skipping runtime install/build."
+echo "📦 Backend deps come from image build; frontend assets will be built for bind-mounted code."
 
 echo "🧹 Refreshing Laravel package discovery cache..."
 docker compose -f docker-compose.uat.yml exec -T uat-app rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
 docker compose -f docker-compose.uat.yml exec -T uat-app php artisan package:discover --ansi
+
+echo "🏗️ Rebuilding frontend assets for bind-mounted app code..."
+docker compose -f docker-compose.uat.yml exec -T uat-app npm ci --no-audit --no-fund
+docker compose -f docker-compose.uat.yml exec -T uat-app npm run build
 
 echo "🗄️ Running database migrations..."
 docker compose -f docker-compose.uat.yml exec -T uat-app php artisan migrate --force
