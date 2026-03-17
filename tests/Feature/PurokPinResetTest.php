@@ -51,7 +51,7 @@ beforeEach(function () {
 
     OfficialsDetails::create([
         'user_id' => $this->purokLeader->id,
-        'id_number' => 'PL-PIN-0001',
+        'id_number' => '0001',
         'purok_id' => $this->purok->id,
         'first_name' => 'Test',
         'last_name' => 'Leader',
@@ -72,7 +72,7 @@ test('purok leader creation auto-generates PIN', function () {
         'email' => 'newleader@test.com',
         'phone_number' => '09111222333',
         'role_id' => $this->purokLeaderRole->id,
-        'id_number' => 'PL-PIN-0002',
+        'id_number' => '0002',
         'assigned_brgy' => 'Test Purok',
         'purok_id' => $this->purok->id,
         // Note: NO password field sent
@@ -219,7 +219,7 @@ test('audit log captures optional reason', function () {
 
     OfficialsDetails::create([
         'user_id' => $anotherLeader->id,
-        'id_number' => 'PL-PIN-0003',
+        'id_number' => '0003',
         'purok_id' => $this->purok->id,
         'first_name' => 'Another',
         'last_name' => 'Leader',
