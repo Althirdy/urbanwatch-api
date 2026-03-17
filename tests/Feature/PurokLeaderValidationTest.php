@@ -98,7 +98,7 @@ class PurokLeaderValidationTest extends TestCase
     public function test_operator_can_update_purok_leader_with_same_phone_number(): void
     {
         $operator = $this->createOperator();
-        $leader = $this->createPurokLeader('09111111111', 'leader@example.com', 'PL-0001');
+        $leader = $this->createPurokLeader('09111111111', 'leader@example.com', '0001');
 
         $response = $this->actingAs($operator)->put("/user/{$leader->id}", [
             'first_name' => 'Updated',
@@ -114,7 +114,7 @@ class PurokLeaderValidationTest extends TestCase
             'latitude' => '',
             'longitude' => '',
             'purok_id' => '',
-            'id_number' => 'PL-0001',
+            'id_number' => '0001',
         ]);
 
         $response->assertSessionDoesntHaveErrors();
