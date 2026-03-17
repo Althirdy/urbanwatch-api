@@ -3,9 +3,12 @@
 use App\Jobs\ProcessYoloSnapshotJob;
 use App\Models\Accident;
 use App\Models\cctvDevices;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -106,4 +109,98 @@ test('it queues job for different accident type on the same camera', function ()
 
     // Verify job was dispatched
     Queue::assertPushed(ProcessYoloSnapshotJob::class);
+});
+
+test('it rejects requests with missing api key', function () {
+    $response = $this->postJson('/api/v1/yolo/process-snapshot', [
+        'snapshot' => UploadedFile::fake()->image('snapshot.jpg'),
+        'device_id' => $this->device->id,
+    ]);
+
+    $response->assertStatus(401)
+        ->assertJsonPath('success', false);
+});
+
+test('it rejects requests with invalid api key', function () {
+    $response = $this->postJson('/api/v1/yolo/process-snapshot', [
+        'snapshot' => UploadedFile::fake()->image('snapshot.jpg'),
+        'device_id' => $this->device->id,
+    ], ['x-api-key' => 'invalid-key']);
+
+    $response->assertStatus(401)
+        ->assertJsonPath('success', false);
+});
+
+test('it blocks yolo requests from non-allowlisted ip', function () {
+    putenv('YOLO_ALLOWED_IPS=203.0.113.10');
+    $_ENV['YOLO_ALLOWED_IPS'] = '203.0.113.10';
+    $_SERVER['YOLO_ALLOWED_IPS'] = '203.0.113.10';
+
+    try {
+        $response = $this->withServerVariables([
+            'REMOTE_ADDR' => '198.51.100.20',
+        ])->postJson('/api/v1/yolo/process-snapshot', [
+            'snapshot' => UploadedFile::fake()->image('snapshot.jpg'),
+            'device_id' => $this->device->id,
+        ], $this->apiKeyHeader);
+
+        $response->assertStatus(403)
+            ->assertJsonPath('success', false);
+    } finally {
+        putenv('YOLO_ALLOWED_IPS');
+        unset($_ENV['YOLO_ALLOWED_IPS'], $_SERVER['YOLO_ALLOWED_IPS']);
+    }
+});
+
+test('it allows yolo requests from allowlisted ip with valid api key', function () {
+    putenv('YOLO_ALLOWED_IPS=203.0.113.10');
+    $_ENV['YOLO_ALLOWED_IPS'] = '203.0.113.10';
+    $_SERVER['YOLO_ALLOWED_IPS'] = '203.0.113.10';
+
+    try {
+        $response = $this->withServerVariables([
+            'REMOTE_ADDR' => '203.0.113.10',
+        ])->postJson('/api/v1/yolo/process-snapshot', [
+            'snapshot' => UploadedFile::fake()->image('snapshot.jpg'),
+            'device_id' => $this->device->id,
+        ], $this->apiKeyHeader);
+
+        $response->assertStatus(202)
+            ->assertJsonPath('data.success', true);
+    } finally {
+        putenv('YOLO_ALLOWED_IPS');
+        unset($_ENV['YOLO_ALLOWED_IPS'], $_SERVER['YOLO_ALLOWED_IPS']);
+    }
+});
+
+test('it rate limits yolo snapshot ingestion', function () {
+    $apiKey = 'rate-limit-test-key';
+    config(['services.yolo_api_key' => $apiKey]);
+    $headers = ['x-api-key' => $apiKey];
+
+    RateLimiter::for('yolo.ingest', function (Request $request) {
+        return [
+            Limit::perMinute(2)->by('test-key'),
+        ];
+    });
+
+    $payload = [
+        'snapshot' => UploadedFile::fake()->image('snapshot.jpg'),
+        'device_id' => $this->device->id,
+    ];
+
+    $first = $this->postJson('/api/v1/yolo/process-snapshot', $payload, $headers);
+    $second = $this->postJson('/api/v1/yolo/process-snapshot', [
+        'snapshot' => UploadedFile::fake()->image('snapshot-2.jpg'),
+        'device_id' => $this->device->id,
+    ], $headers);
+    $third = $this->postJson('/api/v1/yolo/process-snapshot', [
+        'snapshot' => UploadedFile::fake()->image('snapshot-3.jpg'),
+        'device_id' => $this->device->id,
+    ], $headers);
+
+    $first->assertStatus(202);
+    $second->assertStatus(202);
+    $third->assertStatus(429)
+        ->assertJsonStructure(['message']);
 });
