@@ -43,6 +43,7 @@ export default function EditContacts({ contact, children }: EditContactsProps) {
 
     const { data, setData, put, processing, errors } = useForm({
         branch_unit_name: contact.branch_unit_name || '',
+        branch_unit_abbreviation: contact.branch_unit_abbreviation || '',
         contact_person: contact.contact_person || '',
         responder_type: contact.responder_type || '',
         primary_mobile: contact.primary_mobile || '',
@@ -70,7 +71,17 @@ export default function EditContacts({ contact, children }: EditContactsProps) {
         if (!data.branch_unit_name.trim()) {
             toast({
                 title: 'Validation Error',
-                description: 'Response Unit is required.',
+                description: 'Branch/Unit Full Name is required.',
+                variant: 'destructive',
+            });
+
+            return;
+        }
+
+        if (!data.branch_unit_abbreviation.trim()) {
+            toast({
+                title: 'Validation Error',
+                description: 'Branch/Unit abbreviation is required.',
                 variant: 'destructive',
             });
 
@@ -160,13 +171,13 @@ export default function EditContacts({ contact, children }: EditContactsProps) {
                             </div>
 
                             <div>
-                                <Label htmlFor="branch_unit_name">Response Unit</Label>
+                                <Label htmlFor="branch_unit_name">Branch/Unit Full Name</Label>
                                 <Input
                                     id="branch_unit_name"
                                     list={`response-unit-options-${contact.id}`}
                                     value={data.branch_unit_name}
                                     onChange={(e) => setData('branch_unit_name', e.target.value)}
-                                    placeholder="Type or select response unit (e.g., BFP)"
+                                    placeholder="Type full branch/unit name"
                                     className={hasAttemptedSubmit && !data.branch_unit_name.trim() ? 'border-red-500' : ''}
                                 />
                                 <datalist id={`response-unit-options-${contact.id}`}>
@@ -175,10 +186,27 @@ export default function EditContacts({ contact, children }: EditContactsProps) {
                                     ))}
                                 </datalist>
                                 {hasAttemptedSubmit && !data.branch_unit_name.trim() && (
-                                    <p className="mt-1 text-sm text-red-500">Response Unit is required.</p>
+                                    <p className="mt-1 text-sm text-red-500">Branch/Unit Full Name is required.</p>
                                 )}
                                 {errors.branch_unit_name && (
                                     <p className="mt-1 text-sm text-red-500">{errors.branch_unit_name}</p>
+                                )}
+                            </div>
+
+                            <div>
+                                <Label htmlFor="branch_unit_abbreviation">Branch/Unit Abbreviation</Label>
+                                <Input
+                                    id="branch_unit_abbreviation"
+                                    value={data.branch_unit_abbreviation}
+                                    onChange={(e) => setData('branch_unit_abbreviation', e.target.value.toUpperCase())}
+                                    placeholder="Type abbreviation (e.g., BFP)"
+                                    className={hasAttemptedSubmit && !data.branch_unit_abbreviation.trim() ? 'border-red-500' : ''}
+                                />
+                                {hasAttemptedSubmit && !data.branch_unit_abbreviation.trim() && (
+                                    <p className="mt-1 text-sm text-red-500">Branch/Unit abbreviation is required.</p>
+                                )}
+                                {errors.branch_unit_abbreviation && (
+                                    <p className="mt-1 text-sm text-red-500">{errors.branch_unit_abbreviation}</p>
                                 )}
                             </div>
 
@@ -215,7 +243,7 @@ export default function EditContacts({ contact, children }: EditContactsProps) {
                                     onChange={(e) => setData('primary_mobile', validateMobileNumber(e.target.value))}
                                     className={
                                         hasAttemptedSubmit &&
-                                        (!data.primary_mobile || !isMobileNumberValid(data.primary_mobile))
+                                            (!data.primary_mobile || !isMobileNumberValid(data.primary_mobile))
                                             ? 'border-red-500'
                                             : ''
                                     }
@@ -239,8 +267,8 @@ export default function EditContacts({ contact, children }: EditContactsProps) {
                                     onChange={(e) => setData('backup_mobile', validateMobileNumber(e.target.value))}
                                     className={
                                         hasAttemptedSubmit &&
-                                        data.backup_mobile !== '' &&
-                                        !isMobileNumberValid(data.backup_mobile)
+                                            data.backup_mobile !== '' &&
+                                            !isMobileNumberValid(data.backup_mobile)
                                             ? 'border-red-500'
                                             : ''
                                     }

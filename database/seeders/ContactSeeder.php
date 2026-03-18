@@ -14,7 +14,8 @@ class ContactSeeder extends Seeder
     {
         $contacts = [
             [
-                'branch_unit_name' => 'BEST',
+                'branch_unit_name' => 'Barangay Emergency Services Team',
+                'branch_unit_abbreviation' => 'BEST',
                 'contact_person' => 'Juan Dela Cruz',
                 'responder_type' => 'Fire',
                 'primary_mobile' => '09171234567',
@@ -24,7 +25,8 @@ class ContactSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'branch_unit_name' => 'BCCM',
+                'branch_unit_name' => 'Barangay Council for the Care of Minors',
+                'branch_unit_abbreviation' => 'BCCM',
                 'contact_person' => 'Maria Santos',
                 'responder_type' => 'Crime',
                 'primary_mobile' => '09171234568',
@@ -34,7 +36,8 @@ class ContactSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'branch_unit_name' => 'BCPC',
+                'branch_unit_name' => 'Barangay Council for the Protection of Children',
+                'branch_unit_abbreviation' => 'BCPC',
                 'contact_person' => 'Pedro Reyes',
                 'responder_type' => 'Crime',
                 'primary_mobile' => '09171234569',
@@ -44,7 +47,8 @@ class ContactSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'branch_unit_name' => 'BDRRM',
+                'branch_unit_name' => 'Barangay Disaster Risk Reduction and Management',
+                'branch_unit_abbreviation' => 'BDRRM',
                 'contact_person' => 'Ana Garcia',
                 'responder_type' => 'Emergency',
                 'primary_mobile' => '09171234570',
@@ -54,7 +58,8 @@ class ContactSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'branch_unit_name' => 'BHERT',
+                'branch_unit_name' => 'Barangay Health Emergency Response Team',
+                'branch_unit_abbreviation' => 'BHERT',
                 'contact_person' => 'Roberto Cruz',
                 'responder_type' => 'Emergency',
                 'primary_mobile' => '09171234571',
@@ -64,7 +69,8 @@ class ContactSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'branch_unit_name' => 'BHW',
+                'branch_unit_name' => 'Barangay Health Workers',
+                'branch_unit_abbreviation' => 'BHW',
                 'contact_person' => 'Carmen Lopez',
                 'responder_type' => 'Barangay',
                 'primary_mobile' => '09171234572',
@@ -74,7 +80,8 @@ class ContactSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'branch_unit_name' => 'BPSO',
+                'branch_unit_name' => 'Barangay Public Safety Officers',
+                'branch_unit_abbreviation' => 'BPSO',
                 'contact_person' => 'Jose Mendoza',
                 'responder_type' => 'Crime',
                 'primary_mobile' => '09171234573',
@@ -84,7 +91,8 @@ class ContactSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'branch_unit_name' => 'BTMO',
+                'branch_unit_name' => 'Barangay Traffic Management Office',
+                'branch_unit_abbreviation' => 'BTMO',
                 'contact_person' => 'Linda Ramos',
                 'responder_type' => 'Traffic',
                 'primary_mobile' => '09171234574',
@@ -94,7 +102,8 @@ class ContactSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'branch_unit_name' => 'VAWC',
+                'branch_unit_name' => 'Violence Against Women and Children Desk',
+                'branch_unit_abbreviation' => 'VAWC',
                 'contact_person' => 'Teresa Martinez',
                 'responder_type' => 'Others',
                 'primary_mobile' => '09171234575',
@@ -104,7 +113,8 @@ class ContactSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'branch_unit_name' => 'BEST',
+                'branch_unit_name' => 'Barangay Emergency Services Team',
+                'branch_unit_abbreviation' => 'BEST',
                 'contact_person' => 'Ricardo Flores',
                 'responder_type' => 'Fire',
                 'primary_mobile' => '09171234576',

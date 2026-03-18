@@ -54,11 +54,23 @@ function CreateUsers({
     roles: roles_T[];
     puroks?: any[]; // Using any for now to avoid extensive type definitions, or define interface
 }) {
+    const pageProps = usePage().props as any;
+    const actorRoleName = (pageProps?.auth?.user?.role?.name || '').toLowerCase();
+    const defaultPurokLeaderRoleId =
+        roles.find((role) => role.name.toLowerCase() === 'purok leader')?.id?.toString() || '';
+    const defaultOperatorRoleId =
+        roles.find((role) => role.name.toLowerCase() === 'operator')?.id?.toString() || '';
+
+    const isSuperadminActor = actorRoleName === 'superadmin';
+    const defaultRoleId = isSuperadminActor ? defaultOperatorRoleId : defaultPurokLeaderRoleId;
+    const targetAccountLabel = isSuperadminActor ? 'Operator' : 'Purok Leader';
+    const defaultAssignedBrgy = isSuperadminActor ? 'BRGY 176 E' : '';
+
     const [open, setOpen] = useState(false);
     const [showPinModal, setShowPinModal] = useState(false);
     const [generatedPin, setGeneratedPin] = useState<string>('');
     const [purokLeaderName, setPurokLeaderName] = useState<string>('');
-    const { flash } = usePage().props as any;
+    const { flash } = pageProps;
     const { data, setData, post, processing, errors, reset } =
         useForm<CreateUserForm>({
             first_name: '',
@@ -66,8 +78,8 @@ function CreateUsers({
             last_name: '',
             email: '',
             phone_number: '',
-            assigned_brgy: '',
-            role_id: '',
+            assigned_brgy: defaultAssignedBrgy,
+            role_id: defaultRoleId,
             password: '',
             password_confirmation: '',
             suffix: '',
@@ -138,6 +150,19 @@ function CreateUsers({
 
         if (!/^09\d{9}$/.test(value)) {
             return 'Phone number must be 11 digits starting with 09 (e.g., 09123456789)';
+        }
+        return '';
+    };
+
+    const validateIdNumber = (value: string, required: boolean) => {
+        if (required && !value.trim()) {
+            return 'ID Number is required for Purok Leader';
+        }
+        if (!required && !value.trim()) {
+            return '';
+        }
+        if (!/^\d+$/.test(value)) {
+            return 'ID Number must contain digits only';
         }
         return '';
     };
@@ -219,6 +244,9 @@ function CreateUsers({
             case 'phone_number':
                 error = validatePhoneNumber(value, isSelectedPurokLeader());
                 break;
+            case 'id_number':
+                error = validateIdNumber(value, isSelectedPurokLeader());
+                break;
             case 'password':
                 error = validatePassword(value);
                 // Also revalidate password confirmation if it exists
@@ -258,6 +286,8 @@ function CreateUsers({
         validationErrors.email = validateEmail(data.email) || undefined;
         validationErrors.phone_number =
             validatePhoneNumber(data.phone_number, isSelectedPurokLeader()) || undefined;
+        validationErrors.id_number =
+            validateIdNumber(data.id_number || '', isSelectedPurokLeader()) || undefined;
 
         // Password validation only for non-Purok Leaders (Purok Leaders have auto-generated PIN)
         if (!isSelectedPurokLeader()) {
@@ -321,10 +351,26 @@ function CreateUsers({
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog
+            open={open}
+            onOpenChange={(nextOpen) => {
+                setOpen(nextOpen);
+
+                if (nextOpen) {
+                    reset();
+                    setClientErrors({});
+                    setData((prev) => ({
+                        ...prev,
+                        role_id: defaultRoleId,
+                        assigned_brgy: defaultAssignedBrgy,
+                        purok_id: '',
+                    }));
+                }
+            }}
+        >
             <DialogTrigger asChild>
                 <Button className="cursor-pointer px-4 py-2">
-                    <Plus /> Add User
+                    <Plus /> Add {targetAccountLabel}
                 </Button>
             </DialogTrigger>
             <DialogContent
@@ -336,19 +382,15 @@ function CreateUsers({
                     className="flex h-full flex-col overflow-hidden"
                 >
                     <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
-                        <DialogTitle>Add New User</DialogTitle>
+                        <DialogTitle>Add New {targetAccountLabel}</DialogTitle>
                         <DialogDescription>
-                            Create a new user account with their personal
+                            Create a {targetAccountLabel} account with their personal
                             information and role assignment.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-2">
                         <div className="grid flex-1 auto-rows-min">
-                            <div className="grid mb-1">
-                                <p className="text-sm font-medium text-muted-foreground">
-                                    Personal Information
-                                </p>
-                            </div>
+
                             {/* First Name and Middle Name */}
                             <div className="grid w-full grid-cols-5 gap-4">
                                 <div className="col-span-3 grid gap-2">
@@ -468,11 +510,7 @@ function CreateUsers({
                         </div>
 
                         <div className="grid flex-1 auto-rows-min gap-2">
-                            <div className="grid">
-                                <p className="text-sm font-medium text-muted-foreground">
-                                    Contact Information
-                                </p>
-                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
                                     <Label htmlFor="email">Email</Label>
@@ -542,73 +580,44 @@ function CreateUsers({
                             </div>
                         </div>
 
-                        <div className="grid flex-1 auto-rows-min gap-2">
-                            <div className="grid">
-                                <p className="text-sm font-medium text-muted-foreground">
-                                    Role & Location
-                                </p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="grid flex-1 gap-2">
-                                    <Label htmlFor="role">Role</Label>
-                                    <div>
-                                        <Select
-                                            value={data.role_id}
-                                            onValueChange={(value) => {
-                                                setData('role_id', value);
-                                                setClientErrors((prev) => ({
-                                                    ...prev,
-                                                    role_id: undefined,
-                                                }));
-                                                // Auto-set location for Operator, reset for others
-                                                if (isSelectedOperator(value)) {
-                                                    // Operator: Auto-assign to BRGY 176 E
-                                                    setData(prev => ({ ...prev, assigned_brgy: 'BRGY 176 E', purok_id: '' }));
-                                                } else {
-                                                    // Reset location for other roles
-                                                    setData(prev => ({ ...prev, assigned_brgy: '', purok_id: '' }));
+                        {isSelectedPurokLeader() && (
+                            <div className="grid flex-1 auto-rows-min gap-2">
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div className="grid gap-2 mt-2">
+                                        <Label htmlFor="id-number">ID Number</Label>
+                                        <div>
+                                            <Input
+                                                id="id-number"
+                                                value={data.id_number}
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
+                                                onChange={(e) =>
+                                                    handleInputChange('id_number', e.target.value.replace(/\D/g, ''))
                                                 }
-                                            }}
-                                        >
-                                            <SelectTrigger
+                                                placeholder="Enter the last 4 digit ID number of the Purok Leader"
                                                 className={
-                                                    errors.role_id ||
-                                                        clientErrors.role_id
-                                                        ? 'border-red-500 focus:ring-red-500'
+                                                    errors.id_number || clientErrors.id_number
+                                                        ? 'border-[var(--destructive)] focus:ring-[var(--ring)]'
                                                         : ''
                                                 }
-                                            >
-                                                <SelectValue placeholder="" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {roles
-                                                    .filter(
-                                                        (role) =>
-                                                            role.name !==
-                                                            'Citizen',
-                                                    )
-                                                    .map((role) => (
-                                                        <SelectItem
-                                                            key={role.id}
-                                                            value={role.id.toString()}
-                                                        >
-                                                            {role.name}
-                                                        </SelectItem>
-                                                    ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <div className="h-5">
-                                            {(errors.role_id ||
-                                                clientErrors.role_id) && (
-                                                    <span className="mt-1 block text-xs text-red-500">
-                                                        {errors.role_id ||
-                                                            clientErrors.role_id}
+                                            />
+                                            <div className="h-5">
+                                                {(errors.id_number || clientErrors.id_number) && (
+                                                    <span className="mt-1 block text-xs text-[var(--destructive)]">
+                                                        {errors.id_number || clientErrors.id_number}
                                                     </span>
                                                 )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="grid flex-1 gap-2">
+                            </div>
+                        )}
+
+                        <div className="grid flex-1 auto-rows-min gap-2">
+
+                            <div className="grid grid-cols-1 gap-4">
+                                <div className="grid gap-2">
                                     <Label htmlFor="location">Location / Assignment</Label>
                                     <div>
                                         {isSelectedOperator() ? (
@@ -797,31 +806,7 @@ function CreateUsers({
                                         for this Purok Leader. You'll see it once after creation to share with them.
                                     </AlertDescription>
                                 </Alert>
-                                <div className="grid gap-2 mt-2">
-                                    <Label htmlFor="id-number">Purok Leader ID Number</Label>
-                                    <div>
-                                        <Input
-                                            id="id-number"
-                                            value={data.id_number}
-                                            onChange={(e) =>
-                                                setData('id_number', e.target.value)
-                                            }
-                                            placeholder="Enter a unique ID number for this Purok Leader"
-                                            className={
-                                                errors.id_number
-                                                    ? 'border-[var(--destructive)] focus:ring-[var(--ring)]'
-                                                    : ''
-                                            }
-                                        />
-                                        <div className="h-5">
-                                            {errors.id_number && (
-                                                <span className="mt-1 block text-xs text-[var(--destructive)]">
-                                                    {errors.id_number}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
+
                             </div>
                         )}
                     </div>

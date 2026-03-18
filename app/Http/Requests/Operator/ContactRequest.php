@@ -23,6 +23,7 @@ class ContactRequest extends FormRequest
     {
         return [
             'branch_unit_name' => 'required|string|max:255',
+            'branch_unit_abbreviation' => 'required|string|max:50',
             'contact_person' => 'nullable|string|max:255',
             'responder_type' => 'required|string|in:Fire,Emergency,Crime,Traffic,Barangay,Others',
             'primary_mobile' => 'required|string|size:11|regex:/^[0-9]{11}$/',
@@ -40,6 +41,8 @@ class ContactRequest extends FormRequest
     {
         return [
             'branch_unit_name.required' => 'Response unit is required.',
+            'branch_unit_abbreviation.required' => 'Response unit abbreviation is required.',
+            'branch_unit_abbreviation.max' => 'Response unit abbreviation cannot exceed 50 characters.',
             'contact_person.max' => 'Contact person name cannot exceed 255 characters.',
             'responder_type.required' => 'Responder type is required.',
             'responder_type.in' => 'The selected responder type is invalid.',
@@ -61,6 +64,7 @@ class ContactRequest extends FormRequest
     {
         return [
             'branch_unit_name' => 'response unit',
+            'branch_unit_abbreviation' => 'response unit abbreviation',
             'contact_person' => 'contact person',
             'responder_type' => 'responder type',
             'primary_mobile' => 'primary mobile number',

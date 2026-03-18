@@ -40,6 +40,11 @@ export const columns = (): ColumnDef<Contact>[] => [
                     <div className="font-medium">
                         {contact.branch_unit_name}
                     </div>
+                    {contact.branch_unit_abbreviation && (
+                        <div className="text-xs text-muted-foreground">
+                            {contact.branch_unit_abbreviation}
+                        </div>
+                    )}
                     {contact.contact_person && (
                         <div className="text-xs text-muted-foreground">
                             {contact.contact_person}

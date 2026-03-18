@@ -17,6 +17,7 @@ class ContactResource extends JsonResource
         return [
             'id' => $this->id,
             'branch_unit_name' => $this->branch_unit_name,
+            'branch_unit_abbreviation' => $this->branch_unit_abbreviation,
             'contact_person' => $this->contact_person,
             'responder_type' => $this->responder_type,
             'primary_mobile' => $this->primary_mobile,

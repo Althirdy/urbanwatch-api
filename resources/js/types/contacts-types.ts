@@ -4,6 +4,7 @@ import { Auth } from '@/types';
 export type Contact = {
     id: number;
     branch_unit_name: string;
+    branch_unit_abbreviation?: string | null;
     contact_person?: string;
     responder_type: string;
     primary_mobile: string;

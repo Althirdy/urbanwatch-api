@@ -164,7 +164,7 @@ export default function AiLogs({ activeTab, logs, filters, options }: AiLogsPage
                 </Tabs>
 
                 <Card>
-                    <CardContent className="pt-6">
+                    <CardContent className="">
                         <form onSubmit={handleApplyFilters} className="space-y-3">
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
                                 <div className="relative flex-1">

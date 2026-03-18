@@ -77,6 +77,7 @@ const ContactActionTab = ({
         if (searchQuery.trim()) {
             filteredResults = filteredResults.filter((contact: Contact) => {
                 const branch = contact.branch_unit_name.toLowerCase();
+                const abbreviation = (contact.branch_unit_abbreviation || '').toLowerCase();
                 const person = contact.contact_person?.toLowerCase() || '';
                 const primary = contact.primary_mobile.toLowerCase();
                 const backup = (contact.backup_mobile || '').toLowerCase();
@@ -84,6 +85,7 @@ const ContactActionTab = ({
 
                 return (
                     branch.includes(query) ||
+                    abbreviation.includes(query) ||
                     person.includes(query) ||
                     primary.includes(query) ||
                     backup.includes(query)
@@ -111,7 +113,7 @@ const ContactActionTab = ({
     // Count filtered results
     const filteredCount = useMemo(() => {
         let filtered = contacts.data;
-        
+
         if (branchFilter !== 'all') {
             filtered = filtered.filter((c) => c.branch_unit_name === branchFilter);
         }
@@ -127,6 +129,7 @@ const ContactActionTab = ({
                 const query = searchQuery.toLowerCase();
                 return (
                     c.branch_unit_name.toLowerCase().includes(query) ||
+                    (c.branch_unit_abbreviation || '').toLowerCase().includes(query) ||
                     (c.contact_person?.toLowerCase() || '').includes(query) ||
                     c.primary_mobile.toLowerCase().includes(query) ||
                     (c.backup_mobile || '').toLowerCase().includes(query)
@@ -143,7 +146,7 @@ const ContactActionTab = ({
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                        placeholder="Search by response unit, contact person, or mobile..."
+                        placeholder="Search by response unit, abbreviation, contact person, or mobile..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-9 h-9"

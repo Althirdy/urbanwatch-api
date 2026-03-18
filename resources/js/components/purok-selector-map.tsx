@@ -47,6 +47,7 @@ interface PurokData {
     name: string;
     geometry: any; // GeoJSON geometry object
     status: 'occupied' | 'available';
+    active_leader_name?: string | null;
 }
 
 interface PurokSelectorMapProps {
@@ -71,20 +72,27 @@ export default function PurokSelectorMap({
     }, [puroks]);
 
     const onEachFeature = (purok: PurokData) => (feature: any, layer: L.Layer) => {
-        // Add tooltip with name and status
-        const statusText = purok.status === 'occupied' ? '(Occupied)' : '(Available)';
-        layer.bindTooltip(`${purok.name} ${statusText}`, {
+        // Add tooltip with name and optional assigned leader
+        const tooltipText = purok.active_leader_name
+            ? `${purok.name}<br/>Purok Leader: ${purok.active_leader_name}`
+            : purok.name;
+
+        layer.bindTooltip(tooltipText, {
             permanent: false,
             direction: 'center',
-            className: 'text-xs font-bold'
+            className: 'text-xs font-bold whitespace-pre-line'
         });
 
         layer.on({
             click: () => {
                 if (purok.status === 'occupied') {
+                    const occupiedByText = purok.active_leader_name
+                        ? `Assigned to ${purok.active_leader_name}.`
+                        : 'Assigned to another active leader.';
+
                     toast({
                         title: "Area Unavailable",
-                        description: `The territory "${purok.name}" is already assigned to another leader.`,
+                        description: `The territory "${purok.name}" is unavailable. ${occupiedByText}`,
                         variant: "destructive",
                     });
                 } else {

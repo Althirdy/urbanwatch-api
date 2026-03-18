@@ -73,14 +73,13 @@ const UserCard = ({
             {filteredUsers.map((user) => (
                 <Card
                     key={user.id}
-                    className="group relative py-4 overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700 h-full"
+                    className="group relative py-4 w-full overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700 h-full"
                 >
-                    <CardContent className="p-6 flex flex-col h-full">
+                    <CardContent className="p-6 flex flex-col w-full h-full">
                         {/* Header Row */}
                         <div className='flex flex-row gap-2 items-center  mb-4'>
-
                             <div className='flex flex-col gap-1'>
-                                <h3 className="truncate text-sm font-semibold leading-tight">
+                                <h3 className="w-full text-sm font-semibold leading-tight">
                                     {getFullName(user)}
                                 </h3>
                                 <div className='flex  gap-2 items-center'>
@@ -102,8 +101,6 @@ const UserCard = ({
                                 </div>
                             </div>
                         </div>
-
-
 
                         {/* User Info - Compact */}
                         <div className="space-y-2 mb-2 flex-grow">

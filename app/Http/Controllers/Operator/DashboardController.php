@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Operator;
 
 use App\Http\Controllers\Controller;
 use App\Models\Citizen\Concern;
+use App\Models\OfficialsDetails;
 use App\Models\Purok;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -46,19 +47,36 @@ class DashboardController extends Controller
                 ];
             });
 
-        // 2. Fetch Purok Boundaries for the Map
+        // 2. Fetch active leaders keyed by purok so boundaries can show current assignment
+        $activeLeadersByPurok = OfficialsDetails::with('user:id,name')
+            ->where('status', 'active')
+            ->whereNotNull('purok_id')
+            ->whereHas('user', function ($query) {
+                $query->where('role_id', 2);
+            })
+            ->orderByDesc('id')
+            ->get()
+            ->unique('purok_id')
+            ->keyBy('purok_id');
+
+        // 3. Fetch Purok Boundaries for the Map
         $puroks = Purok::select('id', 'name', 'color', DB::raw('ST_AsGeoJSON(boundary) as geometry'))
             ->get()
-            ->map(function ($p) {
+            ->map(function ($p) use ($activeLeadersByPurok) {
+                $activeLeader = $activeLeadersByPurok->get($p->id);
+
                 return [
                     'id' => $p->id,
                     'name' => $p->name,
                     'color' => $p->color,
                     'geometry' => json_decode($p->geometry),
+                    'is_occupied' => (bool) $activeLeader,
+                    'active_leader_name' => $activeLeader?->user?->name,
+                    'active_leader_id' => $activeLeader?->user_id,
                 ];
             });
 
-        // 3. Fetch Active Purok Leaders for Manual Assignment
+        // 4. Fetch Active Purok Leaders for Manual Assignment
         $purokLeaders = User::where('role_id', 2) // Purok Leader
             ->whereHas('officialDetails', function ($q) {
                 $q->where('status', 'active');
