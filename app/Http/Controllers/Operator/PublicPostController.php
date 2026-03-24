@@ -43,6 +43,73 @@ class PublicPostController extends Controller
     }
 
     /**
+     * Get published manual public posts for landing page (no auth, standard pagination)
+     */
+    public function getPublicAnnouncements(Request $request): JsonResponse
+    {
+        $perPage = (int) $request->get('per_page', 15);
+        $search = trim((string) $request->get('search', ''));
+        $category = trim((string) $request->get('category', ''));
+
+        $baseQuery = PublicPost::with('publishedBy')
+            ->published()
+            ->whereNull('postable_id')
+            ->whereNull('postable_type')
+            ->orderBy('published_at', 'desc');
+
+        if ($search !== '') {
+            $baseQuery->where(function ($query) use ($search) {
+                $query->where('title', 'like', "%{$search}%")
+                    ->orWhere('content', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%");
+            });
+        }
+
+        if ($category !== '') {
+            $baseQuery->whereRaw('LOWER(TRIM(category)) = ?', [mb_strtolower($category)]);
+        }
+
+        $posts = $baseQuery->paginate($perPage);
+
+        $categories = PublicPost::query()
+            ->published()
+            ->whereNull('postable_id')
+            ->whereNull('postable_type')
+            ->whereNotNull('category')
+            ->where('category', '!=', '')
+            ->selectRaw('LOWER(TRIM(category)) as normalized')
+            ->distinct()
+            ->pluck('normalized')
+            ->filter()
+            ->values();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Public announcements retrieved successfully',
+            'data' => $posts->map(function ($post) {
+                return [
+                    'id' => $post->public_id,
+                    'title' => $post->title,
+                    'content' => $post->content,
+                    'publishedAt' => $post->published_at->toISOString(),
+                    'publishedBy' => 'Barangay 176-E',
+                    'media' => $post->image_path,
+                    'category' => $post->category,
+                ];
+            }),
+            'pagination' => [
+                'current_page' => $posts->currentPage(),
+                'last_page' => $posts->lastPage(),
+                'per_page' => $posts->perPage(),
+                'total' => $posts->total(),
+            ],
+            'meta' => [
+                'categories' => $categories,
+            ],
+        ]);
+    }
+
+    /**
      * Display a listing of public posts.
      */
     public function index(Request $request)
