@@ -27,9 +27,12 @@ Route::prefix('v1')->group(function () {
     // IoT Box routes
     require __DIR__.'/api/v1/iotbox.php';
 
-    // Public Post routes
+    // Public Post routes (authenticated - mobile app)
     Route::get('/mobile/public-posts', [App\Http\Controllers\Operator\PublicPostController::class, 'getMobilePublicPosts'])
         ->middleware('auth:sanctum');
+
+    // Public announcements (no auth - landing page)
+    Route::get('/public/announcements', [App\Http\Controllers\Operator\PublicPostController::class, 'getPublicAnnouncements']);
 
 });
 
