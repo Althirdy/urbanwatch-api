@@ -336,6 +336,109 @@ class ConcernManagementTest extends TestCase
             ->assertJsonValidationErrors(['files.0']);
     }
 
+    public function test_can_submit_manual_concern_with_video_and_bypass_gemini(): void
+    {
+        Sanctum::actingAs($this->citizen, ['*']);
+
+        $video = UploadedFile::fake()->create('evidence.mp4', 1024, 'video/mp4');
+        $payload = [
+            'title' => 'Flooded Street',
+            'description' => 'Video evidence of flooding.',
+            'latitude' => 14.7785335,
+            'longitude' => 121.1210474,
+            'type' => 'manual',
+            'category' => 'environment',
+            'files' => [$video],
+        ];
+
+        $response = $this->post('/api/v1/concerns', $payload, ['Accept' => 'application/json']);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('message', 'Concern submitted successfully!');
+
+        $concern = Concern::query()
+            ->where('citizen_id', $this->citizen->id)
+            ->where('title', 'Flooded Street')
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($concern);
+        $this->assertEquals('pending', $concern->status);
+        $this->assertTrue((bool) $concern->is_valid);
+        $this->assertDatabaseHas('incident_media', [
+            'source_id' => $concern->id,
+            'source_type' => Concern::class,
+            'media_type' => 'video',
+        ]);
+
+        Queue::assertNotPushed(ProcessManualConcernJob::class);
+    }
+
+    public function test_manual_concern_rejects_mixed_image_and_video_attachments(): void
+    {
+        Sanctum::actingAs($this->citizen, ['*']);
+
+        $image = UploadedFile::fake()->image('evidence.jpg');
+        $video = UploadedFile::fake()->create('evidence.mp4', 1024, 'video/mp4');
+        $payload = [
+            'title' => 'Mixed media concern',
+            'description' => 'Should fail due to mixed media.',
+            'latitude' => 14.7785335,
+            'longitude' => 121.1210474,
+            'type' => 'manual',
+            'category' => 'environment',
+            'files' => [$image, $video],
+        ];
+
+        $response = $this->post('/api/v1/concerns', $payload, ['Accept' => 'application/json']);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['files']);
+    }
+
+    public function test_manual_concern_rejects_multiple_video_files(): void
+    {
+        Sanctum::actingAs($this->citizen, ['*']);
+
+        $videoOne = UploadedFile::fake()->create('evidence-1.mp4', 1024, 'video/mp4');
+        $videoTwo = UploadedFile::fake()->create('evidence-2.mp4', 1024, 'video/mp4');
+        $payload = [
+            'title' => 'Multiple videos concern',
+            'description' => 'Should fail due to multiple videos.',
+            'latitude' => 14.7785335,
+            'longitude' => 121.1210474,
+            'type' => 'manual',
+            'category' => 'environment',
+            'files' => [$videoOne, $videoTwo],
+        ];
+
+        $response = $this->post('/api/v1/concerns', $payload, ['Accept' => 'application/json']);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['files']);
+    }
+
+    public function test_manual_concern_rejects_video_larger_than_25mb(): void
+    {
+        Sanctum::actingAs($this->citizen, ['*']);
+
+        $video = UploadedFile::fake()->create('huge.mp4', 26000, 'video/mp4');
+        $payload = [
+            'title' => 'Oversized video concern',
+            'description' => 'Should fail due to file size.',
+            'latitude' => 14.7785335,
+            'longitude' => 121.1210474,
+            'type' => 'manual',
+            'category' => 'environment',
+            'files' => [$video],
+        ];
+
+        $response = $this->post('/api/v1/concerns', $payload, ['Accept' => 'application/json']);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['files.0']);
+    }
+
     public function test_validates_create_concern_request()
     {
         Sanctum::actingAs($this->citizen, ['*']);

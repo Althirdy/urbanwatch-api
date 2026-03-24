@@ -39,7 +39,8 @@ class StoreConcernRequest extends FormRequest
             'address' => 'nullable|string|max:255',
             'custom_location' => 'nullable|string|max:255',
             'files' => 'nullable|array|min:1|max:3',
-            'files.*' => 'file|max:10240', // 10 MB each
+            // Absolute ceiling for any uploaded file. Detailed type-specific limits are enforced below.
+            'files.*' => 'file|max:25600', // 25 MB each
         ];
     }
 
@@ -63,16 +64,49 @@ class StoreConcernRequest extends FormRequest
                     if (! VoiceAudioFileSupport::isSupportedUpload($file)) {
                         $validator->errors()->add("files.{$index}", 'Voice concern file must be a supported audio format (m4a, mp3, wav, aac, 3gp, mp4, ogg, webm, opus).');
                     }
+
+                    if (($file->getSize() ?? 0) > (10 * 1024 * 1024)) {
+                        $validator->errors()->add("files.{$index}", 'Voice concern file must not exceed 10MB.');
+                    }
                 }
 
                 return;
             }
 
             if ($type === 'manual' && ! empty($files)) {
+                $hasImage = false;
+                $hasVideo = false;
+
                 foreach ($files as $index => $file) {
-                    if (! VoiceAudioFileSupport::isImageMime((string) $file->getMimeType())) {
-                        $validator->errors()->add("files.{$index}", 'Manual concern files must be images only.');
+                    $mimeType = (string) $file->getMimeType();
+                    $isImage = VoiceAudioFileSupport::isImageMime($mimeType);
+                    $isVideo = VoiceAudioFileSupport::isSupportedVideoUpload($file);
+
+                    if (! $isImage && ! $isVideo) {
+                        $validator->errors()->add("files.{$index}", 'Manual concern files must be image or video.');
                     }
+
+                    if ($isImage) {
+                        $hasImage = true;
+                        if (($file->getSize() ?? 0) > (10 * 1024 * 1024)) {
+                            $validator->errors()->add("files.{$index}", 'Each image file must not exceed 10MB.');
+                        }
+                    }
+
+                    if ($isVideo) {
+                        $hasVideo = true;
+                        if (($file->getSize() ?? 0) > (25 * 1024 * 1024)) {
+                            $validator->errors()->add("files.{$index}", 'Video file must not exceed 25MB.');
+                        }
+                    }
+                }
+
+                if ($hasImage && $hasVideo) {
+                    $validator->errors()->add('files', 'Manual concern cannot mix image and video attachments.');
+                }
+
+                if ($hasVideo && count($files) !== 1) {
+                    $validator->errors()->add('files', 'Manual concern accepts exactly 1 video file.');
                 }
             }
         });
@@ -107,7 +141,7 @@ class StoreConcernRequest extends FormRequest
             'files.min' => 'At least 1 file must be uploaded.',
             'files.max' => 'Maximum 3 files can be uploaded.',
             'files.*.file' => 'Each file must be a valid file.',
-            'files.*.max' => 'Each file must not exceed 10MB.',
+            'files.*.max' => 'Each file must not exceed 25MB.',
         ];
     }
 }
