@@ -8,6 +8,8 @@ use Psr\Http\Message\StreamInterface;
 
 class GeminiService
 {
+    private const YOLO_PROMPT_VERSION = 'yolo-v2-strict';
+
     protected $apiKey;
 
     protected string $apiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta';
@@ -25,6 +27,7 @@ class GeminiService
         $this->audioModelName = (string) config('services.gemini.audio_model', 'gemini-2.5-flash-lite');
 
         $generateUrl = "{$this->apiBaseUrl}/models/{$this->audioModelName}:generateContent";
+
         $this->baseUrl = $generateUrl;
         $this->audioModel = $generateUrl;
     }
@@ -99,6 +102,7 @@ class GeminiService
 
             try {
                 $inlineResult = $this->analyzeAudioInlineData($fileContent, $mimeType, $logContext, $attempt);
+
                 if (! $inlineResult['success']) {
                     if ($inlineResult['retryable'] && $attempt < $maxAttempts) {
                         usleep($retryDelaysMs[$attempt] * 1000);
@@ -116,6 +120,7 @@ class GeminiService
                 }
 
                 $result = $inlineResult['result'] ?? null;
+
                 if (! is_array($result)) {
                     return null;
                 }
@@ -290,10 +295,12 @@ class GeminiService
                 }
             }
 
+            $demoMode = (bool) config('yolo.demo_mode_enabled', false);
+
             $prompt = $this->getImageAnalysisSystemPrompt(
                 $contextInfo,
                 $detectedClasses,
-                (bool) config('yolo.demo_mode_enabled', false)
+                $demoMode
             );
 
             $response = Http::timeout(60)->withHeaders([
@@ -345,7 +352,7 @@ class GeminiService
                 return null;
             }
 
-            return $this->normalizeYoloImageResult($result, $detectedClasses);
+            return $this->normalizeYoloImageResult($result, $detectedClasses, $demoMode);
         } catch (\Exception $e) {
             Log::error('GeminiService Exception (YOLO Image Analysis)', [
                 'error' => $e->getMessage(),
@@ -878,15 +885,18 @@ PROMPT;
      */
     private function getImageAnalysisSystemPrompt(string $contextInfo = '', array $detectedClasses = [], bool $demoMode = false): string
     {
+        $promptVersion = self::YOLO_PROMPT_VERSION;
         $detectedClassesText = empty($detectedClasses)
             ? 'No explicit YOLO classes provided. Infer likely emergency classes.'
             : 'YOLO detected classes: '.implode(', ', $detectedClasses);
         $mode = $demoMode
-            ? "MODE: DEMO/SIMULATION\n- Treat toy vehicles and diorama scenes as real emergency simulation."
-            : "MODE: REAL-WORLD\n- Do not treat toy/diorama props as real emergencies.";
+            ? "MODE: DEMO_SIMULATION\n- Diorama/toy scenes are valid emergency simulations if emergency pattern is clearly represented."
+            : "MODE: REAL_WORLD\n- Diorama/toy scenes are NOT real emergencies and must be marked as not legit.";
 
-        return <<<PROMPT
+        return <<<IMAGEPROMPT
 You are the UrbanWatch Emergency Detection AI. You analyze CCTV footage and flag emergencies.
+
+PROMPT VERSION: {$promptVersion}
 
 {$mode}
 
@@ -897,69 +907,95 @@ CLASS MAPPING:
 
 {$detectedClassesText}
 
+DECISION POLICY:
+1) Decide scene_type first: real_world | diorama | uncertain.
+2) Apply mode strictly:
+   - REAL_WORLD: if scene_type is diorama, set is_legit=false for all classes.
+   - DEMO_SIMULATION: do NOT reject only because the scene is a diorama/toy setup.
+   - DEMO_SIMULATION: if emergency representation is clear for Flood/Fire/Accident, mark is_legit=true.
+3) One verdict per detected class whenever possible.
+4) Use JSON null, never the string "null".
+
+VALIDATION EXAMPLES:
+- VALID in DEMO_SIMULATION: clear flood/fire/collision representation in a toy/diorama setup.
+- INVALID in any mode: very simple/ambiguous scene with no clear emergency cues (e.g., random sticks/objects without visible hazard).
+- INVALID in REAL_WORLD: obvious miniature/diorama scene even if it resembles an emergency.
+
 Return JSON:
 {
+  "prompt_version": "yolo-v2-strict",
+  "mode_applied": "REAL_WORLD|DEMO_SIMULATION",
+  "scene_type": "real_world|diorama|uncertain",
   "overall_valid": boolean,
   "reasoning": "Overall explanation",
   "class_verdicts": [
     {
-      "source_class": "CarCollision|Flood|Fire",
-      "normalized_class": "Accident|Flood|Fire",
+      "source_class": "CarCollision|Collision|Flood|Fire|unknown",
+      "normalized_class": "Accident|Flood|Fire|null",
       "is_legit": boolean,
       "accident_type": "Accident|Flood|Fire|null",
       "severity": "Low|Medium|High|null",
-      "title": "short title|null",
-      "description": "short description|null",
-      "confidence": 0-100|null,
+      "title": "short title or null",
+      "description": "short description or null",
+      "confidence": 0-100 or null,
       "detected_objects": ["..."],
-      "reasoning": "class level reasoning"
+      "reasoning": "class level reasoning",
+      "warnings": ["optional warning strings"]
     }
   ]
 }
 
 {$contextInfo}
 
-Return ONLY valid JSON. Do not include markdown formatting.
-PROMPT;
+Return ONLY strict valid JSON. Do not include markdown formatting.
+Do not return the string "null". Use JSON null instead.
+IMAGEPROMPT;
     }
 
-    private function normalizeYoloImageResult(array $result, array $detectedClasses = []): array
+    private function normalizeYoloImageResult(array $result, array $detectedClasses = [], bool $demoMode = false): array
     {
         if (isset($result['is_valid'])) {
-            $legacyAccidentType = $result['accident_type'] ?? null;
+            $legacyAccidentType = $this->normalizeAccidentType($result['accident_type'] ?? null);
             $result['class_verdicts'] = [[
                 'source_class' => $legacyAccidentType,
                 'normalized_class' => $legacyAccidentType,
                 'is_legit' => (bool) ($result['is_valid'] ?? false),
                 'accident_type' => $legacyAccidentType,
-                'severity' => $result['severity'] ?? null,
-                'title' => $result['title'] ?? null,
-                'description' => $result['description'] ?? null,
-                'confidence' => $result['confidence'] ?? null,
+                'severity' => $this->normalizeSeverity($result['severity'] ?? null),
+                'title' => $this->normalizeNullableString($result['title'] ?? null),
+                'description' => $this->normalizeNullableString($result['description'] ?? null),
+                'confidence' => $this->normalizeConfidence($result['confidence'] ?? null),
                 'detected_objects' => $result['detected_objects'] ?? [],
-                'reasoning' => $result['reasoning'] ?? null,
+                'reasoning' => $this->normalizeNullableString($result['reasoning'] ?? null),
             ]];
             $result['overall_valid'] = (bool) ($result['is_valid'] ?? false);
         }
 
         $verdicts = collect($result['class_verdicts'] ?? [])->map(function ($item) {
-            $normalizedClass = $item['normalized_class'] ?? $item['accident_type'] ?? null;
-            $accidentType = $item['accident_type'] ?? $normalizedClass;
-            if ($accidentType === 'CarCollision') {
-                $accidentType = 'Accident';
-            }
+            $normalizedClass = $this->normalizeAccidentType($item['normalized_class'] ?? $item['accident_type'] ?? null);
+            $accidentType = $this->normalizeAccidentType($item['accident_type'] ?? $normalizedClass);
+            $sourceClass = $this->normalizeNullableString($item['source_class'] ?? $normalizedClass);
 
             return [
-                'source_class' => $item['source_class'] ?? $normalizedClass,
+                'source_class' => $sourceClass,
                 'normalized_class' => $normalizedClass,
                 'is_legit' => (bool) ($item['is_legit'] ?? false),
                 'accident_type' => $accidentType,
-                'severity' => $item['severity'] ?? null,
-                'title' => $item['title'] ?? null,
-                'description' => $item['description'] ?? null,
-                'confidence' => isset($item['confidence']) ? (float) $item['confidence'] : null,
-                'detected_objects' => $item['detected_objects'] ?? [],
-                'reasoning' => $item['reasoning'] ?? null,
+                'severity' => $this->normalizeSeverity($item['severity'] ?? null),
+                'title' => $this->normalizeNullableString($item['title'] ?? null),
+                'description' => $this->normalizeNullableString($item['description'] ?? null),
+                'confidence' => $this->normalizeConfidence($item['confidence'] ?? null),
+                'detected_objects' => collect($item['detected_objects'] ?? [])
+                    ->filter(fn ($obj) => ! is_null($this->normalizeNullableString($obj)))
+                    ->map(fn ($obj) => $this->normalizeNullableString($obj))
+                    ->values()
+                    ->toArray(),
+                'reasoning' => $this->normalizeNullableString($item['reasoning'] ?? null),
+                'warnings' => collect($item['warnings'] ?? [])
+                    ->map(fn ($warning) => $this->normalizeNullableString($warning))
+                    ->filter()
+                    ->values()
+                    ->toArray(),
             ];
         })->values()->toArray();
 
@@ -982,12 +1018,220 @@ PROMPT;
             })->toArray();
         }
 
+        $modeApplied = $this->normalizeModeApplied($result['mode_applied'] ?? null, $demoMode);
+        $sceneType = $this->resolveSceneType(
+            $this->normalizeSceneType($result['scene_type'] ?? null),
+            $result,
+            $verdicts
+        );
+        $policyAdjusted = false;
+        $verdicts = $this->applyDemoSimulationFallbackPolicy($verdicts, $modeApplied, $sceneType, $policyAdjusted);
+
+        $containsLegit = collect($verdicts)->contains(fn ($v) => $v['is_legit']);
+        $overallValidFromResult = (bool) ($result['overall_valid'] ?? false);
+
         return [
-            'overall_valid' => (bool) ($result['overall_valid'] ?? collect($verdicts)->contains(fn ($v) => $v['is_legit'])),
-            'reasoning' => $result['reasoning'] ?? null,
+            'overall_valid' => $overallValidFromResult || $containsLegit,
+            'reasoning' => $this->normalizeNullableString($result['reasoning'] ?? null),
+            'prompt_version' => self::YOLO_PROMPT_VERSION,
+            'mode_applied' => $modeApplied,
+            'scene_type' => $sceneType,
+            'policy_adjusted' => $policyAdjusted,
+            'detected_classes_input' => array_values($detectedClasses),
             'class_verdicts' => $verdicts,
             'raw' => $result,
         ];
+    }
+
+    private function applyDemoSimulationFallbackPolicy(
+        array $verdicts,
+        string $modeApplied,
+        string $sceneType,
+        bool &$policyAdjusted
+    ): array {
+        $policyAdjusted = false;
+        if ($modeApplied !== 'DEMO_SIMULATION' || $sceneType !== 'diorama') {
+            return $verdicts;
+        }
+
+        return collect($verdicts)->map(function ($verdict) use (&$policyAdjusted) {
+            if (($verdict['is_legit'] ?? false) === true) {
+                return $verdict;
+            }
+
+            $accidentType = $this->normalizeAccidentType($verdict['accident_type'] ?? $verdict['normalized_class'] ?? null);
+            if (! in_array($accidentType, ['Accident', 'Flood', 'Fire'], true)) {
+                return $verdict;
+            }
+
+            if ($this->hasStrongSimulationRejectionReason($verdict['reasoning'] ?? null)) {
+                return $verdict;
+            }
+
+            $policyAdjusted = true;
+            $warnings = collect($verdict['warnings'] ?? [])->filter()->values()->toArray();
+            $warnings[] = 'Adjusted by DEMO_SIMULATION policy: diorama emergency simulation accepted.';
+
+            return array_merge($verdict, [
+                'is_legit' => true,
+                'accident_type' => $accidentType,
+                'normalized_class' => $accidentType,
+                'severity' => $verdict['severity'] ?? 'Medium',
+                'title' => $verdict['title'] ?? "Simulated {$accidentType} detected",
+                'description' => $verdict['description'] ?? 'Diorama emergency simulation detected.',
+                'warnings' => $warnings,
+            ]);
+        })->values()->toArray();
+    }
+
+    private function hasStrongSimulationRejectionReason(mixed $reasoning): bool
+    {
+        $text = strtolower((string) ($this->normalizeNullableString($reasoning) ?? ''));
+        if ($text === '') {
+            return false;
+        }
+
+        return str_contains($text, 'no hazard') ||
+            str_contains($text, 'no flood') ||
+            str_contains($text, 'no fire') ||
+            str_contains($text, 'no collision') ||
+            str_contains($text, 'no accident') ||
+            str_contains($text, 'no emergency signs') ||
+            str_contains($text, 'insufficient evidence') ||
+            str_contains($text, 'cannot verify') ||
+            str_contains($text, 'not visible');
+    }
+
+    private function resolveSceneType(string $sceneType, array $result, array $verdicts): string
+    {
+        if ($sceneType !== 'uncertain') {
+            return $sceneType;
+        }
+
+        if ($this->isDioramaReasoningText($result['reasoning'] ?? null)) {
+            return 'diorama';
+        }
+
+        foreach ($verdicts as $verdict) {
+            if ($this->isDioramaReasoningText($verdict['reasoning'] ?? null)) {
+                return 'diorama';
+            }
+        }
+
+        return 'uncertain';
+    }
+
+    private function isDioramaReasoningText(mixed $reasoning): bool
+    {
+        $text = strtolower((string) ($this->normalizeNullableString($reasoning) ?? ''));
+        if ($text === '') {
+            return false;
+        }
+
+        return str_contains($text, 'diorama') ||
+            str_contains($text, 'toy') ||
+            str_contains($text, 'miniature') ||
+            str_contains($text, 'scale model') ||
+            str_contains($text, 'model scene');
+    }
+
+    private function normalizeNullableString(mixed $value): ?string
+    {
+        if (is_null($value)) {
+            return null;
+        }
+
+        if (is_bool($value) || is_numeric($value)) {
+            return (string) $value;
+        }
+
+        $string = trim((string) $value);
+        if ($string === '') {
+            return null;
+        }
+
+        $lower = strtolower($string);
+        if (in_array($lower, ['null', 'none', 'n/a', 'na', 'undefined'], true)) {
+            return null;
+        }
+
+        return $string;
+    }
+
+    private function normalizeAccidentType(mixed $value): ?string
+    {
+        $normalized = $this->normalizeNullableString($value);
+        if (is_null($normalized)) {
+            return null;
+        }
+
+        $lower = strtolower($normalized);
+        if (in_array($lower, ['carcollision', 'collision', 'accident'], true)) {
+            return 'Accident';
+        }
+        if ($lower === 'flood') {
+            return 'Flood';
+        }
+        if (in_array($lower, ['fire', 'fir', 'flame'], true)) {
+            return 'Fire';
+        }
+
+        return null;
+    }
+
+    private function normalizeSeverity(mixed $value): ?string
+    {
+        $normalized = $this->normalizeNullableString($value);
+        if (is_null($normalized)) {
+            return null;
+        }
+
+        return match (strtolower($normalized)) {
+            'low' => 'Low',
+            'medium' => 'Medium',
+            'high' => 'High',
+            default => null,
+        };
+    }
+
+    private function normalizeConfidence(mixed $value): ?float
+    {
+        $normalized = $this->normalizeNullableString($value);
+        if (is_null($normalized) || ! is_numeric($normalized)) {
+            return null;
+        }
+
+        $confidence = (float) $normalized;
+        if ($confidence < 0) {
+            return 0.0;
+        }
+        if ($confidence > 100) {
+            return 100.0;
+        }
+
+        return $confidence;
+    }
+
+    private function normalizeSceneType(mixed $value): string
+    {
+        $normalized = strtolower((string) ($this->normalizeNullableString($value) ?? ''));
+
+        return match ($normalized) {
+            'real_world', 'real-world' => 'real_world',
+            'diorama', 'simulation' => 'diorama',
+            default => 'uncertain',
+        };
+    }
+
+    private function normalizeModeApplied(mixed $value, bool $demoMode): string
+    {
+        $normalized = strtoupper((string) ($this->normalizeNullableString($value) ?? ''));
+
+        if (in_array($normalized, ['REAL_WORLD', 'DEMO_SIMULATION'], true)) {
+            return $normalized;
+        }
+
+        return $demoMode ? 'DEMO_SIMULATION' : 'REAL_WORLD';
     }
 
     /**

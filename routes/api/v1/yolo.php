@@ -6,7 +6,8 @@ use Illuminate\Support\Facades\Route;
 
 // YOLO Detection Routes (protected with API key - called by Python YOLO script)
 Route::middleware('api.key')->group(function () {
-    Route::post('yolo/process-snapshot', [YoloAccidentController::class, 'ProcessSnapShot']);
+    Route::post('yolo/process-snapshot', [YoloAccidentController::class, 'ProcessSnapShot'])
+        ->middleware('throttle:yolo.ingest');
     Route::get('yolo/enabled-cctvs', [CCTVController::class, 'getYoloEnabledCCTVs']);
 });
 

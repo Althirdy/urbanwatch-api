@@ -6,6 +6,7 @@ use App\Events\AccidentDetected;
 use App\Events\AccidentUpdated;
 use App\Models\Accident;
 use App\Models\cctvDevices;
+use App\Models\FalseAlarm;
 use App\Models\IncidentMedia;
 use App\Services\FileUploadService;
 use App\Services\GeminiService;
@@ -90,8 +91,50 @@ class YoloAccidentServiceTest extends TestCase
         $this->assertTrue($result['success']);
         $this->assertTrue($result['isNew']);
         $this->assertEquals('Fire', $result['accidentType']);
+        $this->assertSame('gemini_legit', $result['decision_reason']);
+        $this->assertSame(1, $result['legit_verdict_count']);
         $this->assertDatabaseHas('accidents', ['accident_type' => 'Fire']);
         Event::assertDispatched(AccidentDetected::class);
+    }
+
+    public function test_it_prefixes_demo_tag_for_new_demo_incident_title_and_description()
+    {
+        $file = UploadedFile::fake()->image('demo-fire.jpg');
+
+        $this->geminiService->shouldReceive('analyzeYoloImage')->andReturn([
+            'mode_applied' => 'DEMO_SIMULATION',
+            'overall_valid' => true,
+            'reasoning' => 'Demo flood/fire representation is clear.',
+            'class_verdicts' => [[
+                'source_class' => 'Fire',
+                'normalized_class' => 'Fire',
+                'is_legit' => true,
+                'accident_type' => 'Fire',
+                'severity' => 'Medium',
+                'title' => 'Sunog sa miniature na bahay',
+                'description' => 'May malinaw na apoy sa demo setup.',
+                'confidence' => 92,
+                'detected_objects' => ['fire'],
+                'reasoning' => 'Clear emergency representation.',
+            ]],
+        ]);
+
+        $this->fileUploadService->shouldReceive('uploadSingle')->andReturn([
+            'public_url' => 'http://test.com/demo-fire.jpg',
+            'storage_path' => 'yolo/demo-fire.jpg',
+        ]);
+
+        $result = $this->yoloService->processDetection($file, $this->device->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('gemini_legit', $result['decision_reason']);
+        $this->assertStringStartsWith('[demo] ', $result['title']);
+        $this->assertStringStartsWith('[demo] ', $result['description']);
+
+        $accident = Accident::first();
+        $this->assertNotNull($accident);
+        $this->assertStringStartsWith('[demo] ', $accident->title);
+        $this->assertStringStartsWith('[demo] ', $accident->description);
     }
 
     public function test_it_updates_existing_active_accident_of_same_type()
@@ -239,6 +282,55 @@ class YoloAccidentServiceTest extends TestCase
         $this->assertEquals(1, Accident::count());
     }
 
+    public function test_it_keeps_single_demo_prefix_when_updating_existing_incident()
+    {
+        $accident = Accident::create([
+            'cctv_device_id' => $this->device->id,
+            'accident_type' => 'Fire',
+            'status' => 'Pending',
+            'severity' => 'Low',
+            'title' => '[demo] Existing Fire',
+            'description' => '[demo] Existing Description',
+            'latitude' => 10.0,
+            'longitude' => 20.0,
+            'occurred_at' => now()->subMinutes(5),
+        ]);
+
+        $file = UploadedFile::fake()->image('demo-update.jpg');
+
+        $this->geminiService->shouldReceive('analyzeYoloImage')->andReturn([
+            'mode_applied' => 'DEMO_SIMULATION',
+            'overall_valid' => true,
+            'reasoning' => 'Demo update path',
+            'class_verdicts' => [[
+                'source_class' => 'Fire',
+                'normalized_class' => 'Fire',
+                'is_legit' => true,
+                'accident_type' => 'Fire',
+                'severity' => 'High',
+                'title' => '[demo] Updated Fire Title',
+                'description' => '[demo] Updated Fire Description',
+                'confidence' => 96,
+                'detected_objects' => ['fire'],
+                'reasoning' => 'Clear emergency representation.',
+            ]],
+        ]);
+
+        $this->fileUploadService->shouldReceive('uploadSingle')->andReturn([
+            'public_url' => 'http://test.com/demo-update.jpg',
+            'storage_path' => 'yolo/demo-update.jpg',
+        ]);
+
+        $result = $this->yoloService->processDetection($file, $this->device->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertFalse($result['isNew']);
+
+        $accident->refresh();
+        $this->assertSame(1, preg_match_all('/\[demo\]/i', $accident->title));
+        $this->assertSame(1, preg_match_all('/\[demo\]/i', $accident->description));
+    }
+
     public function test_it_does_not_broadcast_accident_events_if_transaction_rolls_back()
     {
         $file = UploadedFile::fake()->image('rollback.jpg');
@@ -285,5 +377,44 @@ class YoloAccidentServiceTest extends TestCase
             $this->assertDatabaseCount('accidents', 0);
             $this->assertDatabaseCount('incident_media', 0);
         }
+    }
+
+    public function test_it_persists_full_gemini_audit_metadata_for_false_alarm_logs()
+    {
+        $file = UploadedFile::fake()->image('false-alarm.jpg');
+
+        $this->geminiService->shouldReceive('analyzeYoloImage')->andReturn([
+            'prompt_version' => 'yolo-v2-strict',
+            'mode_applied' => 'DEMO_SIMULATION',
+            'scene_type' => 'diorama',
+            'overall_valid' => false,
+            'reasoning' => 'Diorama simulation only.',
+            'class_verdicts' => [[
+                'source_class' => 'Flood',
+                'normalized_class' => 'Flood',
+                'is_legit' => false,
+                'accident_type' => null,
+                'severity' => null,
+                'title' => null,
+                'description' => 'Miniature flood scene',
+                'confidence' => 78.5,
+                'detected_objects' => ['miniature_water'],
+                'reasoning' => 'Not real-world event.',
+            ]],
+        ]);
+
+        $result = $this->yoloService->processDetection($file, $this->device->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertTrue($result['falseAlarm']);
+
+        $falseAlarm = FalseAlarm::first();
+        $this->assertNotNull($falseAlarm);
+        $this->assertSame('yolo-v2-strict', $falseAlarm->gemini_metadata['prompt_version'] ?? null);
+        $this->assertSame('DEMO_SIMULATION', $falseAlarm->gemini_metadata['mode_applied'] ?? null);
+        $this->assertSame('diorama', $falseAlarm->gemini_metadata['scene_type'] ?? null);
+        $this->assertSame(78.5, (float) ($falseAlarm->gemini_metadata['confidence'] ?? 0));
+        $this->assertSame('no_legit_verdicts', $falseAlarm->gemini_metadata['decision_reason'] ?? null);
+        $this->assertSame(0, $falseAlarm->gemini_metadata['legit_verdict_count'] ?? null);
     }
 }

@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import {
     Card,
     CardContent,
-    CardDescription,
     CardFooter,
     CardHeader,
     CardTitle,
@@ -17,6 +16,7 @@ import {
 import { baseBadgeClasses, getStatusColorClass } from '@/lib/badgeStyles';
 import { formatRelativeTime } from '@/lib/utils';
 import { router } from '@inertiajs/react';
+import { useMemo } from 'react';
 import {
     Archive,
     Camera,
@@ -38,7 +38,68 @@ type ReportsCardProps = {
     reportTypes: string[];
 };
 
+type GroupedReport = reports_T & {
+    groupedReportTypes: string[];
+    groupedReportIds: number[];
+    groupedCount: number;
+};
+
+const ALLOWED_YOLO_TYPES = new Set(['Accident', 'Flood', 'Fire']);
+
+const toTitleCase = (value: string) =>
+    value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+
+const normalizeReportType = (value: string): string => {
+    if (!value) {
+        return '';
+    }
+
+    const normalized = toTitleCase(value.trim());
+    return ALLOWED_YOLO_TYPES.has(normalized) ? normalized : normalized;
+};
+
 const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
+    const groupedReports = useMemo<GroupedReport[]>(() => {
+        const groupedBySnapshot = new Map<string, reports_T[]>();
+
+        for (const report of reports) {
+            const firstImage =
+                report.media && report.media.length > 0
+                    ? report.media[0]
+                    : null;
+            const key = firstImage ? `img:${firstImage}` : `id:${report.id}`;
+            const group = groupedBySnapshot.get(key) ?? [];
+            group.push(report);
+            groupedBySnapshot.set(key, group);
+        }
+
+        return Array.from(groupedBySnapshot.values())
+            .map((group) => {
+                const sorted = [...group].sort((a, b) =>
+                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                );
+                const representative = sorted[0];
+                const types = Array.from(
+                    new Set(
+                        sorted
+                            .map((item) => normalizeReportType(item.report_type))
+                            .filter((type) => ALLOWED_YOLO_TYPES.has(type)),
+                    ),
+                );
+
+                return {
+                    ...representative,
+                    groupedReportTypes: types,
+                    groupedReportIds: sorted.map((item) => item.id),
+                    groupedCount: sorted.length,
+                };
+            })
+            .sort(
+                (a, b) =>
+                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+            );
+    }, [reports]);
+
     const handleAcknowledge = (id: number) => {
         console.log('Acknowledging report:', id);
         router.patch(
@@ -120,7 +181,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
 
     return (
         <div className="grid auto-rows-min grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {reports.length === 0 && (
+            {groupedReports.length === 0 && (
                 <Card className="col-span-full rounded-[var(--radius)] border border-sidebar-border/70 dark:border-sidebar-border">
                     <CardContent className="flex items-center justify-center py-12">
                         <p className="text-muted-foreground">
@@ -131,7 +192,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
             )}
 
             {/* Use filtered_roles for displaying cards */}
-            {reports.map((report) => {
+            {groupedReports.map((report) => {
                 // Get first image from media
                 const firstImage =
                     report.media && report.media.length > 0
@@ -140,7 +201,7 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
 
                 return (
                     <Card
-                        key={report.id}
+                        key={`snapshot-${report.id}`}
                         className="group relative flex flex-col overflow-hidden border bg-card transition-all duration-200 hover:shadow-md hover:border-primary/20 dark:border-zinc-800 dark:hover:border-zinc-700 h-full"
                     >
                         {/* Accident Image - Reduced height */}
@@ -164,14 +225,21 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                                             AI DETECTED
                                         </Badge>
 
-                                        {report.media && report.media.length > 1 && (
+                                        {report.groupedCount > 1 ? (
+                                            <Badge
+                                                variant="secondary"
+                                                className="bg-black/50 px-1.5 py-0 text-xs text-white backdrop-blur-sm hover:bg-black/70"
+                                            >
+                                                +{report.groupedCount - 1} linked
+                                            </Badge>
+                                        ) : report.media && report.media.length > 1 ? (
                                             <Badge
                                                 variant="secondary"
                                                 className="bg-black/50 px-1.5 py-0 text-xs text-white backdrop-blur-sm hover:bg-black/70"
                                             >
                                                 +{report.media.length - 1} more
                                             </Badge>
-                                        )}
+                                        ) : null}
                                     </div>
                                 </div>
                             </ImagePreview>
@@ -243,6 +311,20 @@ const ReportsCard = ({ reports, reportTypes }: ReportsCardProps) => {
                         </CardContent>
 
                         <CardFooter className="flex flex-col gap-3 p-3 mt-auto dark:border-zinc-800">
+                            {report.groupedReportTypes.length > 0 && (
+                                <div className="flex w-full flex-wrap items-center gap-1.5">
+                                    {report.groupedReportTypes.map((detectedType) => (
+                                        <Badge
+                                            key={`${report.id}-${detectedType}`}
+                                            variant="secondary"
+                                            className="text-[10px] font-semibold uppercase tracking-wide"
+                                        >
+                                            {detectedType}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            )}
+
                             {report.status !== 'False Alarm' && (
                                 <div className="w-full">
                                     {!report.is_acknowledge ? (

@@ -264,4 +264,252 @@ class GeminiServiceResponseTest extends TestCase
 
         $this->assertNull($result);
     }
+
+    public function test_analyze_yolo_image_normalizes_string_nulls_and_adds_audit_fields()
+    {
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [
+                                [
+                                    'text' => json_encode([
+                                        'mode_applied' => 'REAL_WORLD',
+                                        'scene_type' => 'real_world',
+                                        'overall_valid' => false,
+                                        'reasoning' => 'Diorama simulation only.',
+                                        'class_verdicts' => [[
+                                            'source_class' => 'Flood',
+                                            'normalized_class' => 'Flood',
+                                            'is_legit' => false,
+                                            'accident_type' => 'null',
+                                            'severity' => 'null',
+                                            'title' => 'null',
+                                            'description' => 'Miniature flood scene.',
+                                            'confidence' => '87.5',
+                                            'detected_objects' => ['miniature_water'],
+                                            'reasoning' => 'Not real-world.',
+                                        ]],
+                                    ], JSON_THROW_ON_ERROR),
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        config([
+            'services.gemini.api_key' => 'test-key',
+            'yolo.demo_mode_enabled' => true,
+        ]);
+        $service = new GeminiService;
+
+        $result = $service->analyzeYoloImage('fake-image-content', 'image/jpeg', ['device_name' => 'CCTV-1'], ['Flood']);
+
+        $this->assertNotNull($result);
+        $this->assertSame('REAL_WORLD', $result['mode_applied']);
+        $this->assertSame('real_world', $result['scene_type']);
+        $this->assertSame('yolo-v2-strict', $result['prompt_version']);
+        $this->assertSame(['Flood'], $result['detected_classes_input']);
+        $this->assertNull($result['class_verdicts'][0]['accident_type']);
+        $this->assertNull($result['class_verdicts'][0]['severity']);
+        $this->assertNull($result['class_verdicts'][0]['title']);
+        $this->assertSame(87.5, $result['class_verdicts'][0]['confidence']);
+    }
+
+    public function test_analyze_yolo_image_prompt_uses_real_world_mode_instructions()
+    {
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [
+                                [
+                                    'text' => json_encode([
+                                        'overall_valid' => false,
+                                        'reasoning' => 'No emergency',
+                                        'class_verdicts' => [],
+                                    ], JSON_THROW_ON_ERROR),
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        config([
+            'services.gemini.api_key' => 'test-key',
+            'yolo.demo_mode_enabled' => false,
+        ]);
+        $service = new GeminiService;
+
+        $service->analyzeYoloImage('fake-image-content', 'image/jpeg', ['device_name' => 'CCTV-2'], ['Flood']);
+
+        Http::assertSent(function ($request) {
+            $data = $request->data();
+            $prompt = $data['contents'][0]['parts'][1]['text'] ?? '';
+
+            return str_contains($prompt, 'MODE: REAL_WORLD') &&
+                str_contains($prompt, 'do NOT reject only because the scene is a diorama') &&
+                str_contains($prompt, 'very simple/ambiguous scene with no clear emergency cues') &&
+                str_contains($prompt, 'Do not return the string "null"') &&
+                str_contains($prompt, 'PROMPT VERSION: yolo-v2-strict');
+        });
+    }
+
+    public function test_analyze_yolo_image_demo_mode_promotes_diorama_supported_class_to_legit()
+    {
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [
+                                [
+                                    'text' => json_encode([
+                                        'mode_applied' => 'DEMO_SIMULATION',
+                                        'scene_type' => 'diorama',
+                                        'overall_valid' => false,
+                                        'reasoning' => 'Looks like a miniature scene.',
+                                        'class_verdicts' => [[
+                                            'source_class' => 'Flood',
+                                            'normalized_class' => 'Flood',
+                                            'is_legit' => false,
+                                            'accident_type' => 'Flood',
+                                            'severity' => null,
+                                            'title' => null,
+                                            'description' => null,
+                                            'confidence' => 81,
+                                            'detected_objects' => ['water'],
+                                            'reasoning' => 'The image is a diorama, not a real-world scene.',
+                                        ]],
+                                    ], JSON_THROW_ON_ERROR),
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        config([
+            'services.gemini.api_key' => 'test-key',
+            'yolo.demo_mode_enabled' => true,
+        ]);
+        $service = new GeminiService;
+
+        $result = $service->analyzeYoloImage('fake-image-content', 'image/jpeg', ['device_name' => 'CCTV-3'], ['Flood']);
+
+        $this->assertNotNull($result);
+        $this->assertTrue($result['overall_valid']);
+        $this->assertTrue($result['policy_adjusted']);
+        $this->assertTrue($result['class_verdicts'][0]['is_legit']);
+        $this->assertSame('Flood', $result['class_verdicts'][0]['accident_type']);
+        $this->assertContains(
+            'Adjusted by DEMO_SIMULATION policy: diorama emergency simulation accepted.',
+            $result['class_verdicts'][0]['warnings']
+        );
+    }
+
+    public function test_analyze_yolo_image_demo_mode_infers_diorama_from_reasoning_when_scene_type_missing()
+    {
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [
+                                [
+                                    'text' => json_encode([
+                                        'mode_applied' => 'DEMO_SIMULATION',
+                                        'overall_valid' => false,
+                                        'reasoning' => 'The detected objects are part of a diorama and not real-world events.',
+                                        'class_verdicts' => [[
+                                            'source_class' => 'Flood',
+                                            'normalized_class' => 'Flood',
+                                            'is_legit' => false,
+                                            'accident_type' => 'Flood',
+                                            'severity' => null,
+                                            'title' => null,
+                                            'description' => null,
+                                            'confidence' => null,
+                                            'detected_objects' => [],
+                                            'reasoning' => 'The image shows a diorama with toy cars and buildings, not a real-world flood.',
+                                        ]],
+                                    ], JSON_THROW_ON_ERROR),
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        config([
+            'services.gemini.api_key' => 'test-key',
+            'yolo.demo_mode_enabled' => true,
+        ]);
+        $service = new GeminiService;
+
+        $result = $service->analyzeYoloImage('fake-image-content', 'image/jpeg', ['device_name' => 'CCTV-5'], ['Flood']);
+
+        $this->assertNotNull($result);
+        $this->assertSame('diorama', $result['scene_type']);
+        $this->assertTrue($result['policy_adjusted']);
+        $this->assertTrue($result['overall_valid']);
+        $this->assertTrue($result['class_verdicts'][0]['is_legit']);
+    }
+
+    public function test_analyze_yolo_image_real_world_mode_keeps_diorama_non_legit()
+    {
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [
+                                [
+                                    'text' => json_encode([
+                                        'mode_applied' => 'REAL_WORLD',
+                                        'scene_type' => 'diorama',
+                                        'overall_valid' => false,
+                                        'reasoning' => 'Diorama scene.',
+                                        'class_verdicts' => [[
+                                            'source_class' => 'Flood',
+                                            'normalized_class' => 'Flood',
+                                            'is_legit' => false,
+                                            'accident_type' => 'Flood',
+                                            'severity' => null,
+                                            'title' => null,
+                                            'description' => null,
+                                            'confidence' => 81,
+                                            'detected_objects' => ['water'],
+                                            'reasoning' => 'Diorama only.',
+                                        ]],
+                                    ], JSON_THROW_ON_ERROR),
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        config([
+            'services.gemini.api_key' => 'test-key',
+            'yolo.demo_mode_enabled' => false,
+        ]);
+        $service = new GeminiService;
+
+        $result = $service->analyzeYoloImage('fake-image-content', 'image/jpeg', ['device_name' => 'CCTV-4'], ['Flood']);
+
+        $this->assertNotNull($result);
+        $this->assertFalse($result['overall_valid']);
+        $this->assertFalse($result['policy_adjusted']);
+        $this->assertFalse($result['class_verdicts'][0]['is_legit']);
+    }
 }

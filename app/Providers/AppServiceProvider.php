@@ -88,5 +88,21 @@ class AppServiceProvider extends ServiceProvider
                 }),
             ];
         });
+
+        RateLimiter::for('yolo.ingest', function (Request $request) {
+            // Prefer API key identity; fall back to caller IP.
+            $identity = $request->header('x-api-key')
+                ? 'key:'.substr(hash('sha256', (string) $request->header('x-api-key')), 0, 16)
+                : 'ip:'.$request->ip();
+
+            return [
+                Limit::perMinute(30)->by($identity)->response(function () {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Too many YOLO snapshot uploads. Please retry shortly.',
+                    ], 429);
+                }),
+            ];
+        });
     }
 }

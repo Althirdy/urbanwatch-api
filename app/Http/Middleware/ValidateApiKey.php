@@ -15,6 +15,18 @@ class ValidateApiKey
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $allowedIps = collect(explode(',', (string) env('YOLO_ALLOWED_IPS', '')))
+            ->map(fn (string $ip) => trim($ip))
+            ->filter()
+            ->values();
+
+        if ($allowedIps->isNotEmpty() && ! $allowedIps->contains($request->ip())) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Forbidden. Source IP is not allowed.',
+            ], 403);
+        }
+
         $apiKey = $request->header('x-api-key');
         $validApiKey = config('services.yolo_api_key');
 
