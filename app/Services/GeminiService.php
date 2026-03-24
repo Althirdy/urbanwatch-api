@@ -13,9 +13,11 @@ class GeminiService
     protected $apiKey;
 
     protected string $apiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+
     protected string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
 
     protected string $audioModel = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
+
     protected string $audioModelName = 'gemini-2.5-flash-lite';
 
     public function __construct()
@@ -118,7 +120,7 @@ class GeminiService
                 }
 
                 $result = $inlineResult['result'] ?? null;
-                
+
                 if (! is_array($result)) {
                     return null;
                 }

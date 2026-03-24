@@ -149,8 +149,7 @@ class YoloAccidentService
         cctvDevices $cctvDevice,
         float $processingTime,
         array $decisionTrace = []
-    ): array
-    {
+    ): array {
         $processingTimeMs = round($processingTime * 1000, 2);
         $attemptedClasses = collect($aiAnalysis['class_verdicts'] ?? [])
             ->pluck('source_class')
@@ -400,8 +399,7 @@ class YoloAccidentService
         array $verdict,
         ?string $detectedAt,
         bool $useDemoLabel = false
-    ): Accident
-    {
+    ): Accident {
         $updates = ['occurred_at' => $detectedAt ?? now()];
         $newSeverityLabel = ucfirst(strtolower($verdict['severity'] ?? 'Low'));
 
