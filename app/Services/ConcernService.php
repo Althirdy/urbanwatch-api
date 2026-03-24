@@ -362,9 +362,13 @@ class ConcernService
 
                 foreach ($uploadResults['successful'] as $upload) {
                     $mimeType = $upload['mime_type'] ?? '';
-                    $mediaType = VoiceAudioFileSupport::isSupportedMimeOrExtension($mimeType, $upload['original_filename'] ?? null)
-                        ? 'audio'
-                        : (VoiceAudioFileSupport::isVideoMimeOrExtension($mimeType, $upload['original_filename'] ?? null) ? 'video' : 'image');
+                    if ($concernType === 'voice') {
+                        $mediaType = 'audio';
+                    } else {
+                        $mediaType = VoiceAudioFileSupport::isVideoMimeOrExtension($mimeType, $upload['original_filename'] ?? null)
+                            ? 'video'
+                            : 'image';
+                    }
 
                     $media = IncidentMedia::create([
                         'source_type' => Concern::class,
