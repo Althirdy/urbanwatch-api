@@ -27,7 +27,10 @@ Route::prefix('v1')->group(function () {
     // IoT Box routes
     require __DIR__.'/api/v1/iotbox.php';
 
-    // Public Post routes (authenticated - mobile app)
+    // Map routes (barangay-wide endpoints)
+    require __DIR__.'/api/v1/map.php';
+
+    // Public Post routes
     Route::get('/mobile/public-posts', [App\Http\Controllers\Operator\PublicPostController::class, 'getMobilePublicPosts'])
         ->middleware('auth:sanctum');
 
