@@ -41,4 +41,17 @@ class VoiceAudioFileSupportTest extends TestCase
         $this->assertTrue(VoiceAudioFileSupport::isImageMime('image/jpeg'));
         $this->assertFalse(VoiceAudioFileSupport::isImageMime('application/json'));
     }
+
+    public function test_it_detects_video_mime_types(): void
+    {
+        $this->assertTrue(VoiceAudioFileSupport::isVideoMime('video/mp4'));
+        $this->assertFalse(VoiceAudioFileSupport::isVideoMime('audio/mpeg'));
+    }
+
+    public function test_it_accepts_video_extension_with_generic_mime_type(): void
+    {
+        $file = UploadedFile::fake()->create('clip.mp4', 100, 'application/octet-stream');
+
+        $this->assertTrue(VoiceAudioFileSupport::isSupportedVideoUpload($file));
+    }
 }

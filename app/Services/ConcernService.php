@@ -339,10 +339,21 @@ class ConcernService
             ]);
 
             $uploadedMedia = [];
+            $hasVideoMedia = false;
 
             // Handle Media Uploads
             if ($files) {
                 $this->assertFileTypesForConcernType($concernType, $files);
+                $fileList = is_array($files) ? $files : [$files];
+                $incomingVideoDetected = false;
+                if ($concernType === 'manual') {
+                    foreach ($fileList as $incomingFile) {
+                        if (VoiceAudioFileSupport::isSupportedVideoUpload($incomingFile)) {
+                            $incomingVideoDetected = true;
+                            break;
+                        }
+                    }
+                }
 
                 $isMultiple = is_array($files);
                 $uploadResults = $isMultiple
@@ -351,7 +362,13 @@ class ConcernService
 
                 foreach ($uploadResults['successful'] as $upload) {
                     $mimeType = $upload['mime_type'] ?? '';
-                    $mediaType = VoiceAudioFileSupport::isSupportedMimeOrExtension($mimeType, $upload['original_filename'] ?? null) ? 'audio' : 'image';
+                    if ($concernType === 'voice') {
+                        $mediaType = 'audio';
+                    } else {
+                        $mediaType = VoiceAudioFileSupport::isVideoMimeOrExtension($mimeType, $upload['original_filename'] ?? null)
+                            ? 'video'
+                            : 'image';
+                    }
 
                     $media = IncidentMedia::create([
                         'source_type' => Concern::class,
@@ -367,6 +384,17 @@ class ConcernService
                     ]);
 
                     $uploadedMedia[] = $media->original_path;
+                    if ($mediaType === 'video') {
+                        $hasVideoMedia = true;
+                    }
+                }
+
+                // Defensive fallback for clients that send weak MIME metadata.
+                if ($incomingVideoDetected && ! $hasVideoMedia) {
+                    Log::warning('Manual concern video detected from upload metadata but resolved media_type lacked video', [
+                        'concern_id' => $concern->id,
+                    ]);
+                    $hasVideoMedia = true;
                 }
             }
 
@@ -379,9 +407,36 @@ class ConcernService
 
             DB::commit();
 
-            // Dispatch Voice Processing Job
+            // Dispatch processing path by concern/media mode
             if ($concernType === 'voice') {
                 ProcessVoiceConcernJob::dispatch($concern->id);
+            } elseif ($hasVideoMedia) {
+                $concern->update([
+                    'is_valid' => true,
+                    'status' => 'pending',
+                    'ai_processed_at' => now(),
+                    'ai_analysis_raw' => [
+                        'is_fallback' => true,
+                        'fallback_source' => 'manual_video_bypass',
+                        'reasoning' => 'Gemini bypassed for manual video concern due to media size/processing constraints.',
+                        'timestamp' => now()->toIso8601String(),
+                    ],
+                ]);
+
+                ConcernHistory::create([
+                    'concern_id' => $concern->id,
+                    'status' => 'pending',
+                    'remarks' => 'Video concern submitted. Gemini bypassed and routed directly by location.',
+                ]);
+
+                try {
+                    $this->assignWithoutDeduplication($concern->id, 'Video concern assigned directly after Gemini bypass.');
+                } catch (\Throwable $routingError) {
+                    Log::error('Manual video concern routing failed after Gemini bypass', [
+                        'concern_id' => $concern->id,
+                        'error' => $routingError->getMessage(),
+                    ]);
+                }
             } else {
                 // Dispatch Manual Concern AI Processing Job
                 ProcessManualConcernJob::dispatch($concern->id);
@@ -1031,11 +1086,33 @@ class ConcernService
             return;
         }
 
+        $hasImage = false;
+        $hasVideo = false;
+
         foreach ($fileList as $file) {
             $mimeType = (string) ($file->getMimeType() ?? '');
-            if (! VoiceAudioFileSupport::isImageMime($mimeType)) {
-                throw new UrbanWatchException('Manual concern accepts image files only.', 422);
+            $isImage = VoiceAudioFileSupport::isImageMime($mimeType);
+            $isVideo = VoiceAudioFileSupport::isSupportedVideoUpload($file);
+
+            if (! $isImage && ! $isVideo) {
+                throw new UrbanWatchException('Manual concern accepts image or video files only.', 422);
             }
+
+            if ($isImage) {
+                $hasImage = true;
+            }
+
+            if ($isVideo) {
+                $hasVideo = true;
+            }
+        }
+
+        if ($hasImage && $hasVideo) {
+            throw new UrbanWatchException('Manual concern cannot mix image and video attachments.', 422);
+        }
+
+        if ($hasVideo && count($fileList) !== 1) {
+            throw new UrbanWatchException('Manual concern accepts exactly one video file.', 422);
         }
     }
 

@@ -38,6 +38,16 @@ final class VoiceAudioFileSupport
         'caf',
     ];
 
+    private const SUPPORTED_VIDEO_EXTENSIONS = [
+        'mp4',
+        'mov',
+        'm4v',
+        'webm',
+        '3gp',
+        '3gpp',
+        'mkv',
+    ];
+
     public static function isSupportedUpload(UploadedFile $file): bool
     {
         return self::isSupportedMimeOrExtension($file->getMimeType(), $file->getClientOriginalName());
@@ -69,6 +79,27 @@ final class VoiceAudioFileSupport
     public static function isImageMime(?string $mimeType): bool
     {
         return str_starts_with(self::normalizeMimeType($mimeType), 'image/');
+    }
+
+    public static function isVideoMime(?string $mimeType): bool
+    {
+        return str_starts_with(self::normalizeMimeType($mimeType), 'video/');
+    }
+
+    public static function isSupportedVideoUpload(UploadedFile $file): bool
+    {
+        return self::isVideoMimeOrExtension($file->getMimeType(), $file->getClientOriginalName());
+    }
+
+    public static function isVideoMimeOrExtension(?string $mimeType, ?string $fileName): bool
+    {
+        if (self::isVideoMime($mimeType)) {
+            return true;
+        }
+
+        $extension = self::extractExtension($fileName);
+
+        return $extension !== '' && in_array($extension, self::SUPPORTED_VIDEO_EXTENSIONS, true);
     }
 
     private static function normalizeMimeType(?string $mimeType): string

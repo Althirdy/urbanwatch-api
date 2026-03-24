@@ -39,6 +39,13 @@ class AssignedConcernResource extends JsonResource
 
             // Media handling
             'images' => $concern->media
+                ->where('media_type', 'image')
+                ->where('source_category', 'citizen_concern')
+                ->pluck('original_path')
+                ->values()
+                ->toArray(),
+            'videos' => $concern->media
+                ->where('media_type', 'video')
                 ->where('source_category', 'citizen_concern')
                 ->pluck('original_path')
                 ->values()
@@ -61,6 +68,13 @@ class AssignedConcernResource extends JsonResource
                     'citizen_name' => $duplicate->citizen->name ?? 'Anonymous',
                     'created_at' => $duplicate->created_at,
                     'images' => $duplicate->media
+                        ->where('media_type', 'image')
+                        ->where('source_category', 'citizen_concern')
+                        ->pluck('original_path')
+                        ->values()
+                        ->toArray(),
+                    'videos' => $duplicate->media
+                        ->where('media_type', 'video')
                         ->where('source_category', 'citizen_concern')
                         ->pluck('original_path')
                         ->values()
