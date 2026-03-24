@@ -13,6 +13,7 @@ use App\Services\UwDeviceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class IoTBoxController extends BaseApiController
@@ -44,6 +45,7 @@ class IoTBoxController extends BaseApiController
             'device_id' => 'required',
             'anomaly_type' => 'required|in:sound_anomaly,anti_tampering',
             'image' => 'nullable|image|max:10240', // Max 10MB
+            'video' => 'nullable|file|mimetypes:video/mp4,video/quicktime,video/x-msvideo,video/webm|max:51200', // Max 50MB
             'details' => 'nullable|array',
         ], [
             'device_id.required' => 'Device ID is required.',
@@ -51,6 +53,9 @@ class IoTBoxController extends BaseApiController
             'anomaly_type.in' => 'Anomaly type must be sound_anomaly or anti_tampering.',
             'image.image' => 'The file must be an image.',
             'image.max' => 'Image must not exceed 10MB.',
+            'video.file' => 'The file must be a valid video.',
+            'video.mimetypes' => 'Video must be mp4, mov, avi, or webm format.',
+            'video.max' => 'Video must not exceed 50MB.',
         ]);
 
         if ($validator->fails()) {
@@ -82,13 +87,16 @@ class IoTBoxController extends BaseApiController
                 return $this->sendError('IoT box is not registered, inactive, or token is invalid.', null, 403);
             }
 
+            $storageDisk = $this->resolveStorageDisk();
+            $details = $request->input('details', []);
+
             // Handle image upload if provided
             $imagePath = null;
+            $imagePublicUrl = null;
             if ($request->hasFile('image')) {
                 try {
-                    // Ensure directory exists
                     $directory = 'anomaly_logs';
-                    $disk = \Illuminate\Support\Facades\Storage::disk('public');
+                    $disk = Storage::disk($storageDisk);
 
                     if (! $disk->exists($directory)) {
                         $disk->makeDirectory($directory);
@@ -100,15 +108,22 @@ class IoTBoxController extends BaseApiController
                         $directory
                     );
                     $imagePath = $uploadResult['storage_path'];
+                    $imagePublicUrl = $uploadResult['public_url'] ?? null;
 
                     // Verify file was actually saved
                     if (! $disk->exists($imagePath)) {
                         // Fallback: Direct storage if service failed
-                        Log::warning('FileUploadService failed, using fallback storage');
-                        $imagePath = $request->file('image')->store($directory, 'public');
+                        Log::warning('FileUploadService image verification failed, using fallback storage', [
+                            'disk' => $storageDisk,
+                            'path' => $imagePath,
+                        ]);
+
+                        $imagePath = $request->file('image')->store($directory, $storageDisk);
+                        $imagePublicUrl = $disk->url($imagePath);
                     }
 
                     Log::info('Image saved successfully', [
+                        'disk' => $storageDisk,
                         'path' => $imagePath,
                         'exists' => $disk->exists($imagePath),
                     ]);
@@ -119,6 +134,56 @@ class IoTBoxController extends BaseApiController
                     ]);
                     // Continue without image rather than failing the entire request
                     $imagePath = null;
+                    $imagePublicUrl = null;
+                }
+            }
+
+            // Handle video upload if provided (stored in details JSON, no schema change needed)
+            if ($request->hasFile('video')) {
+                try {
+                    $directory = 'anomaly_videos';
+                    $disk = Storage::disk($storageDisk);
+
+                    if (! $disk->exists($directory)) {
+                        $disk->makeDirectory($directory);
+                    }
+
+                    $videoUploadResult = $this->fileUploadService->uploadSingle(
+                        $request->file('video'),
+                        $directory
+                    );
+
+                    $videoPath = $videoUploadResult['storage_path'];
+                    $videoPublicUrl = $videoUploadResult['public_url'] ?? null;
+
+                    if (! $disk->exists($videoPath)) {
+                        Log::warning('FileUploadService video verification failed, using fallback storage', [
+                            'disk' => $storageDisk,
+                            'path' => $videoPath,
+                        ]);
+
+                        $videoPath = $request->file('video')->store($directory, $storageDisk);
+                        $videoPublicUrl = $disk->url($videoPath);
+                    }
+
+                    $details['video'] = [
+                        'storage_path' => $videoPath,
+                        'public_url' => $videoPublicUrl,
+                        'mime_type' => $videoUploadResult['mime_type'] ?? $request->file('video')->getMimeType(),
+                        'file_size' => $videoUploadResult['file_size'] ?? $request->file('video')->getSize(),
+                        'original_filename' => $videoUploadResult['original_filename'] ?? $request->file('video')->getClientOriginalName(),
+                    ];
+
+                    Log::info('Video saved successfully', [
+                        'disk' => $storageDisk,
+                        'path' => $videoPath,
+                        'exists' => $disk->exists($videoPath),
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Video upload failed', [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
                 }
             }
 
@@ -139,7 +204,7 @@ class IoTBoxController extends BaseApiController
                 'iot_box_id' => $iotBox->id,
                 'anomaly_type' => $request->anomaly_type,
                 'image' => $imagePath,
-                'details' => $request->details,
+                'details' => $details,
                 'is_confirmed' => false,
                 'parent_anomaly_id' => $parentAnomaly?->id,
                 'is_duplicate' => $isDuplicate,
@@ -176,6 +241,8 @@ class IoTBoxController extends BaseApiController
                 'anomaly_type' => $anomalyLog->anomaly_type,
                 'is_duplicate' => $isDuplicate,
                 'parent_anomaly_id' => $parentAnomaly?->id,
+                'image_url' => $imagePublicUrl,
+                'video' => data_get($anomalyLog->details, 'video'),
                 'created_at' => $anomalyLog->created_at->toISOString(),
             ], 'Anomaly log recorded successfully', 201);
 
@@ -306,7 +373,7 @@ class IoTBoxController extends BaseApiController
                 abort(404, 'Image not found');
             }
 
-            $disk = \Illuminate\Support\Facades\Storage::disk('public');
+            $disk = Storage::disk($this->resolveStorageDisk());
 
             if (! $disk->exists($anomalyLog->image)) {
                 abort(404, 'Image file not found');
@@ -670,5 +737,23 @@ class IoTBoxController extends BaseApiController
             'anti_tampering' => 'Anti-Tampering Alert',
             default => ucfirst(str_replace('_', ' ', $type)),
         };
+    }
+
+    /**
+     * Resolve upload disk similar to FileUploadService behavior.
+     */
+    private function resolveStorageDisk(): string
+    {
+        $disk = config('filesystems.default');
+
+        if ($disk === 's3' && empty(config('filesystems.disks.s3.bucket'))) {
+            return 'public';
+        }
+
+        if ($disk === 'local') {
+            return 'public';
+        }
+
+        return $disk;
     }
 }
