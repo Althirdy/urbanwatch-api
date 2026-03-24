@@ -88,9 +88,16 @@ class YoloAccidentService
         $legitVerdicts = collect($aiAnalysis['class_verdicts'] ?? [])
             ->filter(fn ($verdict) => (bool) ($verdict['is_legit'] ?? false))
             ->values();
+        $decisionTrace = $this->buildDecisionTrace($aiAnalysis, $legitVerdicts->count());
+        $aiAnalysis = array_merge($aiAnalysis, $decisionTrace);
 
         if ($legitVerdicts->isEmpty()) {
-            return $this->handleFalseAlarm($aiAnalysis, $cctvDevice, microtime(true) - $startTime);
+            return $this->handleFalseAlarm(
+                $aiAnalysis,
+                $cctvDevice,
+                microtime(true) - $startTime,
+                $decisionTrace
+            );
         }
 
         return $this->processValidEmergency(
@@ -99,7 +106,8 @@ class YoloAccidentService
             $legitVerdicts->all(),
             $cctvDevice,
             $detectedAt,
-            microtime(true) - $startTime
+            microtime(true) - $startTime,
+            $decisionTrace
         );
     }
 
@@ -136,21 +144,37 @@ class YoloAccidentService
         return $aiAnalysis;
     }
 
-    protected function handleFalseAlarm(array $aiAnalysis, cctvDevices $cctvDevice, float $processingTime): array
+    protected function handleFalseAlarm(
+        array $aiAnalysis,
+        cctvDevices $cctvDevice,
+        float $processingTime,
+        array $decisionTrace = []
+    ): array
     {
         $processingTimeMs = round($processingTime * 1000, 2);
         $attemptedClasses = collect($aiAnalysis['class_verdicts'] ?? [])
             ->pluck('source_class')
             ->filter()
             ->implode(',');
+        $bestConfidence = collect($aiAnalysis['class_verdicts'] ?? [])
+            ->pluck('confidence')
+            ->filter(fn ($value) => is_numeric($value))
+            ->max();
+        $detectedObjects = collect($aiAnalysis['class_verdicts'] ?? [])
+            ->pluck('detected_objects')
+            ->flatten(1)
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
 
-        $falseAlarm = FalseAlarm::createFromDetection($cctvDevice->id, [
-            'accident_type' => $attemptedClasses ?: null,
-            'reasoning' => $aiAnalysis['reasoning'] ?? 'No legitimate emergency detected',
-            'confidence' => null,
-            'detected_objects' => [],
-            'class_verdicts' => $aiAnalysis['class_verdicts'] ?? [],
-        ]);
+        $falseAlarmPayload = array_merge($aiAnalysis, [
+            'accident_type' => $attemptedClasses ?: ($aiAnalysis['accident_type'] ?? null),
+            'confidence' => $bestConfidence,
+            'detected_objects' => $detectedObjects,
+        ], $decisionTrace);
+
+        $falseAlarm = FalseAlarm::createFromDetection($cctvDevice->id, $falseAlarmPayload);
 
         broadcast(new FalseAlarmDetected($falseAlarm));
 
@@ -163,6 +187,11 @@ class YoloAccidentService
             'deviceName' => $cctvDevice->device_name,
             'location' => $cctvDevice->location_name,
             'processingTimeMs' => $processingTimeMs,
+            'mode_applied' => $decisionTrace['mode_applied'] ?? null,
+            'scene_type' => $decisionTrace['scene_type'] ?? null,
+            'policy_adjusted' => (bool) ($decisionTrace['policy_adjusted'] ?? false),
+            'legit_verdict_count' => (int) ($decisionTrace['legit_verdict_count'] ?? 0),
+            'decision_reason' => $decisionTrace['decision_reason'] ?? 'no_legit_verdicts',
         ];
     }
 
@@ -172,7 +201,8 @@ class YoloAccidentService
         array $legitVerdicts,
         cctvDevices $cctvDevice,
         ?string $detectedAt,
-        float $processingTime
+        float $processingTime,
+        array $decisionTrace = []
     ): array {
         DB::beginTransaction();
 
@@ -186,6 +216,7 @@ class YoloAccidentService
 
             $results = [];
             $broadcastQueue = [];
+            $useDemoLabel = $this->shouldUseDemoLabel($decisionTrace);
             foreach ($legitVerdicts as $verdict) {
                 $accidentType = $verdict['accident_type'] ?? $verdict['normalized_class'] ?? 'Accident';
                 if ($accidentType === 'CarCollision') {
@@ -194,10 +225,10 @@ class YoloAccidentService
 
                 $existingAccident = $this->findActiveAccident($cctvDevice->id, $accidentType);
                 if ($existingAccident) {
-                    $accident = $this->updateExistingAccident($existingAccident, $verdict, $detectedAt);
+                    $accident = $this->updateExistingAccident($existingAccident, $verdict, $detectedAt, $useDemoLabel);
                     $isNew = false;
                 } else {
-                    $accident = $this->createNewAccident($cctvDevice, $verdict, $detectedAt, $accidentType);
+                    $accident = $this->createNewAccident($cctvDevice, $verdict, $detectedAt, $accidentType, $useDemoLabel);
                     $isNew = true;
                 }
 
@@ -268,6 +299,11 @@ class YoloAccidentService
                 'results' => $results,
                 'processingTimeMs' => round($processingTime * 1000, 2),
                 'imageUrl' => $publicUrl,
+                'mode_applied' => $decisionTrace['mode_applied'] ?? null,
+                'scene_type' => $decisionTrace['scene_type'] ?? null,
+                'policy_adjusted' => (bool) ($decisionTrace['policy_adjusted'] ?? false),
+                'legit_verdict_count' => (int) ($decisionTrace['legit_verdict_count'] ?? 0),
+                'decision_reason' => $decisionTrace['decision_reason'] ?? 'gemini_legit',
             ];
         } catch (\Exception $e) {
             DB::rollBack();
@@ -332,12 +368,24 @@ class YoloAccidentService
         cctvDevices $device,
         array $verdict,
         ?string $detectedAt,
-        string $accidentType
+        string $accidentType,
+        bool $useDemoLabel = false
     ): Accident {
+        $title = $this->buildIncidentText(
+            $verdict['title'] ?? null,
+            'Insidente na Natukoy',
+            $useDemoLabel
+        );
+        $description = $this->buildIncidentText(
+            $verdict['description'] ?? null,
+            'Awtomatikong natukoy ng AI system',
+            $useDemoLabel
+        );
+
         return Accident::create([
             'cctv_device_id' => $device->id,
-            'title' => $verdict['title'] ?? 'Insidente na Natukoy',
-            'description' => $verdict['description'] ?? 'Awtomatikong natukoy ng AI system',
+            'title' => $title,
+            'description' => $description,
             'latitude' => $device->latitude,
             'longitude' => $device->longitude,
             'occurred_at' => $detectedAt ?? now(),
@@ -347,7 +395,12 @@ class YoloAccidentService
         ]);
     }
 
-    protected function updateExistingAccident(Accident $accident, array $verdict, ?string $detectedAt): Accident
+    protected function updateExistingAccident(
+        Accident $accident,
+        array $verdict,
+        ?string $detectedAt,
+        bool $useDemoLabel = false
+    ): Accident
     {
         $updates = ['occurred_at' => $detectedAt ?? now()];
         $newSeverityLabel = ucfirst(strtolower($verdict['severity'] ?? 'Low'));
@@ -361,12 +414,68 @@ class YoloAccidentService
 
         $newConfidence = $verdict['confidence'] ?? 0;
         if ($newConfidence > 85) {
-            $updates['title'] = $verdict['title'] ?? $accident->title;
-            $updates['description'] = $verdict['description'] ?? $accident->description;
+            $updates['title'] = $this->buildIncidentText(
+                $verdict['title'] ?? $accident->title,
+                $accident->title ?? 'Insidente na Natukoy',
+                $useDemoLabel
+            );
+            $updates['description'] = $this->buildIncidentText(
+                $verdict['description'] ?? $accident->description,
+                $accident->description ?? 'Awtomatikong natukoy ng AI system',
+                $useDemoLabel
+            );
+        } elseif ($useDemoLabel) {
+            $updates['title'] = $this->buildIncidentText(
+                $accident->title,
+                'Insidente na Natukoy',
+                true
+            );
+            $updates['description'] = $this->buildIncidentText(
+                $accident->description,
+                'Awtomatikong natukoy ng AI system',
+                true
+            );
         }
 
         $accident->update($updates);
 
         return $accident;
+    }
+
+    protected function buildDecisionTrace(array $aiAnalysis, int $legitVerdictCount): array
+    {
+        return [
+            'mode_applied' => $aiAnalysis['mode_applied'] ?? null,
+            'scene_type' => $aiAnalysis['scene_type'] ?? 'uncertain',
+            'policy_adjusted' => (bool) ($aiAnalysis['policy_adjusted'] ?? false),
+            'legit_verdict_count' => $legitVerdictCount,
+            'decision_reason' => $legitVerdictCount > 0
+                ? ((bool) ($aiAnalysis['policy_adjusted'] ?? false) ? 'policy_promoted' : 'gemini_legit')
+                : 'no_legit_verdicts',
+        ];
+    }
+
+    protected function shouldUseDemoLabel(array $decisionTrace): bool
+    {
+        return ($decisionTrace['mode_applied'] ?? null) === 'DEMO_SIMULATION';
+    }
+
+    protected function buildIncidentText(?string $value, string $fallback, bool $useDemoLabel): string
+    {
+        $text = trim((string) ($value ?: $fallback));
+        if (! $useDemoLabel) {
+            return $text;
+        }
+
+        return $this->prefixDemoLabel($text);
+    }
+
+    protected function prefixDemoLabel(string $text): string
+    {
+        if (preg_match('/^\[demo\]\s*/i', $text) === 1) {
+            return preg_replace('/^\[demo\]\s*/i', '[demo] ', $text) ?: $text;
+        }
+
+        return '[demo] '.$text;
     }
 }
