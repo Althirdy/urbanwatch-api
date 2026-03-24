@@ -39,6 +39,7 @@ class AuthUserResource extends JsonResource
                 'role' => $this->role->name,
                 'officeAddress' => $officialDetails->office_address,
                 'phoneNumber' => $officialDetails->contact_number,
+                'assigned_brgy' => $officialDetails->assigned_brgy,
             ];
         } elseif ($this->role_id == 3) {
             $citizenDetails = $this->citizenDetails;
