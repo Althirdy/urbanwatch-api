@@ -47,7 +47,8 @@ class IoTBoxApiTest extends TestCase
             'device_id' => $device->device_id,
         ]);
 
-        $response->assertStatus(403);
+        $response->assertStatus(403)
+            ->assertJsonPath('data.code', 'INVALID_DEVICE_TOKEN');
     }
 
     /** @test */
@@ -93,6 +94,69 @@ class IoTBoxApiTest extends TestCase
             'anomaly_type' => 'sound_anomaly',
         ]);
 
-        $response->assertStatus(403);
+        $response->assertStatus(423)
+            ->assertJsonPath('data.code', 'DEVICE_INACTIVE')
+            ->assertJsonPath('data.device_status', 'inactive');
+
+        $this->assertDatabaseCount('anomaly_logs', 0);
+    }
+
+    /** @test */
+    public function it_rejects_anomaly_log_from_device_in_maintenance_mode()
+    {
+        $device = UwDevice::factory()->create([
+            'api_token' => 'maintenance_token',
+            'status' => 'maintenance',
+        ]);
+
+        $response = $this->withHeaders([
+            'X-Device-Token' => 'maintenance_token',
+        ])->postJson('/api/v1/iot-box/anomaly', [
+            'device_id' => $device->device_id,
+            'anomaly_type' => 'sound_anomaly',
+        ]);
+
+        $response->assertStatus(423)
+            ->assertJsonPath('data.code', 'DEVICE_MAINTENANCE')
+            ->assertJsonPath('data.device_status', 'maintenance');
+
+        $this->assertDatabaseCount('anomaly_logs', 0);
+    }
+
+    /** @test */
+    public function it_returns_locked_when_verifying_an_inactive_device()
+    {
+        $device = UwDevice::factory()->inactive()->create([
+            'api_token' => 'inactive_token',
+        ]);
+
+        $response = $this->withHeaders([
+            'X-Device-Token' => 'inactive_token',
+        ])->postJson('/api/v1/iot-box/verify', [
+            'device_id' => $device->device_id,
+        ]);
+
+        $response->assertStatus(423)
+            ->assertJsonPath('data.code', 'DEVICE_INACTIVE')
+            ->assertJsonPath('data.device_status', 'inactive');
+    }
+
+    /** @test */
+    public function it_returns_locked_when_verifying_a_maintenance_device()
+    {
+        $device = UwDevice::factory()->create([
+            'api_token' => 'maintenance_verify_token',
+            'status' => 'maintenance',
+        ]);
+
+        $response = $this->withHeaders([
+            'X-Device-Token' => 'maintenance_verify_token',
+        ])->postJson('/api/v1/iot-box/verify', [
+            'device_id' => $device->device_id,
+        ]);
+
+        $response->assertStatus(423)
+            ->assertJsonPath('data.code', 'DEVICE_MAINTENANCE')
+            ->assertJsonPath('data.device_status', 'maintenance');
     }
 }
