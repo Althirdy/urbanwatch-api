@@ -18,7 +18,8 @@ class GeographicRoutingService
         try {
             // MySQL/MariaDB spatial query Point-in-Polygon
             // Note: Point is (longitude, latitude) in ST_GeomFromText/POINT
-            $purok = Purok::whereRaw('ST_Contains(boundary, POINT(?, ?))', [$longitude, $latitude])
+            $purok = Purok::whereNotNull('boundary')
+                ->whereRaw('ST_Contains(boundary, POINT(?, ?))', [$longitude, $latitude])
                 ->first();
 
             if (! $purok) {
