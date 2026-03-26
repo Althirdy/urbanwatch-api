@@ -10,6 +10,7 @@ use App\Models\UwDevice;
 use App\Services\FileUploadService;
 use App\Services\NotificationService;
 use App\Services\UwDeviceService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -75,16 +76,18 @@ class IoTBoxController extends BaseApiController
             // Cast device_id to string for consistency (IoT box may send as integer or string)
             $deviceId = (string) $request->device_id;
 
-            // use service to verify and update heartbeat
-            $iotBox = $this->uwDeviceService->verifyAndHeartbeat($deviceId, $token);
+            $verification = $this->uwDeviceService->verifyDeviceAccess($deviceId, $token);
+            $iotBox = $verification['device'];
+            $accessStatus = $verification['status'];
 
-            if (! $iotBox) {
+            if ($accessStatus !== 'active') {
                 Log::warning('Unregistered, inactive, or invalid token IoT box attempted to send data', [
                     'device_id' => $deviceId,
+                    'access_status' => $accessStatus,
                     'ip' => $request->ip(),
                 ]);
 
-                return $this->sendError('IoT box is not registered, inactive, or token is invalid.', null, 403);
+                return $this->deviceAccessErrorResponse($accessStatus);
             }
 
             $storageDisk = $this->resolveStorageDisk();
@@ -584,17 +587,12 @@ class IoTBoxController extends BaseApiController
 
         $token = $request->header('X-Device-Token');
 
-        // Use service to verify and heartbeat
-        $iotBox = $this->uwDeviceService->verifyAndHeartbeat($request->device_id, $token);
+        $verification = $this->uwDeviceService->verifyDeviceAccess((string) $request->device_id, $token);
+        $iotBox = $verification['device'];
+        $accessStatus = $verification['status'];
 
-        if (! $iotBox) {
-            // Check if device exists at all to give better error
-            $exists = $this->uwDeviceService->getDeviceById($request->device_id);
-            if (! $exists) {
-                return $this->sendError('Device not registered', null, 404);
-            }
-
-            return $this->sendError('Invalid token or device inactive', null, 403);
+        if ($accessStatus !== 'active') {
+            return $this->deviceAccessErrorResponse($accessStatus);
         }
 
         return $this->sendResponse([
@@ -755,5 +753,30 @@ class IoTBoxController extends BaseApiController
         }
 
         return $disk;
+    }
+
+    /**
+     * Return a standardized device-access error payload.
+     */
+    private function deviceAccessErrorResponse(string $accessStatus): JsonResponse
+    {
+        return match ($accessStatus) {
+            'device_not_registered' => $this->sendError('Device not registered', [
+                'code' => 'DEVICE_NOT_REGISTERED',
+                'device_status' => null,
+            ], 404),
+            'invalid_token' => $this->sendError('Invalid or missing device token.', [
+                'code' => 'INVALID_DEVICE_TOKEN',
+                'device_status' => null,
+            ], 403),
+            'maintenance' => $this->sendError('IoT box is in maintenance mode. Anomaly ingestion is locked.', [
+                'code' => 'DEVICE_MAINTENANCE',
+                'device_status' => 'maintenance',
+            ], 423),
+            default => $this->sendError('IoT box is inactive. Anomaly ingestion is locked.', [
+                'code' => 'DEVICE_INACTIVE',
+                'device_status' => 'inactive',
+            ], 423),
+        };
     }
 }

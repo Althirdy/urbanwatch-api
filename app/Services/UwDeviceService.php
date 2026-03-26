@@ -10,6 +10,58 @@ use Illuminate\Support\Str;
 class UwDeviceService
 {
     /**
+     * Resolve device access state and heartbeat active devices.
+     *
+     * Possible statuses:
+     * - active
+     * - inactive
+     * - maintenance
+     * - invalid_token
+     * - device_not_registered
+     */
+    public function verifyDeviceAccess(string $deviceId, ?string $token): array
+    {
+        $device = UwDevice::where('device_id', $deviceId)->first();
+
+        if (! $device) {
+            return [
+                'status' => 'device_not_registered',
+                'device' => null,
+            ];
+        }
+
+        if (! $token || ! hash_equals((string) $device->api_token, (string) $token)) {
+            return [
+                'status' => 'invalid_token',
+                'device' => $device,
+            ];
+        }
+
+        $status = strtolower((string) $device->status);
+
+        if ($status === 'maintenance') {
+            return [
+                'status' => 'maintenance',
+                'device' => $device,
+            ];
+        }
+
+        if ($status !== 'active') {
+            return [
+                'status' => 'inactive',
+                'device' => $device,
+            ];
+        }
+
+        $device->update(['last_seen_at' => now()]);
+
+        return [
+            'status' => 'active',
+            'device' => $device->fresh(),
+        ];
+    }
+
+    /**
      * Create a new UW Device with an API token.
      */
     public function createDevice(array $data): UwDevice
@@ -66,16 +118,9 @@ class UwDeviceService
      */
     public function verifyAndHeartbeat(string $deviceId, ?string $token): ?UwDevice
     {
-        $device = UwDevice::where('device_id', $deviceId)
-            ->where('api_token', $token)
-            ->where('status', 'active')
-            ->first();
+        $result = $this->verifyDeviceAccess($deviceId, $token);
 
-        if ($device) {
-            $device->update(['last_seen_at' => now()]);
-        }
-
-        return $device;
+        return $result['status'] === 'active' ? $result['device'] : null;
     }
 
     /**
